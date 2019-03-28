@@ -1,0 +1,4 @@
+﻿{
+    "connectionString": "mongodb://localhost/vpatlas",
+    "secret": "Very long string here"
+}

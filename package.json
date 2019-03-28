@@ -1,0 +1,29 @@
+{
+    "name": "vpatlas-node-postgres-api",
+    "version": "0.0.1",
+    "description": "NodeJS + Postgres + PostGIS API for VPAtlas",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/vtecostudies/vpatlas/node-postgres-api.git"
+    },
+    "scripts": {
+        "start": "node ./server.js",
+        "start-dev": "nodemon ./server.js"
+    },
+    "dependencies": {
+        "bcryptjs": "^2.4.3",
+        "body-parser": "^1.18.3",
+        "cors": "^2.8.4",
+        "express": "^4.16.3",
+        "express-jwt": "^5.3.1",
+        "jsonwebtoken": "^8.2.2",
+        "mongodb": "^3.0.10",
+        "mongoose": "^5.1.4",
+        "pg": "^7.9.0",
+        "rootpath": "^0.1.2"
+    },
+    "devDependencies": {
+        "nodemon": "^1.17.5"
+    }
+}
