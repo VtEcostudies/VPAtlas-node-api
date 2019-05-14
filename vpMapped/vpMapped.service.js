@@ -1,6 +1,6 @@
 ﻿const db = require('_helpers/db_postgres');
 const query = db.query;
-var columns = []; //file scope list of vpmapped table columns retrieved on app startup (see 'getColumns()' below)
+var staticColumns = []; //file scope list of vpmapped table columns retrieved on app startup (see 'getColumns()' below)
 
 module.exports = {
     getColumns,
@@ -22,9 +22,9 @@ async function getColumns() {
     res = await query(text)
         .then(res => {
             res.fields.forEach(fld => {
-                columns.push(String(fld.name));
+                staticColumns.push(String(fld.name));
             });
-            console.log('vpMapped columns:', columns);
+            console.log('vpMapped columns:', staticColumns);
             return res;
         })
         .catch(err => {
@@ -42,7 +42,7 @@ function whereClause(params={}) {
         for (var key in params) {
             var col = key.split("|")[0];
             var opr = key.split("|")[1]; opr = opr ? opr : '=';
-            if (columns.includes(col)) {
+            if (staticColumns.includes(col)) {
                 if (where == '') where = 'where';
                 values.push(params[key]);
                 if (idx > 1) where += ' AND ';
@@ -56,24 +56,25 @@ function whereClause(params={}) {
 /*
 Parse {column:value, ...} pairs from incoming http request object into structures used by postgres
  */
-function parseColumns(body={}, idx=1, values=[]) {
-    var column = ''; // "username,email,zipcode,..."
-    var number = ''; // "$1,$2,$3,..."
+function parseColumns(body={}, idx=1, cValues=[]) {
+    var cNames = ''; // "username,email,zipcode,..."
+    var cNumbr = ''; // "$1,$2,$3,..."
     //var values = []; // [twerkman, twerker@gmail.com, 09183, ...]
     //var idx = 1;
     if (Object.keys(body).length) {
         for (var key in body) {
-            if (columns.includes(key)) {
-                values.push(body[key]);
-                column += `"${key}"`;
-                number += `$${idx++},`;
+            if (staticColumns.includes(key)) { //test for key (db column) in staticColumns, a file-scope array of db columns generated at server startup
+                cValues.push(body[key]);
+                cNames += `"${key}",`;
+                cNumbr += `$${idx++},`;
             }
         }
         //remove leading and trailing commas
-        column = column.replace(/(^,)|(,$)/g, "");
-        number = number.replace(/(^,)|(,$)/g, "");
+        cNames = cNames.replace(/(^,)|(,$)/g, "");
+        cNumbr = cNumbr.replace(/(^,)|(,$)/g, "");
     }
-    return { 'columns': column, 'numbered': number, 'values': values };
+    console.log(`vpMapped.service.js | parseColumns | column list: ${cNames}`)
+    return { 'named': cNames, 'numbered': cNumbr, 'values': cValues };
 }
 
 async function getCount(body={}) {
@@ -111,17 +112,17 @@ async function getById(id) {
 }
 
 async function create(body) {
-    columns = parseColumns(body);
-    text = `insert into vpmapped (${columns.text}) values (${columns.numbered})`;
-    console.log(text, columns.values);
-    return await query(text, columns.values);
+    var queryColumns = parseColumns(body);
+    text = `insert into vpmapped (${queryColumns.named}) values (${queryColumns.numbered})`;
+    console.log(text, queryColumns.values);
+    return await query(text, queryColumns.values);
 }
 
 async function update(id, body) {
-    columns = parseColumns(body, 2, [id]);
-    text = `update vpmapped set (${columns.text}) = (${columns.numbered}) where "mappedPoolId"=$1;`;
-    console.log(text, columns.values);
-    return await query(text, columns.values);
+    var queryColumns = parseColumns(body, 2, [id]);
+    text = `update vpmapped set (${queryColumns.named}) = (${queryColumns.numbered}) where "mappedPoolId"=$1;`;
+    console.log(text, queryColumns.values);
+    return await query(text, queryColumns.values);
 }
 
 async function _delete(id) {

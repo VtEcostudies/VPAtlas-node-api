@@ -7,7 +7,7 @@ router.get('/count', getCount);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
 router.get('/:id', getById);
-router.post('/:id', create);
+router.post('/', create);
 router.put('/:id', update);
 router.delete('/:id', _delete);
 
@@ -39,6 +39,8 @@ function getById(req, res, next) {
 }
 
 function create(req, res, next) {
+    console.log(`create req.body:`);
+    console.dir(req.body);
     poolService.create(req.body)
         .then(() => res.json({}))
         .catch(err => next(err));
