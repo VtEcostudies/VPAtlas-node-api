@@ -14,13 +14,13 @@ router.delete('/:id', _delete);
 module.exports = router;
 
 function getCount(req, res, next) {
-    poolService.getCount(req.body)
+    poolService.getCount(req.query)
         .then(pools => res.json(pools))
         .catch(err => next(err));
 }
 
 function getAll(req, res, next) {
-    poolService.getAll(req.body)
+    poolService.getAll(req.query)
         .then(pools => res.json(pools))
         .catch(err => next(err));
 }
