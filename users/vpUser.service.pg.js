@@ -12,20 +12,22 @@ module.exports = {
     getAll,
     getPage,
     getById,
+    getByUserName,
     create,
     update,
     delete: _delete
 };
 
-pgUtil.getColumns("vpuser", staticColumns); //run it once on init: to create the array here. also diplays on console.
-
 function getColumns() {
     return staticColumns;
 }
 
-if (!staticColumns) {
-    createVpUserTable();
-}
+//run it once on init: to create the array here. also diplays on console.
+pgUtil.getColumns("vpuser", staticColumns)
+    .catch(err => {
+        console.log(`vpUser.service.pg.pgUtil.getColumns`, err);
+        createVpUserTable();
+        });
 
 async function createVpUserTable() {
     const res = await query(`
@@ -33,7 +35,7 @@ async function createVpUserTable() {
         (
             "userid" serial,
             "username" character varying COLLATE pg_catalog."default" NOT NULL,
-            "hash" uuid NOT NULL,
+            "hash" text NOT NULL,
             "firstname" text NOT NULL,
             "lastname" text NOT NULL,
             "email" text NOT NULL,
@@ -49,19 +51,27 @@ async function createVpUserTable() {
         
         ALTER TABLE public.vpuser
             OWNER to vpatlas;
-    `);    
+    `);
+    pgUtil.getColumns("vpuser", staticColumns);
 }
 
-async function authenticate({ username, password }) {
-    const user = await query(`select * from vpuser where username=$1`, username);
+async function authenticate(body) {
+    if (!body.username || !body.password) {throw 'Missing username or password.';}
+    const res = await query(`select * from vpuser where username=$1`, [body.username]);
+    if (res.rowCount != 1) throw 'User not found.';
+    const user = res.rows[0];
     console.log(`vpuser.pg.service.authenticate | user: `, user);
-    if (user && bcrypt.compareSync(password, user.hash)) {
-        const { hash, ...userWithoutHash } = user.toObject();
-        const token = jwt.sign({ sub: user.id, role: user.role }, config.secret);
+    if (user && bcrypt.compareSync(body.password, user.hash)) {
+        //const { hash, ...userNoHash } = user.toObject();
+        var userWithoutHash = user;
+        delete userWithoutHash.hash;
+        const token = jwt.sign({ sub: user.id, role: user.userrole }, config.secret);
         return {
-            ...userWithoutHash,
+            userWithoutHash,
             token
         };
+    } else {
+        return;
     }
 }
 
@@ -89,10 +99,27 @@ async function getPage(page, params={}) {
 }
 
 async function getById(id) {
-    return await query(`select * from vpuser where "userId"=$1;`, [id])
+    const user = await query(`select * from vpuser where "userId"=$1;`, [id])
+    const { hash, ...userWithoutHash } = user.toObject();
+    return { ...userWithoutHash };
+}
+
+async function getByUserName(username) {
+    const user = await query(`select * from vpuser where "username"=$1;`, [username]);
+    const { hash, ...userWithoutHash } = user.toObject();
+    return { ...userWithoutHash };
 }
 
 async function create(body) {
+
+    // hash password into body
+    if (body.password) {
+        body.hash = bcrypt.hashSync(body.password, 10);
+        delete body.password;
+    }
+    
+    body.userrole = 'guest'; //new users are all guests.
+
     var queryColumns = pgUtil.parseColumns(body, 1, [], staticColumns);
     text = `insert into vpuser (${queryColumns.named}) values (${queryColumns.numbered})`;
     console.log(text, queryColumns.values);
@@ -100,6 +127,15 @@ async function create(body) {
 }
 
 async function update(id, body) {
+
+    // hash password into body
+    if (body.password) {
+        body.hash = bcrypt.hashSync(body.password, 10);
+        delete body.password;
+    }
+
+    delete body.userrole; //don't allow role change on update yet.
+    
     var queryColumns = pgUtil.parseColumns(body, 2, [id], staticColumns);
     text = `update vpuser set (${queryColumns.named}) = (${queryColumns.numbered}) where "userId"=$1;`;
     console.log(text, queryColumns.values);

@@ -14,8 +14,8 @@ app.use(cors());
 app.use(jwt());
 
 // api routes
-app.use('/users', require('./users/users.controller'));
-app.use('/vpusers', require('./users/vpUser.routes.pg'));
+//app.use('/users', require('./users/users.controller'));
+app.use('/users', require('./users/vpUser.routes.pg'));
 app.use('/pools/mapped', require('./vpMapped/vpMapped.routes'));
 
 // global error handler

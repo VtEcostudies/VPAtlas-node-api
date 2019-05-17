@@ -22,6 +22,8 @@ function jwt() {
             // public routes that don't require authentication
             '/users/authenticate',
             '/users/register',
+            '/vpusers/authenticate',
+            '/vpusers/register',
             '/pools/mapped',
             '/pools/mapped/:id',
             '/pools/mapped/count',

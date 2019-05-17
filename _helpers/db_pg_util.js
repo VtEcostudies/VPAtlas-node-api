@@ -28,7 +28,7 @@ async function getColumns(tableName, columns=[]) {
             return {tableName: columns};
         })
         .catch(err => {
-            return {tableName: columns};
+            return err;
         });
 }
 
