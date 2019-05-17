@@ -3,6 +3,7 @@ const router = express.Router();
 const poolService = require('./vpMapped.service');
 
 // routes
+router.get('/columns', getColumns);
 router.get('/count', getCount);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
@@ -12,6 +13,12 @@ router.put('/:id', update);
 router.delete('/:id', _delete);
 
 module.exports = router;
+
+function getColumns(req, res, next) {
+    poolService.getColumns()
+        .then(columns => res.json(columns))
+        .catch(err => next(err));
+}
 
 function getCount(req, res, next) {
     poolService.getCount(req.query)

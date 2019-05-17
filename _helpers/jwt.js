@@ -38,7 +38,7 @@ async function isRevoked(req, payload, done) {
     
     console.log(`jwt.js|isRevoked()
                 |req.body:[${Object.keys(req.body)}] [${Object.values(req.body)}]
-                |payload:[${Object.keys(payload)}] [${Object.values(req.body)}]`
+                |payload:[${Object.keys(payload)}] [${Object.values(payload)}]`
                 );
     
     const user = await userService.getById(payload.sub);

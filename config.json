@@ -1,4 +1,11 @@
 ﻿{
     "connectionString": "mongodb://localhost/vpatlas",
-    "secret": "Very long string here"
+    "secret": "Very long string here",
+	"pg": {
+	  "user": "vpatlas",
+	  "host": "localhost",
+	  "database": "vpatlas",
+	  "password": "EatArugula",
+	  "port": 5433
+	}
 }
