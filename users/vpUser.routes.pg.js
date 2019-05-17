@@ -15,16 +15,18 @@ router.delete('/:id', _delete);
 module.exports = router;
 
 function authenticate(req, res, next) {
-    console.log(`users.pg.routes.authenticate | req.body:`, req.body);
+    console.log(`vpUser.routes.pg.authenticate | req.body:`, req.body);
     userService.authenticate(req.body)
-        .then(user => user ? res.json(user) : res.status(400).json({ message: 'Username or password is incorrect' }))
+        //.then(user => user ? res.json(user) : res.status(400).json({ message: 'Username or password is incorrect' }))
+        .then(user => res.json(user))
         .catch(err => next(err));
 }
 
 function register(req, res, next) {
     console.log(`users.pg.routes.register | req.body:`, req.body);
     userService.create(req.body)
-        .then(() => res.json({}))
+        //.then(() => res.json({}))
+        .then(user => res.json(user))
         .catch(err => next(err));
 }
 

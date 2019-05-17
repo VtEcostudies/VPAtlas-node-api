@@ -1,6 +1,7 @@
 const expressJwt = require('express-jwt');
 const config = require('config.json');
-const userService = require('../users/user.service');
+//const userService = require('../users/user.service');
+const userService = require('../users/vpUser.service.pg');
 
 module.exports = jwt;
 
@@ -16,24 +17,26 @@ Example: Key: Authorization, Value: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
  */
 function jwt() {
     const secret = config.secret;
-    //return expressJwt({ secret, isRevoked }).unless({
-    var ret = expressJwt({ secret, isRevoked }).unless({
+    return expressJwt({ secret, isRevoked }).unless({
+    //var ret = expressJwt({ secret, isRevoked }).unless({
         path: [
-            // public routes that don't require authentication
+            /*
+             public routes that don't require authentication
+             https://stackoverflow.com/questions/30559158/handling-parameterised-routes-in-express-jwt-using-unless
+             */
             '/users/authenticate',
             '/users/register',
             '/vpusers/authenticate',
             '/vpusers/register',
-            '/pools/mapped',
-            '/pools/mapped/:id',
             '/pools/mapped/count',
-            '/pools/mapped/page/:page',
-            '/pools/mapped/page/',
-            '/pools/mapped/page'
+            '/pools/mapped', // /pools/mapped performs a getAll()
+            { url: /^\/pools\/mapped\/.*/, methods: ['GET'] }, // /pools/mapped/:id
+            { url: /^\/pools\/mapped\/page\/.*/, methods: ['GET'] } // /pools/mapped/page/:page
         ]
     });
-    console.log('jwt.js|jwt()|return: ', ret);
-    return ret;
+    
+    //console.log('jwt.js|jwt()|return: ', ret);
+    //return;
 }
 
 async function isRevoked(req, payload, done) {
@@ -50,5 +53,5 @@ async function isRevoked(req, payload, done) {
         return done(null, true);
     }
 
-    done();
+    return done();
 };

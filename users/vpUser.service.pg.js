@@ -29,12 +29,16 @@ pgUtil.getColumns("vpuser", staticColumns)
         createVpUserTable();
         });
 
+/*
+    Create table vpusers in postgres.
+    Call pgUtil.getColumns when it's done.
+ */
 async function createVpUserTable() {
     const res = await query(`
         CREATE TABLE public.vpuser
         (
-            "userid" serial,
-            "username" character varying COLLATE pg_catalog."default" NOT NULL,
+            "id" serial,
+            "username" text NOT NULL,
             "hash" text NOT NULL,
             "firstname" text NOT NULL,
             "lastname" text NOT NULL,
@@ -56,22 +60,19 @@ async function createVpUserTable() {
 }
 
 async function authenticate(body) {
-    if (!body.username || !body.password) {throw 'Missing username or password.';}
+    if (!body.username || !body.password) {throw 'Username and password are required.';}
     const res = await query(`select * from vpuser where username=$1`, [body.username]);
-    if (res.rowCount != 1) throw 'User not found.';
     const user = res.rows[0];
     console.log(`vpuser.pg.service.authenticate | user: `, user);
     if (user && bcrypt.compareSync(body.password, user.hash)) {
-        //const { hash, ...userNoHash } = user.toObject();
-        var userWithoutHash = user;
-        delete userWithoutHash.hash;
+        delete user.hash;
         const token = jwt.sign({ sub: user.id, role: user.userrole }, config.secret);
-        return {
-            userWithoutHash,
+        return { //interesting - this generates object key:value pairs from variable names and content...
+            user,
             token
         };
     } else {
-        return;
+        throw 'Username or password is incorrect.';
     }
 }
 
@@ -79,7 +80,8 @@ async function getAll(body={}) {
     const where = pgUtil.whereClause(body, staticColumns);
     const text = `select * from vpuser ${where.text};`;
     console.log(text, where.values);
-    return await query(text, where.values);
+    const res = await query(text, where.values);
+    return res.rows;
 }
 
 async function getPage(page, params={}) {
@@ -95,19 +97,22 @@ async function getPage(page, params={}) {
     var where = pgUtil.whereClause(params, staticColumns); //whereClause filters output against vpuser.columns
     const text = `select (select count(*) from vpuser ${where.text}),* from vpuser ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
-    return await query(text, where.values);
+    const res = await query(text, where.values);
+    return res.rows;
 }
 
 async function getById(id) {
-    const user = await query(`select * from vpuser where "userId"=$1;`, [id])
-    const { hash, ...userWithoutHash } = user.toObject();
-    return { ...userWithoutHash };
+    const res = await query(`select * from vpuser where "id"=$1;`, [id]);
+    const user = res.rows[0];
+    delete user.hash;
+    return user;
 }
 
 async function getByUserName(username) {
     const user = await query(`select * from vpuser where "username"=$1;`, [username]);
-    const { hash, ...userWithoutHash } = user.toObject();
-    return { ...userWithoutHash };
+    const user = res.rows[0];
+    delete user.hash;
+    return user;
 }
 
 async function create(body) {
