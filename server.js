@@ -34,6 +34,9 @@ for (var i=0; i<process.argv.length; i++) {
             argPort=process.argv[++i];
             console.log(`argPort: ${argPort}`);
             break;
+        case "prod":
+            argPort=4321;
+            break;
 	}
 }
 
