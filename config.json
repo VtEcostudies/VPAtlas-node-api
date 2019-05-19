@@ -7,5 +7,12 @@
 	  "database": "vpatlas",
 	  "password": "EatArugula",
 	  "port": 5433
+	},
+	"rds": {
+		"user": "vpatlas",
+		"host": "vpatlas-dbinst.caj7x0vzcitw.us-west-2.rds.amazonaws.com",
+		"database": "vpatlas",
+		"password": "EatArugula",
+		"port": 5432
 	}
 }
