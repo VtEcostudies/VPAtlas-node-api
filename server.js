@@ -7,10 +7,8 @@ const jwt = require('_helpers/jwt');
 const errorHandler = require('_helpers/error-handler');
 
 // Command-Line Arguments Processing
-// This MUST occur before the requires() below. Note that appVersion, which corresponds to the
-// server-specific API version (the default of which is defined in config.js), CAN be overridden
-// via the command line.
-var noauth = 0;
+// These are processed without prefixed "-"
+// Space-delimited args
 var http = 0;
 var argPort = 0;
 
@@ -50,7 +48,7 @@ app.use(jwt());
 // api routes
 //app.use('/users', require('./users/users.controller')); //mongo user db
 app.use('/users', require('./users/vpUser.routes.pg')); //postgres user db
-app.use('/pools/mapped', require('./vpMapped/vpMapped.routes'));
+app.use('/pools/mapped', require('./vpMapped/vpMapped.routes')); //postgres mapped pools db
 
 // global error handler
 app.use(errorHandler);

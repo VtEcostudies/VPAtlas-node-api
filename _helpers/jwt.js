@@ -26,8 +26,6 @@ function jwt() {
              */
             '/users/authenticate',
             '/users/register',
-            '/vpusers/authenticate',
-            '/vpusers/register',
             '/pools/mapped/count',
             '/pools/mapped', // /pools/mapped performs a getAll()
             { url: /^\/pools\/mapped\/.*/, methods: ['GET'] }, // /pools/mapped/:id

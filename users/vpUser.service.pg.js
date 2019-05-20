@@ -19,14 +19,21 @@ module.exports = {
 };
 
 function getColumns() {
+    console.log(`vpUser.service.getColumns | staticColumns:`, staticColumns);
     return staticColumns;
 }
 
 //run it once on init: to create the array here. also diplays on console.
 pgUtil.getColumns("vpuser", staticColumns)
+    .then(res => {return res;})
     .catch(err => {
-        console.log(`vpUser.service.pg.pgUtil.getColumns`, err);
-        createVpUserTable();
+        console.log(`vpUser.service.pg.pgUtil.getColumns`, err.message);
+        createVpUserTable()
+            .then(res => {
+                pgUtil.getColumns("vpuser", staticColumns);
+                return res;
+            })
+            .catch(err => {return err;});
         });
 
 /*
@@ -34,7 +41,7 @@ pgUtil.getColumns("vpuser", staticColumns)
     Call pgUtil.getColumns when it's done.
  */
 async function createVpUserTable() {
-    const res = await query(`
+    await query(`
         CREATE TABLE public.vpuser
         (
             "id" serial,
@@ -47,16 +54,19 @@ async function createVpUserTable() {
             "createdat" timestamp default now(),
             "updatedat" timestamp default now(),
             CONSTRAINT vpuser_pkey PRIMARY KEY ("username")
-        )
-        WITH (
-            OIDS = FALSE
-        )
-        TABLESPACE pg_default;
+        );
         
         ALTER TABLE public.vpuser
             OWNER to vpatlas;
-    `);
-    pgUtil.getColumns("vpuser", staticColumns);
+    `)
+    .then(res => {
+        console.log(`createVpUserTable() | res:`, res);
+        return res;
+    })
+    .catch(err => {
+        console.log(`createVpUserTable() | err:`, err.message);
+        throw err;
+    });
 }
 
 async function authenticate(body) {

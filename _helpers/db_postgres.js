@@ -5,16 +5,6 @@ const { Pool } = require('pg'); //a Postgres Connection Pool, not to be confused
 const connPool = new Pool(config.pg);
 
 /*
-const connPool = new Pool({
-  user: 'vpatlas',
-  host: 'vpatlas-dbinst.caj7x0vzcitw.us-west-2.rds.amazonaws.com',
-  database: 'vpatlas',
-  password: 'EatArugula',
-  port: 5432,
-});
-*/
-
-/*
 NOTES:
 
  */

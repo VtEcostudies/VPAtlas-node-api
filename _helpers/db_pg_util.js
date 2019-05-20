@@ -19,7 +19,7 @@ async function getColumns(tableName, columns=[]) {
     
     const text = `select * from ${tableName} limit 0;`;
     
-    res = await query(text)
+    await query(text)
         .then(res => {
             res.fields.forEach(fld => {
                 columns.push(String(fld.name));
@@ -28,7 +28,7 @@ async function getColumns(tableName, columns=[]) {
             return {tableName: columns};
         })
         .catch(err => {
-            return err;
+            throw err;
         });
 }
 
