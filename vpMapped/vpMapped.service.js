@@ -4,6 +4,7 @@ const pgUtil = require('_helpers/db_pg_util');
 var staticColumns = [];
 
 module.exports = {
+    importCSV,
     getColumns,
     getAll,
     getCount,

@@ -11,6 +11,7 @@ const errorHandler = require('_helpers/error-handler');
 // Space-delimited args
 var http = 0;
 var argPort = 0;
+var importFile = null;
 
 console.log(process.argv);
 
@@ -29,11 +30,16 @@ for (var i=0; i<process.argv.length; i++) {
 			http=2;
 			break;
         case "port":
-            argPort=process.argv[++i];
+            argPort = process.argv[++i];
             console.log(`argPort: ${argPort}`);
             break;
         case "prod":
             argPort=4321;
+            break;
+        case "import":
+            //importFile = process.argv[++i];
+            //if (!importFile) {importFile='~/data/import/vpmapped.csv';}
+            importFile='~/data/import/vpmapped.csv';
             break;
 	}
 }
@@ -59,3 +65,10 @@ if (argPort) srvPort = argPort;
 const server = app.listen(srvPort, function () {
     console.log('Server listening on port ' + srvPort);
 });
+
+if (importFile) {
+    console.log('importFile:', importFile);
+    const mappedService = require('vpMapped/vpMapped.service');
+    //mappedService.importCSV(importFile);
+    mappedService.importCSV();
+}
