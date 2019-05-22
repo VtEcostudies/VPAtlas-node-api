@@ -6,41 +6,40 @@ const path = require("path"); //needed to use paths relative to this file's loca
 const db = require('_helpers/db_postgres');
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
-const sqlVpMappedTypes = fs.readFileSync(path.resolve(__dirname, 'vpMapped.types.sql').toString('utf8'));
-const sqlVpMappedTable = fs.readFileSync(path.resolve(__dirname, 'vpMapped.table.sql')).toString('utf8');
-const sqlVpMappedImportCsv = fs.readFileSync(path.resolve(__dirname, 'vpMapped.import.sql')).toString('utf8');
+const sqlVpMappedTable = fs.readFileSync(path.resolve(__dirname, 'vpMapped.table.sql')).toString();
+const sqlVpMappedImportCsv = fs.readFileSync(path.resolve(__dirname, 'vpMapped.import.sql')).toString();
+const sqlUpgrade01 = fs.readFileSync(path.resolve(__dirname, 'vpMapped.upgrade01.sql')).toString();
 var staticColumns = [];
 
 module.exports = {
     initVpMapped,
-    createVpMappedTypes,
     createVpMappedTable,
-    importCSV
+    importCSV,
+    upgradeVpMapped
 };  
 
 async function initVpMapped() {
-        createVpMappedTable()
-            .then(res => {
-                pgUtil.getColumns("vpmapped", staticColumns);
-                importCSV()
-                    .then(res => {return res;})
-                    .catch(err => {return err;});
-            })
-            .catch(err => {
-                return err;
-            });
+    createVpMappedTable()
+        .then(res => {
+            pgUtil.getColumns("vpmapped", staticColumns);
+            importCSV()
+                .then(res => {return res;})
+                .catch(err => {return err;});
+        })
+        .catch(err => {
+            return err;
+        });
 }
 
-async function createVpMappedTypes() {
-    await query(sqlVpMappedTypes)
-    .then(res => {
-        console.log(`createVpMappedTypes() | res:`, res);
-        return res;
-    })
-    .catch(err => {
-        console.log(`createVpMappedTypes() | err:`, err.message);
-        throw err;
-    });
+//chain future upgrades together here
+async function upgradeVpMapped() {
+    upgrade01()
+        .then(res => {
+            return res;
+        })
+        .catch(err => {
+            return err;
+        });
 }
 
 async function createVpMappedTable() {
@@ -66,6 +65,19 @@ async function importCSV(csvFileName='vpmapped.20190520.csv') {
     })
     .catch(err => {
         console.log(`vpMapped.service.importCSV() | err:`, err.message);
+        throw err;
+    });
+}
+
+async function upgrade01() {
+    console.log('vpMapped.model.upgrade01 | query:', sqlUpgrade01);
+    await query(sqlUpgrade01)
+    .then(res => {
+        console.log(`upgrade01() | res:`, res);
+        return res;
+    })
+    .catch(err => {
+        console.log(`upgrade01() | err:`, err.message);
         throw err;
     });
 }

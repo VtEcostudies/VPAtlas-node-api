@@ -5,48 +5,13 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const jwt = require('_helpers/jwt');
 const errorHandler = require('_helpers/error-handler');
+const vpMappedModel = require('vpMapped/vpMapped.model.js');
 
 // Command-Line Arguments Processing
 // These are processed without prefixed "-"
 // Space-delimited args
 var http = 0;
 var argPort = 0;
-var init = 0;
-var importFile = null;
-
-console.log(process.argv);
-
-for (var i=0; i<process.argv.length; i++) {
-	switch(process.argv[i]) {
-		case "noauth":
-			noauth = 1;
-			break;
-		case "http":
-			http=1;
-			break;
-		case "https":
-			http=0;
-			break;
-		case "http2":
-			http=2;
-			break;
-        case "port":
-            argPort = process.argv[++i];
-            console.log(`argPort: ${argPort}`);
-            break;
-        case "prod":
-            argPort=4321;
-            break;
-        case "init":
-            init = 1;
-            break;
-        case "import":
-            //importFile = process.argv[++i];
-            //if (!importFile) {importFile='~/data/import/vpmapped.csv';}
-            importFile='~/data/import/vpmapped.csv';
-            break;
-	}
-}
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -63,20 +28,52 @@ app.use('/pools/mapped', require('./vpMapped/vpMapped.routes')); //postgres mapp
 // global error handler
 app.use(errorHandler);
 
+console.log('command-line arguments:', process.argv);
+
+for (var i=0; i<process.argv.length; i++) {
+    var all = process.argv[i].split('=');
+    var act = all[0];
+    var arg = all[1];
+    console.log(`command-line argument ${i}`, all);
+	switch(act) {
+		case "http":
+			http=1;
+			break;
+		case "https":
+			http=0;
+			break;
+		case "http2":
+			http=2;
+			break;
+        case "port":
+            argPort = arg;
+            break;
+        case "prod":
+            argPort=4321;
+            break;
+        case "init":
+            vpMappedModel.initVpMapped();
+            break;
+        case "upgrade":
+            vpMappedModel.upgradeVpMapped();
+            break;
+	}
+}
+
 // start server
 var srvPort = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
 if (argPort) srvPort = argPort;
 const server = app.listen(srvPort, function () {
     console.log('Server listening on port ' + srvPort);
 });
-
+/*
 if (init) {
     const vpMappedModel = require('vpMapped/vpMapped.model.js');
     vpMappedModel.initVpMapped();
 }
 
-if (importFile) {
-    console.log('importFile:', importFile);
+if (upgrade) {
     const vpMappedModel = require('vpMapped/vpMapped.model.js');
-    vpMappedModel.importCSV(importFile);
+    vpMappedModel.upgradeV01();
 }
+*/

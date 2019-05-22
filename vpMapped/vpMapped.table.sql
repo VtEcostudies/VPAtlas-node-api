@@ -1,6 +1,6 @@
-ALTER TABLE vpmapped DROP CONSTRAINT IF EXISTS vpmapped_pkey;
+--ALTER TABLE vpmapped DROP CONSTRAINT IF EXISTS vpmapped_pkey;
 
-ALTER TABLE IF EXISTS vpmapped RENAME TO vpmapped_2;
+--ALTER TABLE IF EXISTS vpmapped RENAME TO vpmapped_2;
 
 CREATE TABLE IF NOT EXISTS vpmapped
 (
