@@ -11,6 +11,7 @@ const errorHandler = require('_helpers/error-handler');
 // Space-delimited args
 var http = 0;
 var argPort = 0;
+var init = 0;
 var importFile = null;
 
 console.log(process.argv);
@@ -35,6 +36,9 @@ for (var i=0; i<process.argv.length; i++) {
             break;
         case "prod":
             argPort=4321;
+            break;
+        case "init":
+            init = 1;
             break;
         case "import":
             //importFile = process.argv[++i];
@@ -66,9 +70,13 @@ const server = app.listen(srvPort, function () {
     console.log('Server listening on port ' + srvPort);
 });
 
+if (init) {
+    const vpMappedModel = require('vpMapped/vpMapped.model.js');
+    vpMappedModel.initVpMapped();
+}
+
 if (importFile) {
     console.log('importFile:', importFile);
-    const mappedService = require('vpMapped/vpMapped.service');
-    //mappedService.importCSV(importFile);
-    mappedService.importCSV();
+    const vpMappedModel = require('vpMapped/vpMapped.model.js');
+    vpMappedModel.importCSV(importFile);
 }

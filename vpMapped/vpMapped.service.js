@@ -4,7 +4,6 @@ const pgUtil = require('_helpers/db_pg_util');
 var staticColumns = [];
 
 module.exports = {
-    importCSV,
     getColumns,
     getAll,
     getCount,
@@ -20,93 +19,11 @@ pgUtil.getColumns("vpmapped", staticColumns) //run it once on init: to create th
     .then(res => {return res;})
     .catch(err => {
         console.log(`vpMapped.service.pg.pgUtil.getColumns | error: `, err.message);
-        createVpMappedTable()
-            .then(res => {
-                pgUtil.getColumns("vpmapped", staticColumns);
-                importCSV()
-                    .then(res => {return res;})
-                    .catch(err => {return err;});
-            })
-            .catch(err => {
-                return err;
-            });
-        });
+    });
 
 function getColumns() {
     console.log(`vpMapped.service.pg.getColumns | staticColumns:`, staticColumns);
     return staticColumns;
-}
-
-async function createVpMappedTable() {
-    await query(
-    `
-    CREATE TYPE confidence AS ENUM ('L','ML','M','MH','H');
-    CREATE TYPE locationaccuracy AS ENUM ('L','ML','M','MH','H');
-
-    CREATE TABLE IF NOT EXISTS vpmapped
-    (
-        "mappedPoolId" text NOT NULL,
-        "mappedByUser" text,
-        "mappedByUserId" integer,
-        "mappedDateText" date,
-        "mappedDateUnixSeconds" bigint,
-        "mappedLatitude" real NOT NULL,
-        "mappedLongitude" real NOT NULL,
-        "mappedConfidence" confidence,
-        "mappedSource" text,
-        "mappedSource2" text,
-        "mappedPhotoNumber" text,
-        "mappedLocationAccuracy" locationaccuracy,
-        "mappedShape" text,
-        "mappedComments" text,
-        "createdAt" timestamp default now(),
-        "updatedAt" timestamp default now()
-    );
-    
-    ALTER TABLE vpmapped OWNER TO vpatlas;
-    ALTER TABLE vpmapped DROP CONSTRAINT IF EXISTS vpmapped_pkey;
-    ALTER TABLE vpmapped ADD CONSTRAINT vpmapped_pkey PRIMARY KEY ("mappedPoolId");
-    `)
-    .then(res => {
-        console.log(`createVpMappedTable() | res:`, res);
-        return res;
-    })
-    .catch(err => {
-        console.log(`createVpMappedTable() | err:`, err.message);
-        throw err;
-    });
-}
-
-async function importCSV(csvFileName='~/data/import/vpmapped.csv') {
-    await query(`
-    COPY vpmapped(
-        "mappedPoolId",
-        "mappedByUser",
-        "mappedByUserId",
-        "mappedDateText",
-        "mappedDateUnixSeconds",
-        "mappedLatitude",
-        "mappedLongitude",
-        "mappedConfidence",
-        "mappedSource",
-        "mappedSource2",
-        "mappedPhotoNumber",
-        "mappedLocationAccuracy",
-        "mappedShape",
-        "mappedComments",
-        "createdAt",
-        "updatedAt"        
-    )
-    FROM '${csvFileName}' DELIMITER ',' CSV HEADER;
-    `)
-    .then(res => {
-        console.log(`vpMapped.service.importCSV() | res:`, res);
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpMapped.service.importCSV() | err:`, err.message);
-        throw err;
-    });
 }
 
 async function getCount(body={}) {
