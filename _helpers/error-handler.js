@@ -2,7 +2,12 @@ module.exports = errorHandler;
 
 function errorHandler(err, req, res, next) {
     
-    console.log('error-handler.errorHandler', `err.name: ${err.name}`, `err.message: ${err.message}`,  `err.hint: ${err.hint}`);
+    console.log('error-handler.errorHandler',
+                `err.name: ${err.name}`,
+                `err.message: ${err.message}`,
+                `err.hint: ${err.hint}`,
+                `err.detail: ${err.detail}`
+                );
     
     var ret;
     

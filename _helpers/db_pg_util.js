@@ -8,11 +8,15 @@ module.exports = {
 }
 
 /*
-    Load just columns from the db and return as an object.
+    Load just columns from the db and return array of columns.
     
     CORRECTION: it DOES NOT WORK to return an array.
-    HOWEVER: it does work to pass by reference. Do that,
-    or use the object returned from here.
+    
+    HOWEVER: it does work to pass and array as an argument to
+    this funtion, by reference, and update that array here.
+    
+    OPTIONS: (1) Pass an empty array to be filled here, or
+    (2) Use the object returned from here.
     
  */
 async function getColumns(tableName, columns=[]) {

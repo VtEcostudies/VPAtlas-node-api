@@ -1,5 +1,8 @@
 /*
- NOTE: This is not implemented yet!
+ this module attempts to capture the process to create database elements, import
+ initial datasets, then migrate those db elements and datasets over time.
+ 
+ it is not foolproof. beware.
  */
 const fs = require('fs'); //uses process.cwd() as root for relative paths
 const path = require("path"); //needed to use paths relative to this file's location

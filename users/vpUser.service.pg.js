@@ -28,47 +28,8 @@ pgUtil.getColumns("vpuser", staticColumns)
     .then(res => {return res;})
     .catch(err => {
         console.log(`vpUser.service.pg.pgUtil.getColumns`, err.message);
-        createVpUserTable()
-            .then(res => {
-                pgUtil.getColumns("vpuser", staticColumns);
-                return res;
-            })
-            .catch(err => {return err;});
-        });
-
-/*
-    Create table vpusers in postgres.
-    Call pgUtil.getColumns when it's done.
- */
-async function createVpUserTable() {
-    await query(`
-        CREATE TABLE public.vpuser
-        (
-            "id" serial,
-            "username" text NOT NULL,
-            "hash" text NOT NULL,
-            "firstname" text NOT NULL,
-            "lastname" text NOT NULL,
-            "email" text NOT NULL,
-            "userrole" text NOT NULL,
-            "createdat" timestamp default now(),
-            "updatedat" timestamp default now(),
-            CONSTRAINT vpuser_pkey PRIMARY KEY ("username")
-        );
-        
-        ALTER TABLE public.vpuser
-            OWNER to vpatlas;
-    `)
-    .then(res => {
-        console.log(`createVpUserTable() | res:`, res);
-        return res;
-    })
-    .catch(err => {
-        console.log(`createVpUserTable() | err:`, err.message);
-        throw err;
     });
-}
-
+    
 async function authenticate(body) {
     if (!body.username || !body.password) {throw 'Username and password are required.';}
     const res = await query(`select * from vpuser where username=$1`, [body.username]);
@@ -127,7 +88,7 @@ async function getByUserName(username) {
 
 async function create(body) {
 
-    // hash password into body
+    // hash password, add to body object, delete password from body object
     if (body.password) {
         body.hash = bcrypt.hashSync(body.password, 10);
         delete body.password;
@@ -138,7 +99,17 @@ async function create(body) {
     var queryColumns = pgUtil.parseColumns(body, 1, [], staticColumns);
     text = `insert into vpuser (${queryColumns.named}) values (${queryColumns.numbered})`;
     console.log(text, queryColumns.values);
-    return await query(text, queryColumns.values);
+    await query(text, queryColumns.values)
+        .catch(err => {
+            console.log(err);
+            if (err.code == 23505 && err.constraint == 'vpuser_pkey') {
+                err.name = 'Uniqueness Constraint Violation';
+                err.hint = 'Please choose a different username.';
+                err.message = `username '${body.username}' is already taken.`;
+            }
+            throw err;
+            })
+        .then(res => {return res;});
 }
 
 async function update(id, body) {
