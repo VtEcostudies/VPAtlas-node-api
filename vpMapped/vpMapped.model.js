@@ -11,7 +11,7 @@ const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
 const sqlVpMappedTable = fs.readFileSync(path.resolve(__dirname, 'vpMapped.table.sql')).toString();
 const sqlVpMappedImportCsv = fs.readFileSync(path.resolve(__dirname, 'vpMapped.import.sql')).toString();
-const sqlUpgrade01 = fs.readFileSync(path.resolve(__dirname, 'vpMapped.upgrade01.sql')).toString();
+const sqlUpgrade01 = fs.readFileSync(path.resolve(__dirname, 'db.upgrade_1.sql')).toString();
 var staticColumns = [];
 
 module.exports = {
@@ -34,15 +34,33 @@ async function initVpMapped() {
         });
 }
 
-//chain future upgrades together here
+/*
+ chain upgrades together here
+ -query dbversion for last successful upgrade by upgrade name
+ -increment upgrade number from last successful
+ -use upgrade number to try the next one
+ */
 async function upgradeVpMapped() {
-    upgrade01()
-        .then(res => {
-            return res;
-        })
-        .catch(err => {
-            return err;
-        });
+    const nextQuery = 'SELECT max("dbVersionId") AS "dbVersionId" FROM dbversion;';
+    await query(nextQuery)
+    .then(res => {
+        var next = Number(res.rows[0].dbVersionId);
+        next++;
+        console.log('vpMapped.model.upgradeVpMapped | next upgrade Id:', next);
+        try_upgrade(next)
+            .then(res => {
+                console.log(res);
+                return res;
+            })
+            .catch(err => {
+                console.log(err);
+                return err;
+            });
+    })
+    .catch(err => {
+        console.log('vpMapped.model.upgradeVpMapped | err:', err);
+        return err;
+    });
 }
 
 async function createVpMappedTable() {
@@ -81,6 +99,26 @@ async function upgrade01() {
     })
     .catch(err => {
         console.log(`upgrade01() | err:`, err.message);
+        throw err;
+    });
+}
+
+async function try_upgrade(next) {
+    const upgradeFile = path.resolve(__dirname, `db.upgrade_${next}.sql`);
+    if (!fs.existsSync(upgradeFile)) {        
+        throw `Error: ${upgradeFile} does not exist.`;
+    }
+    const sqlUpgrade = fs.readFileSync(upgradeFile).toString();
+    console.log(`vpMapped.model.upgrade_${next} | query:`, sqlUpgrade);
+    await query(sqlUpgrade)
+    .then(res => {
+        console.log(`vpMapped.model.upgrade_${next} | res:`, res);
+        return query (`INSERT INTO dbversion
+                    ("dbVersionId","dbUpgradeName","dbUpgradeScript")
+                    VALUES (${next},${upgradeFile},${sqlUpgrade})`);
+    })
+    .catch(err => {
+        console.log(`vpMapped.model.upgrade_${next} | err:`, err.message);
         throw err;
     });
 }

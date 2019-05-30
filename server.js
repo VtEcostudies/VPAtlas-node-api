@@ -6,6 +6,7 @@ const bodyParser = require('body-parser');
 const jwt = require('_helpers/jwt');
 const errorHandler = require('_helpers/error-handler');
 const vpMappedModel = require('vpMapped/vpMapped.model.js');
+const vtInfoModel = require('vtInfo/vtInfo.model.js');
 
 // Command-Line Arguments Processing
 // These are processed without prefixed "-"
@@ -24,6 +25,7 @@ app.use(jwt());
 //app.use('/users', require('./users/users.controller')); //mongo user db
 app.use('/users', require('./users/vpUser.routes.pg')); //postgres user db
 app.use('/pools/mapped', require('./vpMapped/vpMapped.routes')); //postgres mapped pools db
+app.use('/vtinfo', require('./vtInfo/vtInfo.routes')); //postgres vermont data - counties, towns, etc.
 
 // global error handler
 app.use(errorHandler);
@@ -55,8 +57,20 @@ for (var i=0; i<process.argv.length; i++) {
             vpMappedModel.initVpMapped();
             break;
         case "upgrade":
-            vpMappedModel.upgradeVpMapped();
-            break;
+            switch(arg) {
+                case "mapped":
+                case "vpmapped":
+                    vpMappedModel.upgradeVpMapped();
+                    break;
+                case "county":
+                case "counties":
+                    vtInfoModel.importCounties();
+                    break;
+                case "town":
+                case "towns":
+                    vtInfoModel.importTowns();
+                    break;
+            }
 	}
 }
 
@@ -66,14 +80,3 @@ if (argPort) srvPort = argPort;
 const server = app.listen(srvPort, function () {
     console.log('Server listening on port ' + srvPort);
 });
-/*
-if (init) {
-    const vpMappedModel = require('vpMapped/vpMapped.model.js');
-    vpMappedModel.initVpMapped();
-}
-
-if (upgrade) {
-    const vpMappedModel = require('vpMapped/vpMapped.model.js');
-    vpMappedModel.upgradeV01();
-}
-*/
