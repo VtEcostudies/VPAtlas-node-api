@@ -35,7 +35,9 @@ async function getCount(body={}) {
 
 async function getAll(body={}) {
     const where = pgUtil.whereClause(body, staticColumns);
-    const text = `select * from vpmapped ${where.text};`;
+    const text = `select vpmapped.*, to_json(vptown) as "mappedTown"
+                from vpmapped inner join vptown on vpmapped."mappedTownId"=vptown."townId"
+                ${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
@@ -51,13 +53,19 @@ async function getPage(page, params={}) {
         orderClause = `order by "${col}" ${dir}`;
     }
     var where = pgUtil.whereClause(params, staticColumns); //whereClause filters output against vpmapped.columns
-    const text = `select (select count(*) from vpmapped ${where.text}),* from vpmapped ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
+    const text = `select (select count(*) from vpmapped ${where.text}),
+                vpmapped.*,
+                to_json(vptown) as "mappedTown"
+                from vpmapped inner join vptown on vpmapped."mappedTownId"=vptown."townId"
+                ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
 
 async function getById(id) {
-    return await query(`select * from vpmapped where "mappedPoolId"=$1;`, [id])
+    return await query(`select vpmapped.*,to_json(vptown) as "mappedTown" from vpmapped
+                       inner join vptown on vpmapped."mappedTownId"=vptown."townId"
+                       where "mappedPoolId"=$1;`, [id])
 }
 
 async function create(body) {
