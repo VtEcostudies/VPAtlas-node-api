@@ -1,4 +1,18 @@
 /*
+ * NOTE: this had to be done by hand - code that uses this file
+ * depends upon the table to exist.
+ * 
+--Create a database version table to handle those
+CREATE TABLE dbversion (
+	"dbVersionId" INTEGER,
+	"dbUpgradeFileName" TEXT,
+	"dbUpgradeScript" TEXT,
+	PRIMARY KEY ("dbVersionId")
+);
+
+INSERT INTO dbversion ("dbVersionId","dbUpgradeFileName") VALUES (1,'db.upgrade_1.sql');
+*/
+/*
 Remove from Add Pool Form (db - make not required):
 	Confidence
 	Location Accuracy
@@ -23,6 +37,8 @@ Add to Add Pool Form (db - add columns, etc.)
 		If yes: goto vpVisit Add Pool form
 */
 
+CREATE EXTENSION IF NOT EXISTS postgis SCHEMA public;
+	
 --create a table of Vermont Counties with PostGIS fields for centroid and border
 CREATE TABLE vpcounty (
 	"countyId" INTEGER NOT NULL,
@@ -64,16 +80,6 @@ ALTER TABLE vpmapped ADD CONSTRAINT "fk_town_id" FOREIGN KEY ("mappedTownId") RE
 --a border will not be known. However, those values are stored here, not in vpVisit or vpMonitor.
 SELECT AddGeometryColumn('public', 'vpmapped', 'mappedLocation', -1, 'POINT', 2);
 SELECT AddGeometryColumn('public', 'vpmapped', 'mappedPoolBorder', -1, 'MULTIPOLYGON', 2);
-
---Create a database version table to handle those
-CREATE TABLE dbversion (
-	"dbVersionId" INTEGER,
-	"dbUpgradeFileName" TEXT,
-	"dbUpgradeScript" TEXT,
-	PRIMARY KEY ("dbVersionId")
-);
-
-INSERT INTO dbversion ("dbVersionId","dbUpgradeFileName") VALUES (1,'db.upgrade_1.sql');
 
 UPDATE vpmapped SET "mappedPhotoNumber"=null WHERE "mappedPhotoNumber" = ' ';
 UPDATE vpmapped SET "mappedMethod"='Known/Probable' WHERE "mappedPoolId" LIKE '%KWN%'
