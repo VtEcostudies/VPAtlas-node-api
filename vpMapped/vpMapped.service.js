@@ -16,7 +16,10 @@ module.exports = {
 
 //file scope list of vpmapped table columns retrieved on app startup (see 'getColumns()' below)
 pgUtil.getColumns("vpmapped", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {return res;})
+    .then(res => {
+        staticColumns.push(`vptown."townName"`); //Add this for town filter query
+        return res;
+    })
     .catch(err => {
         console.log(`vpMapped.service.pg.pgUtil.getColumns | error: `, err.message);
     });

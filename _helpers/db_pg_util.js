@@ -68,7 +68,11 @@ function whereClause(params={}, staticColumns=[]) {
                 if (where == '') where = 'where';
                 values.push(params[key]);
                 if (idx > 1) where += ' AND ';
-                where += ` "${col}" ${opr} $${idx++}`;
+                if (col.includes(`."`)) {
+                  where += ` ${col} ${opr} $${idx++}`;
+                } else {
+                  where += ` "${col}" ${opr} $${idx++}`;
+                }
             }
         }
     }
