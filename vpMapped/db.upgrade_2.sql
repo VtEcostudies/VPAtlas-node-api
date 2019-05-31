@@ -82,8 +82,8 @@ SELECT AddGeometryColumn('public', 'vpmapped', 'mappedLocation', -1, 'POINT', 2)
 SELECT AddGeometryColumn('public', 'vpmapped', 'mappedPoolBorder', -1, 'MULTIPOLYGON', 2);
 
 UPDATE vpmapped SET "mappedPhotoNumber"=null WHERE "mappedPhotoNumber" = ' ';
-UPDATE vpmapped SET "mappedMethod"='Known/Probable' WHERE "mappedPoolId" LIKE '%KWN%'
-UPDATE vpmapped SET "mappedMethod"='Aerial/Potential' WHERE "mappedPoolId" NOT LIKE '%KWN%'
+UPDATE vpmapped SET "mappedMethod"='Known/Probable' WHERE "mappedPoolId" LIKE '%KWN%';
+UPDATE vpmapped SET "mappedMethod"='Aerial/Potential' WHERE "mappedPoolId" NOT LIKE '%KWN%';
 
 --all these were changed in create statements above, and were used during development
 /*
