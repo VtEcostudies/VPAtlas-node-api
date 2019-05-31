@@ -67,7 +67,7 @@ INSERT INTO vptown ("townName", "townId", "townCountyId") VALUES ('Unknown', 0, 
 --Create new fields for entering new pools as per conversation with Alex and Steve
 --CREATE TYPE distanceunits AS ENUM ('Feet', 'Yards', 'Meters');
 CREATE TYPE methodmapped AS ENUM ('Aerial/Potential', 'Known/Probable');
-ALTER TABLE vpmapped ADD COLUMN "mappedMethod" mappedmethod;
+ALTER TABLE vpmapped ADD COLUMN "mappedMethod" methodmapped;
 ALTER TABLE vpmapped ADD COLUMN "mappedlocationInfoDirections" TEXT;
 ALTER TABLE vpmapped ADD COLUMN "mappedLandownerKnown" BOOLEAN DEFAULT false;
 ALTER TABLE vpmapped ADD COLUMN "mappedLandownerInfo" TEXT;
