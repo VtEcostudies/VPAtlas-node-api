@@ -1,14 +1,9 @@
 /*
-Add to Create/Update Pool Form:
-	mappedLandownerPermisssion
-	mappedLandowner
-	mappedLandowner
-	mappedLandowner
 	...
 */
 ALTER TABLE vpmapped RENAME COLUMN "mappedLandownerKnown" TO "mappedLandownerPermission";
-ALTER TABLE vpmapped RENAME COLUMN "vpMappedLocation" TO "mappedPoolLocation";
-ALTER TABLE vpmapped RENAME COLUMN "vpMappedPoolBorder" TO "mappedPoolBorder";
+--ALTER TABLE vpmapped RENAME COLUMN "mappedLocation" TO "mappedPoolLocation";
+--ALTER TABLE vpmapped RENAME COLUMN "mappedBorder" TO "mappedPoolBorder";
 
 ALTER TABLE vpmapped ADD COLUMN "mappedLandownerName" TEXT;
 ALTER TABLE vpmapped ADD COLUMN "mappedLandownerAddress" TEXT;
@@ -24,3 +19,7 @@ CREATE TYPE poolStatus AS ENUM ('Potential', 'Probable', 'Confirmed', 'Eliminate
 ALTER TABLE vpmapped ADD COLUMN "mappedPoolStatus" poolStatus DEFAULT 'Potential';
 UPDATE vpmapped SET "mappedPoolStatus"='Probable' WHERE "mappedPoolId" LIKE '%KWN%';
 
+ALTER TABLE vpcounty RENAME COLUMN "vpCountyCentroid" TO "countyCentroid";
+ALTER TABLE vpcounty RENAME COLUMN "vpCountyBorder" TO "countyBorder";
+ALTER TABLE vptown RENAME COLUMN "vpTownCentroid" TO "townCentroid";
+ALTER TABLE vptown RENAME COLUMN "vpTownBorder" TO "townBorder";
