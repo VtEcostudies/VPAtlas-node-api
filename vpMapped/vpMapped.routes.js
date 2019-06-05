@@ -49,13 +49,13 @@ function create(req, res, next) {
     console.log(`create req.body:`);
     console.dir(req.body);
     poolService.create(req.body)
-        .then(() => res.json({}))
+        .then((pool) => res.json(pool))
         .catch(err => next(err));
 }
 
 function update(req, res, next) {
     poolService.update(req.params.id, req.body)
-        .then(() => res.json({}))
+        .then((pool) => res.json(pool))
         .catch(err => next(err));
 }
 

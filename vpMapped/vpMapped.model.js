@@ -114,7 +114,7 @@ async function try_upgrade(next) {
     .then(res => {
         console.log(`vpMapped.model.upgrade_${next} | res:`, res);
         return query (`INSERT INTO dbversion
-                    ("dbVersionId","dbUpgradeName","dbUpgradeScript")
+                    ("dbVersionId","dbUpgradeFileName","dbUpgradeScript")
                     VALUES (${next},${upgradeFile},${sqlUpgrade})`);
     })
     .catch(err => {

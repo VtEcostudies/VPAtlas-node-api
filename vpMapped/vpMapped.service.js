@@ -73,15 +73,17 @@ async function getById(id) {
 
 async function create(body) {
     var queryColumns = pgUtil.parseColumns(body, 1, [], staticColumns);
-    text = `insert into vpmapped (${queryColumns.named}) values (${queryColumns.numbered})`;
+    text = `insert into vpmapped (${queryColumns.named}) values (${queryColumns.numbered}) returning "mappedPoolId"`;
     console.log(text, queryColumns.values);
-    return await query(text, queryColumns.values);
+    var res = await query(text, queryColumns.values);
+    console.log('vpMapped.service.create | returning: ', res);
+    return res;
 }
 
 async function update(id, body) {
     console.log(`vpMapped.service.update | before pgUtil.parseColumns`, staticColumns);
     var queryColumns = pgUtil.parseColumns(body, 2, [id], staticColumns);
-    text = `update vpmapped set (${queryColumns.named}) = (${queryColumns.numbered}) where "mappedPoolId"=$1;`;
+    text = `update vpmapped set (${queryColumns.named}) = (${queryColumns.numbered}) where "mappedPoolId"=$1 returning "mappedPoolId"`;
     console.log(text, queryColumns.values);
     return await query(text, queryColumns.values);
 }
