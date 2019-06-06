@@ -2,6 +2,7 @@
 	...
 */
 ALTER TABLE vpmapped RENAME COLUMN "mappedLandownerKnown" TO "mappedLandownerPermission";
+--the following only applied to the dev env. prod was already correct.
 --ALTER TABLE vpmapped RENAME COLUMN "mappedLocation" TO "mappedPoolLocation";
 --ALTER TABLE vpmapped RENAME COLUMN "mappedBorder" TO "mappedPoolBorder";
 
@@ -19,7 +20,8 @@ CREATE TYPE poolStatus AS ENUM ('Potential', 'Probable', 'Confirmed', 'Eliminate
 ALTER TABLE vpmapped ADD COLUMN "mappedPoolStatus" poolStatus DEFAULT 'Potential';
 UPDATE vpmapped SET "mappedPoolStatus"='Probable' WHERE "mappedPoolId" LIKE '%KWN%';
 
-ALTER TABLE vpcounty RENAME COLUMN "vpCountyCentroid" TO "countyCentroid";
-ALTER TABLE vpcounty RENAME COLUMN "vpCountyBorder" TO "countyBorder";
-ALTER TABLE vptown RENAME COLUMN "vpTownCentroid" TO "townCentroid";
-ALTER TABLE vptown RENAME COLUMN "vpTownBorder" TO "townBorder";
+--the following only applied to the dev env. prod was already correct.
+--ALTER TABLE vpcounty RENAME COLUMN "vpCountyCentroid" TO "countyCentroid";
+--ALTER TABLE vpcounty RENAME COLUMN "vpCountyBorder" TO "countyBorder";
+--ALTER TABLE vptown RENAME COLUMN "vpTownCentroid" TO "townCentroid";
+--ALTER TABLE vptown RENAME COLUMN "vpTownBorder" TO "townBorder";
