@@ -20,7 +20,7 @@ UPDATE vpmapped SET "mappedComments" = "mappedComments" || ' - original mappedBy
 UPDATE vpmapped SET "mappedByUser" = 'KNOWN' WHERE "mappedByUser" is null;
 --select * from vpmapped where "mappedDateText" is null AND "mappedDateUnixSeconds" = -2209161600;
 UPDATE vpmapped SET "mappedComments" = "mappedComments" || ' - original text date was zero' WHERE "mappedDateText" is null;
-UPDATE vpmapped SET "mappedDateText"='01/01/1970',"mappedDateUnixSeconds"=0 WHERE "mappedDateText" is null;
+UPDATE vpmapped SET "mappedDateText"='01/01/1900',"mappedDateUnixSeconds"=0 WHERE "mappedDateText" is null;
 
 ALTER TABLE vpmapped ALTER COLUMN "mappedConfidence" SET NOT NULL;
 ALTER TABLE vpmapped ALTER COLUMN "mappedLocationAccuracy" SET NOT NULL;

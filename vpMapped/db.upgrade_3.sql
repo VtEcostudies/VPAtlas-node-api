@@ -1,6 +1,4 @@
-/*
-	...
-*/
+--NOTE: DON'T USE BACKSLASH COMMENTS IN THESE SCRIPTS. IT CAUSES ERRORS.
 ALTER TABLE vpmapped RENAME COLUMN "mappedLandownerKnown" TO "mappedLandownerPermission";
 --the following only applied to the dev env. prod was already correct.
 --ALTER TABLE vpmapped RENAME COLUMN "mappedLocation" TO "mappedPoolLocation";
