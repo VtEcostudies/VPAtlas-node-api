@@ -4,6 +4,7 @@ CREATE TABLE public.vpuser
 	"username" text NOT NULL,
 	"hash" text NOT NULL,
 	"firstname" text NOT NULL,
+	"middlename" text,
 	"lastname" text NOT NULL,
 	"email" text NOT NULL,
 	"userrole" text NOT NULL,

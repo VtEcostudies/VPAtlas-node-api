@@ -5,8 +5,9 @@ var staticColumns = [];
 
 module.exports = {
     getColumns,
-    getAll,
     getCount,
+    getStats,
+    getAll,
     getPage,
     getById,
     create,
@@ -34,6 +35,17 @@ async function getCount(body={}) {
     const text = `select count(*) from vpmapped ${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
+}
+
+async function getStats() {
+    const text = `select 
+(select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Potential') as potential,
+(select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Probable') as probable,
+(select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Confirmed') as confirmed,
+(select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Duplicate') as duplicate,
+(select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Eliminated') as eliminated,
+(select 49) as monitored;`;
+    return await query(text);
 }
 
 async function getAll(body={}) {

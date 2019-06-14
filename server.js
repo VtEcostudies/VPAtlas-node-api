@@ -24,8 +24,9 @@ app.use(jwt());
 // api routes
 //app.use('/users', require('./users/users.controller')); //mongo user db
 app.use('/users', require('./users/vpUser.routes.pg')); //postgres user db
-app.use('/pools/mapped', require('./vpMapped/vpMapped.routes')); //postgres mapped pools db
 app.use('/vtinfo', require('./vtInfo/vtInfo.routes')); //postgres vermont data - counties, towns, etc.
+app.use('/pools/mapped', require('./vpMapped/vpMapped.routes')); //postgres mapped pools db
+app.use('/pools/visit', require('./vpVisit/vpVisit.routes')); //postgres pool visits db
 
 // global error handler
 app.use(errorHandler);

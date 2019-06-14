@@ -1,9 +1,8 @@
-truncate table vpvisit;
-
 COPY vpvisit
 (
 "visitIdLegacy",
 "visitUserName",
+"visitPoolId",
 "visitNavMethod",
 "visitCertainty",
 "visitLocatePool",
@@ -70,9 +69,5 @@ COPY vpvisit
 "visitFishSizeSmall",
 "visitFishSizeMedium",
 "visitFishSizeLarge",
-"visitPoolPhoto",
-"visitPoolId",
-"visitUserId",
-"createdAt",
-"updatedAt"
-) FROM 'C:\Users\jloomis\Documents\VCE\VPAtlas\vpAtlas-node-api\database\vpvisit.20190608.csv' DELIMITER ',' CSV HEADER;
+"visitPoolPhoto"
+) FROM 'C:\Users\jloomis\Documents\VCE\VPAtlas\vpAtlas-node-api\database\vpvisit.20190611.csv' DELIMITER ',' CSV HEADER;

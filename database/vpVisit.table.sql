@@ -1,10 +1,13 @@
-DROP TABLE vpvisit;
+DROP TABLE IF EXISTS vpvisit;
+
+DROP SEQUENCE IF EXISTS vpvisit_visitId_seq;
 
 CREATE TABLE vpvisit
 (
     "visitId" SERIAL,
     "visitIdLegacy" INTEGER,
     "visitUserName" TEXT,
+    "visitPoolId" TEXT,
     "visitNavMethod" TEXT,
     "visitCertainty" TEXT,
     "visitLocatePool" TEXT,
@@ -72,7 +75,6 @@ CREATE TABLE vpvisit
     "visitFishSizeMedium" REAL,
     "visitFishSizeLarge" REAL,
     "visitPoolPhoto" TEXT,
-    "visitPoolId" TEXT,
     "visitUserId" INTEGER DEFAULT 0,
 	"createdAt" TIMESTAMP DEFAULT NOW(),
 	"updatedAt" TIMESTAMP DEFAULT NOW(),
