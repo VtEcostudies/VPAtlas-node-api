@@ -87,9 +87,18 @@ async function create(body) {
     var queryColumns = pgUtil.parseColumns(body, 1, [], staticColumns);
     text = `insert into vpmapped (${queryColumns.named}) values (${queryColumns.numbered}) returning "mappedPoolId"`;
     console.log(text, queryColumns.values);
-    var res = await query(text, queryColumns.values);
-    console.log('vpMapped.service.create | returning: ', res);
-    return res;
+    return await query(text, queryColumns.values);
+/*
+            .catch(err => {
+            console.log(err);
+            if (err.code == 23505 && err.constraint == 'vpmapped_pkey') {
+                err.name = 'UniquenessConstraintViolation';
+                err.message = `Pool ID '${body.mappedPoolId}' is already taken. Please choose a different Pool ID.`; 
+            }
+            throw err;
+            })
+        .then(res => {return res;});
+*/
 }
 
 async function update(id, body) {
@@ -98,6 +107,20 @@ async function update(id, body) {
     text = `update vpmapped set (${queryColumns.named}) = (${queryColumns.numbered}) where "mappedPoolId"=$1 returning "mappedPoolId"`;
     console.log(text, queryColumns.values);
     return await query(text, queryColumns.values);
+/*
+            .catch(err => {
+            console.log(err);
+            if (err.code == 23505 && err.constraint == 'vpmapped_pkey') {
+                err.name = 'UniquenessConstraintViolation';
+                err.message = `Pool ID '${body.mappedPoolId}' is already taken. Please choose a different Pool ID.`; 
+            }
+            throw err;
+            })
+        .then(res => {
+            console.log('vpMapped.service.update | returning: ', res);
+            return res;
+            });
+*/
 }
 
 async function _delete(id) {

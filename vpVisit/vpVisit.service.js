@@ -36,14 +36,24 @@ async function getCount(body={}) {
     return await query(text, where.values);
 }
 
-async function getAll(body={}) {
-    const where = pgUtil.whereClause(body, staticColumns);
+async function getAll(params={}) {
+    var orderClause = 'order by "visitId"';
+    if (params.orderBy) {
+        var col = params.orderBy.split("|")[0];
+        var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';
+        orderClause = `order by "${col}" ${dir}`;
+    }
+    const where = pgUtil.whereClause(params, staticColumns);
     const text = `select (select count(*) from vpvisit ${where.text}),
-                vpvisit.*, vpmapped.*, to_json(vptown) as "mappedTown"
+                vpvisit.*, vpmapped.*, to_json(vptown) as "mappedTown",
+				vpvisit."updatedAt" as "visitUpdatedAt",
+				vpvisit."createdAt" as "visitCreatedAt",
+				vpmapped."updatedAt" as "mappedUpdatedAt",
+				vpmapped."createdAt" as "mappedCreatedAt"
                 from vpvisit
                 inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
                 inner join vptown on vpmapped."mappedTownId"=vptown."townId"
-                ${where.text};`;
+                ${where.text} ${orderClause};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
@@ -52,7 +62,7 @@ async function getPage(page, params={}) {
     page = Number(page) ? Number(page) : 1;
     const pageSize = Number(params.pageSize) ? Number(params.pageSize) : 10;
     const offset = (page-1) * pageSize;
-    var orderClause = '';
+    var orderClause = 'order by "visitId"';
     if (params.orderBy) {
         var col = params.orderBy.split("|")[0];
         var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';
@@ -60,7 +70,11 @@ async function getPage(page, params={}) {
     }
     var where = pgUtil.whereClause(params, staticColumns); //whereClause filters output against vpvisit.columns
     const text = `select (select count(*) from vpvisit ${where.text}),
-                vpvisit.*, vpmapped.*, to_json(vptown) as "mappedTown"
+                vpvisit.*, vpmapped.*, to_json(vptown) as "mappedTown",
+				vpvisit."updatedAt" as "visitUpdatedAt",
+				vpvisit."createdAt" as "visitCreatedAt",
+				vpmapped."updatedAt" as "mappedUpdatedAt",
+				vpmapped."createdAt" as "mappedCreatedAt"
                 from vpvisit
                 inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
                 inner join vptown on vpmapped."mappedTownId"=vptown."townId"
@@ -70,7 +84,11 @@ async function getPage(page, params={}) {
 }
 
 async function getById(id) {
-    const text = `select vpvisit.*, vpmapped.*, to_json(vptown) as "mappedTown"
+    const text = `select vpvisit.*, vpmapped.*, to_json(vptown) as "mappedTown",
+				vpvisit."updatedAt" as "visitUpdatedAt",
+				vpvisit."createdAt" as "visitCreatedAt",
+				vpmapped."updatedAt" as "mappedUpdatedAt",
+				vpmapped."createdAt" as "mappedCreatedAt"
                 from vpvisit
                 inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
                 inner join vptown on vpmapped."mappedTownId"=vptown."townId"

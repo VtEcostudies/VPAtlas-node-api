@@ -56,13 +56,28 @@ function create(req, res, next) {
     console.dir(req.body);
     service.create(req.body)
         .then((item) => res.json(item))
-        .catch(err => next(err));
+        .catch(err => {
+            console.log('vpVisit.routes.create | error: ' , err);
+            if (err.code == 23505 && err.constraint == 'vpvisit_pkey') {
+                err.name = 'UniquenessConstraintViolation';
+                err.message = `Visit ID '${req.body.visitId}' is already taken. Please choose a different Visit ID.`; 
+            }
+            next(err);
+        });
 }
 
 function update(req, res, next) {
+    console.log('vpVisit.routes.update', req.body);
     service.update(req.params.id, req.body)
         .then((item) => res.json(item))
-        .catch(err => next(err));
+        .catch(err => {
+            console.log('vpVisit.routes.update | error: ' , err);
+            if (err.code == 23505 && err.constraint == 'vpvisit_pkey') {
+                err.name = 'UniquenessConstraintViolation';
+                err.message = `Visit ID '${req.body.visitId}' is already taken. Please choose a different Visit ID.`; 
+            }
+            next(err);
+        });
 }
 
 function _delete(req, res, next) {

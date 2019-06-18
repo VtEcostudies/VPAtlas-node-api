@@ -57,13 +57,25 @@ function create(req, res, next) {
     console.dir(req.body);
     poolService.create(req.body)
         .then((pool) => res.json(pool))
-        .catch(err => next(err));
+        .catch(err => {
+            if (err.code == 23505 && err.constraint == 'vpmapped_pkey') {
+                err.name = 'UniquenessConstraintViolation';
+                err.message = `Pool ID '${req.body.mappedPoolId}' is already taken. Please choose a different Pool ID.`; 
+            }
+            next(err);
+        });
 }
 
 function update(req, res, next) {
     poolService.update(req.params.id, req.body)
         .then((pool) => res.json(pool))
-        .catch(err => next(err));
+        .catch(err => {
+            if (err.code == 23505 && err.constraint == 'vpmapped_pkey') {
+                err.name = 'UniquenessConstraintViolation';
+                err.message = `Pool ID '${req.body.mappedPoolId}' is already taken. Please choose a different Pool ID.`; 
+            }
+            next(err);
+        });
 }
 
 function _delete(req, res, next) {

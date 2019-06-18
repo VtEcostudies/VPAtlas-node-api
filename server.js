@@ -29,6 +29,7 @@ app.use('/pools/mapped', require('./vpMapped/vpMapped.routes')); //postgres mapp
 app.use('/pools/visit', require('./vpVisit/vpVisit.routes')); //postgres pool visits db
 
 // global error handler
+//NOTE: this causes error when http status is set in handler. No solution yet.
 app.use(errorHandler);
 
 console.log('command-line arguments:', process.argv);
