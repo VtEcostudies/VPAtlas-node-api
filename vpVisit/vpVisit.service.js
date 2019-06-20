@@ -49,7 +49,10 @@ async function getAll(params={}) {
 				vpvisit."updatedAt" as "visitUpdatedAt",
 				vpvisit."createdAt" as "visitCreatedAt",
 				vpmapped."updatedAt" as "mappedUpdatedAt",
-				vpmapped."createdAt" as "mappedCreatedAt"
+				vpmapped."createdAt" as "mappedCreatedAt",
+                vpvisit."visitPoolId" as "poolId",
+                vpvisit."visitLatitude" as "latitude",
+                vpvisit."visitLongitude" as "longitude"
                 from vpvisit
                 inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
                 inner join vptown on vpmapped."mappedTownId"=vptown."townId"
@@ -74,7 +77,10 @@ async function getPage(page, params={}) {
 				vpvisit."updatedAt" as "visitUpdatedAt",
 				vpvisit."createdAt" as "visitCreatedAt",
 				vpmapped."updatedAt" as "mappedUpdatedAt",
-				vpmapped."createdAt" as "mappedCreatedAt"
+				vpmapped."createdAt" as "mappedCreatedAt",
+                vpvisit."visitPoolId" as "poolId",
+                vpvisit."visitLatitude" as "latitude",
+                vpvisit."visitLongitude" as "longitude"
                 from vpvisit
                 inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
                 inner join vptown on vpmapped."mappedTownId"=vptown."townId"
@@ -88,7 +94,10 @@ async function getById(id) {
 				vpvisit."updatedAt" as "visitUpdatedAt",
 				vpvisit."createdAt" as "visitCreatedAt",
 				vpmapped."updatedAt" as "mappedUpdatedAt",
-				vpmapped."createdAt" as "mappedCreatedAt"
+				vpmapped."createdAt" as "mappedCreatedAt",
+                vpvisit."visitPoolId" as "poolId",
+                vpvisit."visitLatitude" as "latitude",
+                vpvisit."visitLongitude" as "longitude"
                 from vpvisit
                 inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
                 inner join vptown on vpmapped."mappedTownId"=vptown."townId"
