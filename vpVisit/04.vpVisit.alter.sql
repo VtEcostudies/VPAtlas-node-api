@@ -119,3 +119,11 @@ ALTER TABLE vpvisit ADD COLUMN "visitFairyShrimpPhoto" TEXT;
 ALTER TABLE vpvisit ADD COLUMN "visitFairyShrimpNotes" TEXT;
 ALTER TABLE vpvisit ADD COLUMN "visitFingerNailClamsPhoto" TEXT;
 ALTER TABLE vpvisit ADD COLUMN "visitFingerNailClamsNotes" TEXT;
+ALTER TABLE vpvisit ADD COLUMN "visitNavMethodOther" TEXT;
+ALTER TABLE vpvisit ADD COLUMN "visitPoolTypeOther" TEXT;
+ALTER TABLE vpvisit ADD COLUMN "visitSubstrateOther" TEXT;
+
+ALTER TABLE vpvisit ADD COLUMN "visitSpeciesOtherName" TEXT;
+ALTER TABLE vpvisit ADD COLUMN "visitSpeciesOtherCount" INTEGER DEFAULT 0;
+ALTER TABLE vpvisit ADD COLUMN "visitSpeciesOtherPhoto" TEXT;
+ALTER TABLE vpvisit ADD COLUMN "visitSpeciesOtherNotes" TEXT;
