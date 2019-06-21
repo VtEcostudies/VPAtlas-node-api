@@ -50,7 +50,11 @@ async function getStats() {
 
 async function getAll(body={}) {
     const where = pgUtil.whereClause(body, staticColumns);
-    const text = `select vpmapped.*, to_json(vptown) as "mappedTown"
+    const text = `select vpmapped.*, 
+                vpmapped."mappedLatitude" as "latitude",
+                vpmapped."mappedLongitude" as "longitude",
+                vpmapped."mappedPoolId" as "poolId",
+                to_json(vptown) as "mappedTown"
                 from vpmapped inner join vptown on vpmapped."mappedTownId"=vptown."townId"
                 ${where.text};`;
     console.log(text, where.values);
@@ -70,6 +74,9 @@ async function getPage(page, params={}) {
     var where = pgUtil.whereClause(params, staticColumns); //whereClause filters output against vpmapped.columns
     const text = `select (select count(*) from vpmapped ${where.text}),
                 vpmapped.*,
+                vpmapped."mappedLatitude" as "latitude",
+                vpmapped."mappedLongitude" as "longitude",
+                vpmapped."mappedPoolId" as "poolId",
                 to_json(vptown) as "mappedTown"
                 from vpmapped inner join vptown on vpmapped."mappedTownId"=vptown."townId"
                 ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
@@ -78,9 +85,13 @@ async function getPage(page, params={}) {
 }
 
 async function getById(id) {
-    return await query(`select vpmapped.*,to_json(vptown) as "mappedTown" from vpmapped
-                       inner join vptown on vpmapped."mappedTownId"=vptown."townId"
-                       where "mappedPoolId"=$1;`, [id])
+    return await query(`select vpmapped.*,
+                vpmapped."mappedLatitude" as "latitude",
+                vpmapped."mappedLongitude" as "longitude",
+                vpmapped."mappedPoolId" as "poolId",
+                to_json(vptown) as "mappedTown"
+                from vpmapped inner join vptown on vpmapped."mappedTownId"=vptown."townId"
+                where "mappedPoolId"=$1;`, [id])
 }
 
 async function create(body) {
@@ -88,17 +99,6 @@ async function create(body) {
     text = `insert into vpmapped (${queryColumns.named}) values (${queryColumns.numbered}) returning "mappedPoolId"`;
     console.log(text, queryColumns.values);
     return await query(text, queryColumns.values);
-/*
-            .catch(err => {
-            console.log(err);
-            if (err.code == 23505 && err.constraint == 'vpmapped_pkey') {
-                err.name = 'UniquenessConstraintViolation';
-                err.message = `Pool ID '${body.mappedPoolId}' is already taken. Please choose a different Pool ID.`; 
-            }
-            throw err;
-            })
-        .then(res => {return res;});
-*/
 }
 
 async function update(id, body) {
@@ -107,20 +107,6 @@ async function update(id, body) {
     text = `update vpmapped set (${queryColumns.named}) = (${queryColumns.numbered}) where "mappedPoolId"=$1 returning "mappedPoolId"`;
     console.log(text, queryColumns.values);
     return await query(text, queryColumns.values);
-/*
-            .catch(err => {
-            console.log(err);
-            if (err.code == 23505 && err.constraint == 'vpmapped_pkey') {
-                err.name = 'UniquenessConstraintViolation';
-                err.message = `Pool ID '${body.mappedPoolId}' is already taken. Please choose a different Pool ID.`; 
-            }
-            throw err;
-            })
-        .then(res => {
-            console.log('vpMapped.service.update | returning: ', res);
-            return res;
-            });
-*/
 }
 
 async function _delete(id) {
