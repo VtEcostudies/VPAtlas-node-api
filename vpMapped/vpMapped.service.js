@@ -44,7 +44,7 @@ async function getStats() {
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Confirmed') as confirmed,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Duplicate') as duplicate,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Eliminated') as eliminated,
-(select 49) as monitored;`;
+(select 0) as monitored;`;
     return await query(text);
 }
 
