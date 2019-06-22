@@ -70,4 +70,7 @@ COPY vpvisit
 "visitFishSizeMedium",
 "visitFishSizeLarge",
 "visitPoolPhoto"
-) FROM 'C:\Users\jloomis\Documents\VCE\VPAtlas\vpAtlas-node-api\database\vpvisit.20190611.csv' DELIMITER ',' CSV HEADER;
+)
+FROM 'vpVisit.20190611.csv' DELIMITER ',' CSV HEADER;
+--FROM 'C:\Users\jloomis\Documents\VCE\VPAtlas\vpAtlas-node-api\vpVisit\db.02\vpVisit.20190611.csv' DELIMITER ',' CSV HEADER;
+--FROM '/home/ubuntu/VPAtlas-node-api/vpVisit/db.02/vpVisit.20190611.csv' DELIMITER ',' CSV HEADER;

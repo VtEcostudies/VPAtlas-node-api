@@ -1,26 +1,26 @@
 --ALTER TABLE vpmapped DROP CONSTRAINT IF EXISTS vpmapped_pkey;
 
---ALTER TABLE IF EXISTS vpmapped RENAME TO vpmapped_2;
+--DROP TABLE IF EXISTS vpmapped;
 
 CREATE TABLE IF NOT EXISTS vpmapped
 (
-	"mappedPoolId" text NOT NULL,
-	"mappedByUser" text NOT NULL,
+	"mappedPoolId" TEXT NOT NULL,
+	"mappedByUser" TEXT NOT NULL,
 	"mappedByUserId" INTEGER DEFAULT 0,
 	"mappedDateText" DATE,
 	"mappedDateUnixSeconds" BIGINT,
     "mappedLatitude" numeric(11,8) NOT NULL,
     "mappedLongitude" numeric(11,8) NOT NULL,
 	"mappedConfidence" confidence,
-	"mappedSource" text,
-	"mappedSource2" text,
-	"mappedPhotoNumber" text,
-	"mappedLocationAccuracy" text,
-	"mappedShape" text,
-	"mappedComments" text,
+	"mappedSource" TEXT,
+	"mappedSource2" TEXT,
+	"mappedPhotoNumber" TEXT,
+	"mappedLocationAccuracy" TEXT,
+	"mappedShape" TEXT,
+	"mappedComments" TEXT,
 	"createdAt" timestamp default now(),
 	"updatedAt" timestamp default now(),
-    "mappedMethod" methodmapped,
+    "mappedMethod" TEXT,
     "mappedlocationInfoDirections" TEXT,
     "mappedLandownerPermission" boolean DEFAULT false,
     "mappedLandownerInfo" TEXT,
@@ -37,10 +37,8 @@ CREATE TABLE IF NOT EXISTS vpmapped
     "mappedLandownerEmail" TEXT,
     "mappedPoolStatus" poolstatus DEFAULT 'Potential'::poolstatus,
     CONSTRAINT vpmapped_pkey PRIMARY KEY ("mappedPoolId"),
-    CONSTRAINT fk_town_id FOREIGN KEY ("mappedTownId")
-        REFERENCES public.vptown ("townId") MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION
+    CONSTRAINT fk_user_id FOREIGN KEY ("mappedByUserId") REFERENCES vpuser ("id"),
+    CONSTRAINT fk_town_id FOREIGN KEY ("mappedTownId") REFERENCES vptown ("townId")
 );
 
 ALTER TABLE vpmapped OWNER TO vpatlas;

@@ -9,9 +9,6 @@ const path = require("path"); //needed to use paths relative to this file's loca
 const db = require('_helpers/db_postgres');
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
-const sqlVpMappedTable = fs.readFileSync(path.resolve(__dirname, 'vpMapped.table.sql')).toString();
-const sqlVpMappedImportCsv = fs.readFileSync(path.resolve(__dirname, 'vpMapped.import.sql')).toString();
-const sqlUpgrade01 = fs.readFileSync(path.resolve(__dirname, 'db.upgrade_1.sql')).toString();
 var staticColumns = [];
 
 module.exports = {
@@ -64,6 +61,7 @@ async function upgradeVpMapped() {
 }
 
 async function createVpMappedTable() {
+    const sqlVpMappedTable = fs.readFileSync(path.resolve(__dirname, '/db.01/vpMapped.table.sql')).toString();
     console.log('vpMapped.model.createVpMappedTable | query:', sqlVpMappedTable);
     await query(sqlVpMappedTable)
     .then(res => {
@@ -77,6 +75,7 @@ async function createVpMappedTable() {
 }
 
 async function importCSV(csvFileName='vpmapped.20190520.csv') {
+    const sqlVpMappedImportCsv = fs.readFileSync(path.resolve(__dirname, '/db.01/vpMapped.import.sql')).toString();
     const qtext = `${sqlVpMappedImportCsv} FROM '${path.resolve(__dirname, csvFileName)}' DELIMITER ',' CSV HEADER;`;
     console.log('vpMapped.model.importCSV | query:', qtext);
     await query(qtext)
@@ -91,6 +90,7 @@ async function importCSV(csvFileName='vpmapped.20190520.csv') {
 }
 
 async function upgrade01() {
+    const sqlUpgrade01 = fs.readFileSync(path.resolve(__dirname, '/db.01/db.upgrade_1.sql')).toString();
     console.log('vpMapped.model.upgrade01 | query:', sqlUpgrade01);
     await query(sqlUpgrade01)
     .then(res => {

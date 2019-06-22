@@ -9,8 +9,6 @@ const path = require("path"); //needed to use paths relative to this file's loca
 const db = require('_helpers/db_postgres');
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
-const sqlvpVisitTable = fs.readFileSync(path.resolve(__dirname, '01.vpVisit.table.sql')).toString();
-const sqlvpVisitImportCsv = fs.readFileSync(path.resolve(__dirname, '02.vpVisit.import.sql')).toString();
 var staticColumns = [];
 
 module.exports = {
@@ -19,6 +17,7 @@ module.exports = {
 };  
 
 async function createVpVisitTable() {
+    const sqlvpVisitTable = fs.readFileSync(path.resolve(__dirname, '/db.02/01.vpVisit.table.sql')).toString();
     console.log('vpVisit.model.createVpVisitTable | query:', sqlvpVisitTable);
     await query(sqlvpVisitTable)
     .then(res => {
@@ -32,6 +31,7 @@ async function createVpVisitTable() {
 }
 
 async function importCSV(csvFileName='vpvisit.20190611.csv') {
+    const sqlvpVisitImportCsv = fs.readFileSync(path.resolve(__dirname, '/db.02/02.vpVisit.import.sql')).toString();
     const qtext = `${sqlvpVisitImportCsv} FROM '${path.resolve(__dirname, csvFileName)}' DELIMITER ',' CSV HEADER;`;
     console.log('vpVisit.model.importCSV | query:', qtext);
     await query(qtext)
