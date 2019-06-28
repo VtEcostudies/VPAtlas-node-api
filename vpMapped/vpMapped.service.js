@@ -55,7 +55,7 @@ async function getAll(body={}) {
                 vpmapped."mappedLongitude" as "longitude",
                 vpmapped."mappedPoolId" as "poolId",
                 to_json(vptown) as "mappedTown"
-                from vpmapped inner join vptown on vpmapped."mappedTownId"=vptown."townId"
+                from vpmapped LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
                 ${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -78,7 +78,7 @@ async function getPage(page, params={}) {
                 vpmapped."mappedLongitude" as "longitude",
                 vpmapped."mappedPoolId" as "poolId",
                 to_json(vptown) as "mappedTown"
-                from vpmapped inner join vptown on vpmapped."mappedTownId"=vptown."townId"
+                from vpmapped LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
                 ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -90,7 +90,7 @@ async function getById(id) {
                 vpmapped."mappedLongitude" as "longitude",
                 vpmapped."mappedPoolId" as "poolId",
                 to_json(vptown) as "mappedTown"
-                from vpmapped inner join vptown on vpmapped."mappedTownId"=vptown."townId"
+                from vpmapped LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
                 where "mappedPoolId"=$1;`, [id])
 }
 

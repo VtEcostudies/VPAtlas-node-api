@@ -55,7 +55,7 @@ async function getAll(params={}) {
                 vpvisit."visitLongitude" as "longitude"
                 from vpvisit
                 inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-                inner join vptown on vpmapped."mappedTownId"=vptown."townId"
+                LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
                 ${where.text} ${orderClause};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -83,7 +83,7 @@ async function getPage(page, params={}) {
                 vpvisit."visitLongitude" as "longitude"
                 from vpvisit
                 inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-                inner join vptown on vpmapped."mappedTownId"=vptown."townId"
+                LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
                 ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -100,7 +100,7 @@ async function getById(id) {
                 vpvisit."visitLongitude" as "longitude"
                 from vpvisit
                 inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-                inner join vptown on vpmapped."mappedTownId"=vptown."townId"
+                LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
                 where "visitId"=$1;`;
     return await query(text, [id])
 }

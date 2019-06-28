@@ -1,0 +1,1 @@
+ALTER TABLE vpvisit ALTER COLUMN "visitDate" TYPE DATE USING "visitDate"::date;
