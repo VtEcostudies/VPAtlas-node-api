@@ -29,7 +29,14 @@ function jwt() {
             '/pools/mapped/count',
             '/pools/mapped', // /pools/mapped performs a getAll()
             { url: /^\/pools\/mapped\/.*/, methods: ['GET'] }, // /pools/mapped/:id
-            { url: /^\/pools\/mapped\/page\/.*/, methods: ['GET'] } // /pools/mapped/page/:page
+            { url: /^\/pools\/mapped\/page\/.*/, methods: ['GET'] }, // /pools/mapped/page/:page
+            '/pools/visit', // /pools/mapped performs a getAll()
+            { url: /^\/pools\/visit\/.*/, methods: ['GET'] },
+            { url: /^\/pools\/visit\/page\/.*/, methods: ['GET'] },
+            '/pools', '/pools/list', 'pools/view',
+            { url: /^\/pools\/.*/, methods: ['GET'] },
+            { url: /^\/pools\/page\/.*/, methods: ['GET'] },
+            { url: /^\/pools\/view\/.*/, methods: ['GET'] }
         ]
     });
     

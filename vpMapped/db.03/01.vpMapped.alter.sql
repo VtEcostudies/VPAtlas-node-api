@@ -10,7 +10,7 @@ DECLARE
 	next_val text;
 BEGIN
 	--check to see if this is a NEW* pool
-	IF (substr(NEW."mappedPoolId",1,3) = 'NEW') THEN
+	IF (substr(NEW."mappedPoolId",1,4) = 'NEW*') THEN
 	
 		SELECT max(new_val) AS new_max FROM (
 			SELECT 

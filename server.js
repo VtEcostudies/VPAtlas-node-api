@@ -27,6 +27,7 @@ app.use('/users', require('./users/vpUser.routes.pg')); //postgres user db
 app.use('/vtinfo', require('./vtInfo/vtInfo.routes')); //postgres vermont data - counties, towns, etc.
 app.use('/pools/mapped', require('./vpMapped/vpMapped.routes')); //postgres mapped pools db
 app.use('/pools/visit', require('./vpVisit/vpVisit.routes')); //postgres pool visits db
+app.use('/pools', require('./vpPools/vpPools.routes')); //postgres 'Mapped Pools' and 'Pool Visits' GETS-only combined
 
 // global error handler
 //NOTE: this causes error when http status is set in handler. No solution yet.
