@@ -2,6 +2,10 @@
 UPDATE vpmapped SET "mappedTownId"=0 WHERE "mappedTownId" is NULL;
 ALTER TABLE vpmapped ALTER COLUMN "mappedTownId" SET NOT NULL;
 
+UPDATE vpmapped SET "mappedMethod"='Known' WHERE "mappedMethod" IS NULL AND "mappedPoolId" LIKE '%KWN%';
+UPDATE vpmapped SET "mappedMethod"='Aerial' WHERE "mappedMethod" IS NULL AND "mappedPoolId" NOT LIKE '%KWN%';
+ALTER TABLE vpmapped ALTER COLUMN "mappedMethod" SET NOT NULL;
+
 --add a function and trigger to auto-generate a pool ID for NEW* pools
 CREATE OR REPLACE FUNCTION generate_new_pool_id()
 RETURNS TRIGGER AS $$
