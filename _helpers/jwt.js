@@ -26,17 +26,19 @@ function jwt() {
              */
             '/users/authenticate',
             '/users/register',
-            '/pools/mapped/count',
+            '/vtinfo/towns',
+            
             '/pools/mapped', // /pools/mapped performs a getAll()
             { url: /^\/pools\/mapped\/.*/, methods: ['GET'] }, // /pools/mapped/:id
             { url: /^\/pools\/mapped\/page\/.*/, methods: ['GET'] }, // /pools/mapped/page/:page
-            '/pools/visit', // /pools/mapped performs a getAll()
+
+            '/pools/visit', // /pools/visit performs a getAll()
             { url: /^\/pools\/visit\/.*/, methods: ['GET'] },
             { url: /^\/pools\/visit\/page\/.*/, methods: ['GET'] },
-            '/pools', '/pools/list', 'pools/view',
+
+            '/pools', // /pools performs a getAll()
             { url: /^\/pools\/.*/, methods: ['GET'] },
-            { url: /^\/pools\/page\/.*/, methods: ['GET'] },
-            { url: /^\/pools\/view\/.*/, methods: ['GET'] }
+            { url: /^\/pools\/page\/.*/, methods: ['GET'] }
         ]
     });
     

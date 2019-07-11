@@ -39,6 +39,7 @@ async function getCount(body={}) {
 
 async function getStats() {
     const text = `select 
+(select count("mappedPoolId") from vpmapped) as total,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Potential') as potential,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Probable') as probable,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Confirmed') as confirmed,

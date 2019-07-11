@@ -18,6 +18,12 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
 
+//debug middleware to get request info for display
+app.use(function (req, res, next) {
+  console.log('request:', req.method, req.originalUrl, req.params);
+  next();
+});
+
 // use JWT auth to secure the api
 app.use(jwt());
 
