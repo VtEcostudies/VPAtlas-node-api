@@ -49,8 +49,11 @@ async function getAll(params={}) {
     }
     const where = pgUtil.whereClause(params, staticColumns);
     const text = `
-        SELECT (SELECT COUNT(*) FROM vpmapped LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
-        vpmapped.*, to_json(vptown) AS "mappedTown",
+        SELECT
+        (SELECT COUNT(*) FROM vpmapped LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
+        to_json(mappedtown) AS "mappedTown",
+        to_json(visittown) AS "visitTown",
+        vpmapped.*,
         vpmapped."updatedAt" AS "mappedUpdatedAt",
         vpmapped."createdAt" AS "mappedCreatedAt",
         vpmapped."mappedPoolId" AS "poolId",
@@ -61,7 +64,8 @@ async function getAll(params={}) {
         vpvisit."createdAt" AS "visitCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vptown ON vpmapped."mappedTownId"=vptown."townId"
+        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
+        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         ${where.text} ${orderClause};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -79,8 +83,11 @@ async function getPage(page, params={}) {
     }
     var where = pgUtil.whereClause(params, staticColumns); //whereClause filters output against vpvisit.columns
     const text = `
-        SELECT (SELECT COUNT(*) FROM vpmapped LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
-        vpmapped.*, to_json(vptown) AS "mappedTown",
+        SELECT
+        (SELECT COUNT(*) FROM vpmapped LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
+        to_json(mappedtown) AS "mappedTown",
+        to_json(visittown) AS "visitTown",
+        vpmapped.*,
         vpmapped."updatedAt" AS "mappedUpdatedAt",
         vpmapped."createdAt" AS "mappedCreatedAt",
         vpmapped."mappedPoolId" AS "poolId",
@@ -91,7 +98,8 @@ async function getPage(page, params={}) {
         vpvisit."createdAt" AS "visitCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vptown ON vpmapped."mappedTownId"=vptown."townId"
+        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
+        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
     return await query(text, where.values);

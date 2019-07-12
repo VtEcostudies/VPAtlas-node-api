@@ -50,6 +50,20 @@ async function getColumns(tableName, columns=[]) {
     example is:
     
     GET http://vpatlas.org/pools/mapped/page?mappedPoolId|LIKE='AAA' (roughly)
+       
+    TO-DO: find a way to enable the IN operator. As currently implemented, IN
+    can't work because node-postgres automatically applies single quotes around
+    parameter values. If we receive an http request like
+    
+    GET http://vpatlas.org/pools/mapped/page?mappedPoolStatus|IN=(Potential,Probable)
+    
+    Parsing here leads pg-postgres to send the values like
+    
+    ['(Potential,Probable)', ...]
+    
+    ...when what's needed is
+    
+    [('Potential','Probable'), ...]
     
     Arguments:
        params: a valid express query param object
