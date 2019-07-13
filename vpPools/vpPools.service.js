@@ -11,7 +11,8 @@ var staticColumns = [];
 module.exports = {
     getCount,
     getAll,
-    getPage
+    getPage,
+    getByVisitId
 };
 
 
@@ -103,4 +104,48 @@ async function getPage(page, params={}) {
         ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
     return await query(text, where.values);
+}
+
+async function getByVisitId(id) {
+    const text = `
+        SELECT
+        to_json(mappedtown) AS "mappedTown",
+        to_json(visittown) AS "visitTown",
+        vpmapped.*,
+        vpmapped."updatedAt" AS "mappedUpdatedAt",
+        vpmapped."createdAt" AS "mappedCreatedAt",
+        vpmapped."mappedPoolId" AS "poolId",
+        vpmapped."mappedLatitude" AS "latitude",
+        vpmapped."mappedLongitude" AS "longitude",
+        vpvisit.*, 
+        vpvisit."updatedAt" AS "visitUpdatedAt",
+        vpvisit."createdAt" AS "visitCreatedAt"
+        from vpmapped
+        LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
+        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
+        WHERE "visitId"=$1;`;
+    return await query(text, [id])
+}
+
+async function getByPoolId(id) {
+    const text = `
+        SELECT
+        to_json(mappedtown) AS "mappedTown",
+        to_json(visittown) AS "visitTown",
+        vpmapped.*,
+        vpmapped."updatedAt" AS "mappedUpdatedAt",
+        vpmapped."createdAt" AS "mappedCreatedAt",
+        vpmapped."mappedPoolId" AS "poolId",
+        vpmapped."mappedLatitude" AS "latitude",
+        vpmapped."mappedLongitude" AS "longitude",
+        vpvisit.*, 
+        vpvisit."updatedAt" AS "visitUpdatedAt",
+        vpvisit."createdAt" AS "visitCreatedAt"
+        from vpmapped
+        LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
+        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
+        WHERE "mappedPoolId"=$1;`;
+    return await query(text, [id])
 }

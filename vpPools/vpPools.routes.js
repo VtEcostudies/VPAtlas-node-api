@@ -11,6 +11,8 @@ const service = require('./vpPools.service');
 router.get('/count', getCount);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
+router.get('/visitId/:visitId', getByVisitId);
+router.get('/poolId/:poolId', getByPoolId);
 
 module.exports = router;
 
@@ -21,14 +23,29 @@ function getCount(req, res, next) {
 }
 
 function getAll(req, res, next) {
+    console.log('vpPools.routes.getAll req.query', req.query);
     service.getAll(req.query)
         .then(items => res.json(items))
         .catch(err => next(err));
 }
 
 function getPage(req, res, next) {
-    console.log('getPage req.query', req.query);
+    console.log('vpPools.routes.getPage req.query', req.query);
     service.getPage(req.params.page, req.query)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getByVisitId(req, res, next) {
+    console.log('vpPools.routes.getByVisitId req.query', req.query);
+    service.getByVisitId(req.params.visitId, req.query)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getByPoolId(req, res, next) {
+    console.log('vpPools.routes.getByPoolId req.query', req.query);
+    service.getByPoolId(req.params.poolId, req.query)
         .then(items => res.json(items))
         .catch(err => next(err));
 }
