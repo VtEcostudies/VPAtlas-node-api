@@ -18,6 +18,8 @@ module.exports = {
 pgUtil.getColumns("vpvisit", staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
         staticColumns.push(`vptown."townName"`); //Add this for town filter query
+        staticColumns.push(`visittown."townName"`); //Add this for town filter query
+        staticColumns.push(`mappedtown."townName"`); //Add this for town filter query
         return res;
     })
     .catch(err => {
@@ -44,19 +46,25 @@ async function getAll(params={}) {
         orderClause = `order by "${col}" ${dir}`;
     }
     const where = pgUtil.whereClause(params, staticColumns);
-    const text = `select (select count(*) from vpvisit ${where.text}),
-                vpvisit.*, vpmapped.*, to_json(vptown) as "mappedTown",
-				vpvisit."updatedAt" as "visitUpdatedAt",
-				vpvisit."createdAt" as "visitCreatedAt",
-				vpmapped."updatedAt" as "mappedUpdatedAt",
-				vpmapped."createdAt" as "mappedCreatedAt",
-                vpvisit."visitPoolId" as "poolId",
-                vpvisit."visitLatitude" as "latitude",
-                vpvisit."visitLongitude" as "longitude"
-                from vpvisit
-                inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-                LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
-                ${where.text} ${orderClause};`;
+    const text = `
+        SELECT
+        (SELECT COUNT(*) FROM vpmapped INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
+        to_json(mappedtown) AS "mappedTown",
+        to_json(visittown) AS "visitTown",
+        vpmapped.*,
+        vpmapped."updatedAt" AS "mappedUpdatedAt",
+        vpmapped."createdAt" AS "mappedCreatedAt",
+        vpmapped."mappedPoolId" AS "poolId",
+        vpmapped."mappedLatitude" AS "latitude",
+        vpmapped."mappedLongitude" AS "longitude",
+        vpvisit.*, 
+        vpvisit."updatedAt" AS "visitUpdatedAt",
+        vpvisit."createdAt" AS "visitCreatedAt"
+        from vpmapped
+        INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
+        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
+        ${where.text} ${orderClause};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
@@ -72,36 +80,48 @@ async function getPage(page, params={}) {
         orderClause = `order by "${col}" ${dir}`;
     }
     var where = pgUtil.whereClause(params, staticColumns); //whereClause filters output against vpvisit.columns
-    const text = `select (select count(*) from vpvisit ${where.text}),
-                vpvisit.*, vpmapped.*, to_json(vptown) as "mappedTown",
-				vpvisit."updatedAt" as "visitUpdatedAt",
-				vpvisit."createdAt" as "visitCreatedAt",
-				vpmapped."updatedAt" as "mappedUpdatedAt",
-				vpmapped."createdAt" as "mappedCreatedAt",
-                vpvisit."visitPoolId" as "poolId",
-                vpvisit."visitLatitude" as "latitude",
-                vpvisit."visitLongitude" as "longitude"
-                from vpvisit
-                inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-                LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
-                ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
+    const text = `
+        SELECT
+        (SELECT COUNT(*) FROM vpmapped INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
+        to_json(mappedtown) AS "mappedTown",
+        to_json(visittown) AS "visitTown",
+        vpmapped.*,
+        vpmapped."updatedAt" AS "mappedUpdatedAt",
+        vpmapped."createdAt" AS "mappedCreatedAt",
+        vpmapped."mappedPoolId" AS "poolId",
+        vpmapped."mappedLatitude" AS "latitude",
+        vpmapped."mappedLongitude" AS "longitude",
+        vpvisit.*, 
+        vpvisit."updatedAt" AS "visitUpdatedAt",
+        vpvisit."createdAt" AS "visitCreatedAt"
+        from vpmapped
+        INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
+        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
+        ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
 
 async function getById(id) {
-    const text = `select vpvisit.*, vpmapped.*, to_json(vptown) as "mappedTown",
-				vpvisit."updatedAt" as "visitUpdatedAt",
-				vpvisit."createdAt" as "visitCreatedAt",
-				vpmapped."updatedAt" as "mappedUpdatedAt",
-				vpmapped."createdAt" as "mappedCreatedAt",
-                vpvisit."visitPoolId" as "poolId",
-                vpvisit."visitLatitude" as "latitude",
-                vpvisit."visitLongitude" as "longitude"
-                from vpvisit
-                inner join vpmapped on vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-                LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
-                where "visitId"=$1;`;
+    const text = `
+        SELECT
+        to_json(mappedtown) AS "mappedTown",
+        to_json(visittown) AS "visitTown",
+        vpmapped.*,
+        vpmapped."updatedAt" AS "mappedUpdatedAt",
+        vpmapped."createdAt" AS "mappedCreatedAt",
+        vpmapped."mappedPoolId" AS "poolId",
+        vpmapped."mappedLatitude" AS "latitude",
+        vpmapped."mappedLongitude" AS "longitude",
+        vpvisit.*, 
+        vpvisit."updatedAt" AS "visitUpdatedAt",
+        vpvisit."createdAt" AS "visitCreatedAt"
+        from vpmapped
+        INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
+        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
+        WHERE "visitId"=$1;`;
     return await query(text, [id])
 }
 

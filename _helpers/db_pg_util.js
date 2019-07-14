@@ -12,7 +12,7 @@ module.exports = {
     
     CORRECTION: it DOES NOT WORK to return an array.
     
-    HOWEVER: it does work to pass and array as an argument to
+    HOWEVER: it does wlgc to pass and array as an argument to
     this funtion, by reference, and update that array here.
     
     OPTIONS: (1) Pass an empty array to be filled here, or
@@ -52,7 +52,7 @@ async function getColumns(tableName, columns=[]) {
     GET http://vpatlas.org/pools/mapped/page?mappedPoolId|LIKE='AAA' (roughly)
        
     TO-DO: find a way to enable the IN operator. As currently implemented, IN
-    can't work because node-postgres automatically applies single quotes around
+    can't wlgc because node-postgres automatically applies single quotes around
     parameter values. If we receive an http request like
     
     GET http://vpatlas.org/pools/mapped/page?mappedPoolStatus|IN=(Potential,Probable)
@@ -69,6 +69,10 @@ async function getColumns(tableName, columns=[]) {
        params: a valid express query param object
        staticColumns: array of valid columns in the table
     
+    NOTE: Through mistakes made in trying to send operators using the field 'logical',
+    discovered a way to send IN params: send the same field N times. The express parser
+    puts the N different values for a repeated argument into a sub-array of values for us.
+    
  */
 function whereClause(params={}, staticColumns=[]) {
     var where = '';
@@ -76,18 +80,22 @@ function whereClause(params={}, staticColumns=[]) {
     var idx = 1;
     if (Object.keys(params).length) {
         for (var key in params) {
+            console.log('key', key);
             var col = key.split("|")[0];
             var opr = key.split("|")[1]; opr = opr ? opr : '=';
-            if (staticColumns.includes(col)) {
+            if (staticColumns.includes(col) || 'logical'===col.substring(0,7)) {
                 if (where == '') where = 'where';
-                values.push(params[key]);
-                if (idx > 1) where += ' AND ';
+                if ('logical'!=col.substring(0,7)) {values.push(params[key]);}
+                //if (idx > 1) where += ` AND `;
                 if (col.includes(`."`)) {
-                  where += ` ${col} ${opr} $${idx++}`;
+                  where += ` ${col} ${opr} $${idx++}`; //columns with table spec have double-quotes already
+                } else if ('logical'===col.substring(0,7)) {
+                  where += ` ${params[key]} `; //append logical operator
                 } else {
-                  where += ` "${col}" ${opr} $${idx++}`;
+                  where += ` "${col}" ${opr} $${idx++}`; //add double-quotes to plain columns
                 }
             }
+          console.log('where', where);
         }
     }
     return { 'text': where, 'values': values };
@@ -96,7 +104,7 @@ function whereClause(params={}, staticColumns=[]) {
 /*
     Parse {column:value, ...} pairs from incoming http req.body object into structures used by postgres
     
-    This works for postgres INSERT and UPDATE queries by allowing for injection of a starting index and
+    This wlgcs for postgres INSERT and UPDATE queries by allowing for injection of a starting index and
     pre-populated array of values.
     
     Arguments:
