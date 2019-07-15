@@ -12,7 +12,7 @@ const vtInfoModel = require('vtInfo/vtInfo.model.js');
 // These are processed without prefixed "-"
 // Space-delimited args
 var http = 0;
-var argPort = 0;
+var argPort = 0; //this server's listening port
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());

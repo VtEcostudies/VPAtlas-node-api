@@ -1,6 +1,5 @@
 const expressJwt = require('express-jwt');
 const config = require('config.json');
-//const userService = require('../users/user.service');
 const userService = require('../users/vpUser.service.pg');
 
 module.exports = jwt;
