@@ -1,3 +1,6 @@
+# IDE definition files
+vpatlas-node-api.komodoproject
+
 # Logs
 logs
 *.log
