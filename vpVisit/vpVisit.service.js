@@ -38,6 +38,9 @@ async function getCount(body={}) {
     return await query(text, where.values);
 }
 
+/*
+NOTE: in vpvist, vpivisit lat/lon are canonical
+*/
 async function getAll(params={}) {
     var orderClause = 'order by "visitId"';
     if (params.orderBy) {
@@ -54,12 +57,12 @@ async function getAll(params={}) {
         vpmapped.*,
         vpmapped."updatedAt" AS "mappedUpdatedAt",
         vpmapped."createdAt" AS "mappedCreatedAt",
-        vpmapped."mappedPoolId" AS "poolId",
-        vpmapped."mappedLatitude" AS "latitude",
-        vpmapped."mappedLongitude" AS "longitude",
         vpvisit.*, 
         vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt"
+        vpvisit."createdAt" AS "visitCreatedAt",
+        vpvisit."visitPoolId" AS "poolId",
+        vpvisit."visitLatitude" AS "latitude",
+        vpvisit."visitLongitude" AS "longitude"
         from vpmapped
         INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
@@ -88,12 +91,12 @@ async function getPage(page, params={}) {
         vpmapped.*,
         vpmapped."updatedAt" AS "mappedUpdatedAt",
         vpmapped."createdAt" AS "mappedCreatedAt",
-        vpmapped."mappedPoolId" AS "poolId",
-        vpmapped."mappedLatitude" AS "latitude",
-        vpmapped."mappedLongitude" AS "longitude",
         vpvisit.*, 
         vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt"
+        vpvisit."createdAt" AS "visitCreatedAt",
+        vpvisit."visitPoolId" AS "poolId",
+        vpvisit."visitLatitude" AS "latitude",
+        vpvisit."visitLongitude" AS "longitude"
         from vpmapped
         INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
@@ -111,12 +114,12 @@ async function getById(id) {
         vpmapped.*,
         vpmapped."updatedAt" AS "mappedUpdatedAt",
         vpmapped."createdAt" AS "mappedCreatedAt",
-        vpmapped."mappedPoolId" AS "poolId",
-        vpmapped."mappedLatitude" AS "latitude",
-        vpmapped."mappedLongitude" AS "longitude",
         vpvisit.*, 
         vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt"
+        vpvisit."createdAt" AS "visitCreatedAt",
+        vpvisit."visitPoolId" AS "poolId",
+        vpvisit."visitLatitude" AS "latitude",
+        vpvisit."visitLongitude" AS "longitude"
         from vpmapped
         INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
