@@ -82,7 +82,9 @@ function whereClause(params={}, staticColumns=[]) {
         for (var key in params) {
             console.log('key', key);
             var col = key.split("|")[0];
-            var opr = key.split("|")[1]; opr = opr ? opr : '=';
+            var opr = key.split("|")[1];
+            opr = opr ? opr : '='; //default operator is '='
+            opr = opr==='!' ? '!=' : opr; //turn '!' operator into its intended operator: '!='
             if (staticColumns.includes(col) || 'logical'===col.substring(0,7)) {
                 if (where == '') where = 'where';
                 if ('logical'!=col.substring(0,7)) {values.push(params[key]);}
