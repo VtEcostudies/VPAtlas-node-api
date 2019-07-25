@@ -87,12 +87,31 @@ function whereClause(params={}, staticColumns=[]) {
             opr = opr==='!' ? '!=' : opr; //turn '!' operator into its intended operator: '!='
             if (staticColumns.includes(col) || 'logical'===col.substring(0,7)) {
                 if (where == '') where = 'where';
-                if ('logical'!=col.substring(0,7)) {values.push(params[key]);}
+                if ('logical'!=col.substring(0,7)) {
+                  if (Array.isArray(params[key])) { //search token has multiple values, passed as array
+                    params[key].forEach((item, index) => {
+                      values.push(item);
+                    });
+                  } else {
+                    values.push(params[key]); //not an array of values
+                  }
+                }
                 //if (idx > 1) where += ` AND `;
                 if (col.includes(`."`)) {
                   where += ` ${col} ${opr} $${idx++}`; //columns with table spec have double-quotes already
                 } else if ('logical'===col.substring(0,7)) {
                   where += ` ${params[key]} `; //append logical operator
+                } else if (Array.isArray(params[key])) { //break array of values into list like '($2,$3,...)'
+                  if (Array.isArray(params[key])) { //search token has multiple values, passed as array
+                    where += ` "${col}" ${opr} (`; //() around array of args
+                    params[key].forEach((item, index) => {
+                      where += index>0 ? ',': '';
+                      where += `$${idx++}`;
+                    });
+                    where += `)`;
+                  } else {
+                    where += ` "${col}" ${opr} $${idx++}`; //add double-quotes to plain columns
+                  }
                 } else {
                   where += ` "${col}" ${opr} $${idx++}`; //add double-quotes to plain columns
                 }
