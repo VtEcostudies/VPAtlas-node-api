@@ -39,6 +39,6 @@ COPY vpreview(
     "reviewQADate",
     "reviewQANotes"
 )
+FROM '/home/ubuntu/VPAtlas-node-api/vpReview/db.04/vpreview.20190611.csv' DELIMITER ',' CSV HEADER;
 --FROM 'vpreview.20190611.csv' DELIMITER ',' CSV HEADER;
-FROM 'C:\Users\jloomis\Documents\VCE\VPAtlas\vpAtlas-node-api\vpreview\db.04\vpreview.20190611.csv' DELIMITER ',' CSV HEADER;
---FROM '/home/ubuntu/VPAtlas-node-api/vpreview/db.04/vpreview.20190611.csv' DELIMITER ',' CSV HEADER;
+--FROM 'C:\Users\jloomis\Documents\VCE\VPAtlas\vpAtlas-node-api\vpreview\db.04\vpreview.20190611.csv' DELIMITER ',' CSV HEADER;

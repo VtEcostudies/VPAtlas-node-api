@@ -16,10 +16,13 @@ FROM vpreview
 		(SELECT * FROM vpreview 
 		 WHERE vpmapped."mappedPoolId"=vpreview."reviewPoolId" limit 1) AS review
 	);
-	 
-SELECT "mappedPoolId","mappedPoolStatus",* FROM vpmapped WHERE "mappedPoolStatus" IS NULL;
---UPDATE vpmapped SET "mappedPoolStatus"='Potential' WHERE "mappedPoolStatus" IS NULL; --3572
 
-SELECT * FROM vpmapped WHERE "mappedPoolId" LIKE '%KWN%' AND "mappedPoolStatus"='Potential';
---UPDATE vpmapped SET "mappedPoolStatus"='Probable' WHERE
- "mappedPoolId" LIKE '%KWN%' AND "mappedPoolStatus" = 'Potential'; --389
+UPDATE vpmapped SET "mappedPoolStatus" = (SELECT review."reviewPoolStatus" FROM (SELECT * FROM vpreview WHERE vpmapped."mappedPoolId"=vpreview."reviewPoolId" limit 1) AS review);
+
+SELECT "mappedPoolId","mappedPoolStatus",* FROM vpmapped WHERE "mappedPoolStatus" IS NULL;
+
+UPDATE vpmapped SET "mappedPoolStatus"='Potential' WHERE "mappedPoolStatus" IS NULL; --3572
+
+SELECT count(*) FROM vpmapped WHERE "mappedPoolId" LIKE '%KWN%' AND "mappedPoolStatus"='Potential';
+
+UPDATE vpmapped SET "mappedPoolStatus"='Probable' WHERE "mappedPoolId" LIKE '%KWN%' AND "mappedPoolStatus" = 'Potential'; --389
