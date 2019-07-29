@@ -44,3 +44,6 @@ UPDATE vpreview SET "reviewPoolStatus" = 'Potential' WHERE "reviewQACode"='LANDO
 -- Typically used with incomplete or very inconsistent entries without sufficient explanation.
 -- Keep as Potential.
 UPDATE vpreview SET "reviewPoolStatus" = 'Potential' WHERE "reviewQACode"='ERROR'; --10
+
+--TODO: set reviewVisitId to vpvisit.visitId using reviewVisitIdLegacy, then add a foreign
+-- constraint on vpreview.reviewVisitId.
