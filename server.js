@@ -92,20 +92,12 @@ var srvPort = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) :
 if (argPort) srvPort = argPort;
 
 //create server and listen
+var server = null;
 if (tls > 0) {
-  https.createServer({
+  server = https.createServer({
       key: fs.readFileSync('/etc/letsencrypt/live/vpatlas.org/privkey.pem'),
       cert: fs.readFileSync('/etc/letsencrypt/live/vpatlas.org/fullchain.pem')
-  }, app).listen(srvPort, cb_server);
+  }, app).listen(srvPort, () => {console.log(`https server listening on ${srvPort}`);});
 } else {
-  app.listen(srvPort, cb_server);
-}
-/*
-  // start server
-  const server = app.listen(srvPort, function () {
-      console.log('Server listening on port ' + srvPort);
-  });
-*/
-var cb_server = function() {
-  console.log('Server listening on port ' + srvPort);
+  server = app.listen(srvPort, () => {console.log(`http server listening on ${srvPort}`);});
 }
