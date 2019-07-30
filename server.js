@@ -53,17 +53,19 @@ for (var i=0; i<process.argv.length; i++) {
 			tls=0;
 			break;
 		case "https":
-			http=0;
+			tls=1;
+      argPort=4322;
 			break;
 		case "http2":
-			http=2;
+			tls=2;
+      argPort=4322;
 			break;
         case "port":
             argPort = arg;
             break;
         case "prod":
-            argPort=4321;
             tls=1;
+            argPort=4322;
             break;
         case "init":
             vpMappedModel.initVpMapped();
