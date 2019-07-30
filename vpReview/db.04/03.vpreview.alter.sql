@@ -53,7 +53,7 @@ END;
 $$ 
 LANGUAGE plpgsql;
 
---reset all mappedPoolStatus to 'Potential' are repeat all status-change steps
+--reset all mappedPoolStatus to 'Potential' and repeat all status-change steps
 UPDATE vpmapped SET "mappedPoolStatus"='Potential';
 
 UPDATE vpmapped SET "mappedPoolStatus"='Probable' WHERE "mappedPoolId" LIKE '%KWN%';

@@ -1,4 +1,6 @@
 ﻿require('rootpath')();
+const fs = require('fs');
+const https = require('https');
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -11,7 +13,7 @@ const vtInfoModel = require('vtInfo/vtInfo.model.js');
 // Command-Line Arguments Processing
 // These are processed without prefixed "-"
 // Space-delimited args
-var http = 0;
+var tls = 0;
 var argPort = 0; //this server's listening port
 
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -48,7 +50,7 @@ for (var i=0; i<process.argv.length; i++) {
     console.log(`command-line argument ${i}`, all);
 	switch(act) {
 		case "http":
-			http=1;
+			tls=0;
 			break;
 		case "https":
 			http=0;
@@ -61,6 +63,7 @@ for (var i=0; i<process.argv.length; i++) {
             break;
         case "prod":
             argPort=4321;
+            tls=1;
             break;
         case "init":
             vpMappedModel.initVpMapped();
@@ -82,10 +85,25 @@ for (var i=0; i<process.argv.length; i++) {
             }
 	}
 }
-
-// start server
+//get port
 var srvPort = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
 if (argPort) srvPort = argPort;
-const server = app.listen(srvPort, function () {
-    console.log('Server listening on port ' + srvPort);
-});
+
+//create server and listen
+if (tls > 0) {
+  https.createServer({
+      key: fs.readFileSync('/etc/letsencrypt/live/vpatlas.org/privkey.pem'),
+      cert: fs.readFileSync('/etc/letsencrypt/live/vpatlas.org/fullchain.pem')
+  }, app).listen(srvPort, cb_server);
+} else {
+  app.listen(srvPort, cb_server);
+}
+/*
+  // start server
+  const server = app.listen(srvPort, function () {
+      console.log('Server listening on port ' + srvPort);
+  });
+*/
+var cb_server = function() {
+  console.log('Server listening on port ' + srvPort);
+}
