@@ -1,4 +1,8 @@
-# node-mongo-postgres API for the VPAtlas
+# node-postgres API for VPAtlas
 
-NodeJS + MongoDB API for User Management, Authentication and Registration
-NodeJS + Postgres/PostGIS API for map, auth, user data
+NodeJS/ExpressJ + Postgres/PostGIS API serves routes which handle
+Registration
+Authentication
+Authorization
+Vernal Pool Mapping CRUD
+Vernal Pool Visit CRUD
