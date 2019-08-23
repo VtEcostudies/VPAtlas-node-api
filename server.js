@@ -36,6 +36,7 @@ app.use('/vtinfo', require('./vtInfo/vtInfo.routes')); //postgres vermont data -
 app.use('/pools/mapped', require('./vpMapped/vpMapped.routes')); //postgres mapped pools db
 app.use('/pools/visit', require('./vpVisit/vpVisit.routes')); //postgres pool visits db
 app.use('/pools', require('./vpPools/vpPools.routes')); //postgres 'Mapped Pools' and 'Pool Visits' GETS-only combined
+app.use('/aws/s3', require('./vpUtil/vp_s3_info.routes')); //get connection credentials for aws s3 bucket by bucketName
 
 // global error handler
 //NOTE: this causes error when http status is set in handler. No solution yet.
