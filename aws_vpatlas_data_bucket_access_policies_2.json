@@ -12,14 +12,28 @@
                 "s3:PutObject",
                 "s3:DeleteObject"
             ],
-            "Resource": "arn:aws:s3:::vpatlas.data/*"
+            "Resource": "arn:aws:s3:::vpatlas.photos/*"
         },
         {
             "Sid": "AddPermPublicUser",
             "Effect": "Allow",
             "Principal": "*",
             "Action": "s3:GetObject",
-            "Resource": "arn:aws:s3:::vpatlas.data/*"
+            "Resource": "arn:aws:s3:::vpatlas.photos/*"
+        },
+        {
+            "Sid": "AddPermPublicUser",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::vpatlas.photos/*/*"
+        },
+        {
+            "Sid": "AddPermPublicUser",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::vpatlas.photos/*/*/*"
         },
         {
             "Sid": "AddPermAdminUser",
@@ -28,7 +42,7 @@
                 "AWS": "arn:aws:iam::824614856275:user/jloomis"
             },
             "Action": "s3:*",
-            "Resource": "arn:aws:s3:::vpatlas.data/*"
+            "Resource": "arn:aws:s3:::vpatlas.photos/*"
         }
     ]
 }
