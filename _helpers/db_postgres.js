@@ -8,8 +8,9 @@ var types = require('pg').types
 /*
 simply by adding a function to return the raw value, we
 override the pg_postgres default behavior, which  mucks
-date-only  values by ‘correcting’ for local TZ.var parseDate = function(val) {
+date-only  values by ‘correcting’ for local TZ.
 */
+parseDate = function(val) {
    console.log('db_postgres.parseDate', val);
    return val;
 }
