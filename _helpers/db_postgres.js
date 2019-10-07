@@ -2,16 +2,27 @@ const config = require('config.json');
 const { Pool } = require('pg'); //a Postgres Connection Pool, not to be confused with a Vernal Pool
 const connPool = new Pool(config.pg);
 var types = require('pg').types
-//type date OID=1082
-//type timestamp OID=1114
 
 /*
-simply by adding a function to return the raw value, we
-override the pg_postgres default behavior, which  mucks
-date-only  values by ‘correcting’ for local TZ.
+ * Fix date display error.
+ * Simply by adding a function to return the raw value, we
+ * override the pg_postgres default behavior, which mucks
+ * date-only values by ‘correcting’ for local TZ. This is
+ * confusing, because pg_postgres lives on the server, whose
+ * TZ is UTC. It may be that moment(), running on the client
+ * cannot properly process dates that contain an explicit
+ * UTC TZ indicator with time set to 00:00, causing a correction
+ * for TZ EST by subtracting 5 hours from midnight. In theory,
+ * this would set the UI time back to the previous evening at 7P.
+ *
+ * pg_types uses postgres OIDs to identify db data types:
+ *
+ * date OID=1082
+ * timestamp OID=1114
+ * 
 */
 parseDate = function(val) {
-   console.log('db_postgres.parseDate', val);
+   //console.log('db_postgres.parseDate', val); //NOTE: this log is hit 2x per row. HUGE API performance hit.
    return val;
 }
 
