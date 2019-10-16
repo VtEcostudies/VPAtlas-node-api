@@ -39,7 +39,7 @@ async function getCount(body={}) {
 
 //TO-DO: filter out non-display pools for non-admin users
 //maybe do this by having roles available here, filtering queries based on role.
-async function getStats(body={username:null}) {
+async function getStats(body={"username":null}) {
     const text = `select 
 (select count("mappedPoolId") from vpmapped) as total_data,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"!='Eliminated' AND "mappedPoolStatus"!='Duplicate') as total,
