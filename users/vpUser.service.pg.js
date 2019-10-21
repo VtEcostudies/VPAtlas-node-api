@@ -32,17 +32,21 @@ pgUtil.getColumns("vpuser", staticColumns)
     
 async function authenticate(body) {
     if (!body.username || !body.password) {throw 'Username and password are required.';}
-    const res = await query(`select * from vpuser where username=$1`, [body.username]);
-    const user = res.rows[0];
-    console.log(`vpuser.pg.service.authenticate | user: `, user);
-    if (user && bcrypt.compareSync(body.password, user.hash)) {
-        delete user.hash;
-        const token = jwt.sign({ sub: user.id, role: user.userrole }, config.secret);
-        return { //interesting - this generates object key:value pairs from variable names and content...
-            user,
-            token
-        };
-    } else {
+    try {
+        const res = await query(`select * from vpuser where username=$1`, [body.username]);
+        const user = res.rows[0];
+        console.log(`vpuser.pg.service.authenticate | user: `, user);
+        if (user && bcrypt.compareSync(body.password, user.hash)) {
+            delete user.hash;
+            const token = jwt.sign({ sub: user.id, role: user.userrole }, config.secret);
+            return { //interesting - this generates object key:value pairs from variable names and content...
+                user,
+                token
+            };
+        } else {
+            throw 'Username or password is incorrect.';
+        }
+    } catch(err) {
         throw 'Username or password is incorrect.';
     }
 }
@@ -50,9 +54,13 @@ async function authenticate(body) {
 async function getAll(body={}) {
     const where = pgUtil.whereClause(body, staticColumns);
     const text = `select * from vpuser ${where.text};`;
-    console.log(text, where.values);
-    const res = await query(text, where.values);
-    return res.rows;
+    console.log(`vpUser.service.pg.js getAll`, text, where.values);
+    try {
+        var res = await query(text, where.values);
+        return res.rows;
+    } catch(err) {
+        throw err;
+    }
 }
 
 async function getPage(page, params={}) {
@@ -67,23 +75,67 @@ async function getPage(page, params={}) {
     }
     var where = pgUtil.whereClause(params, staticColumns); //whereClause filters output against vpuser.columns
     const text = `select (select count(*) from vpuser ${where.text}),* from vpuser ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
-    console.log(text, where.values);
-    const res = await query(text, where.values);
-    return res.rows;
+    console.log(`vpUser.service.pg.js getPage`, text, where.values);
+    try {
+        var res = await query(text, where.values);
+        return res.rows;
+    } catch(err) {
+        throw err;
+    }
 }
 
+/*
+ * NOTE: tried handling promise, here, with .catch, .then. Doesn't work
+ * with await. Neither does it appear to work without await. See commented
+ * code below.
+ *
+ * It does appear that await is meant to be used with the old-school try {}
+ * catch {} formulation.
+ */
 async function getById(id) {
-    const res = await query(`select * from vpuser where "id"=$1;`, [id]);
-    const user = res.rows[0];
-    delete user.hash;
-    return user;
+    try {
+        var res = await query(`select * from vpuser where "id"=$1;`, [id]);
+        if (res.rowCount == 1) {
+            delete res.rows[0].hash;
+            return res.rows[0];
+        } else {
+            console.log(`vpUser.service.pg.js::getByID ${id} NOT Found`);
+            return {};
+        }
+    } catch(err) {
+        console.log(`vpUser.service.pg.js::getByID error`, err);
+        throw err;
+    }
+/* this doesn't work
+    query(`select * from vpuser where "id"=$1;`, [id])
+        .catch(err => {
+            return res.rows[0];
+            console.log('vpUser.service.pg.js::getById error', err);
+            throw err;
+                })        return res;
+
+        .then(res => {
+            var user = res.rows[0];
+            delete user.hash;
+            return user;
+        });
+*/
 }
 
 async function getByUserName(username) {
-    const user = await query(`select * from vpuser where "username"=$1;`, [username]);
-    const user = res.rows[0];
-    delete user.hash;
-    return user;
+    try {
+        var res = await query(`select * from vpuser where "username"=$1;`, [username]);
+        if (res.rowCount == 1) {
+            delete res.rows[0].hash;
+            return res.rows[0];
+        } else {
+            console.log(`vpUser.service.pg.js::getByID ${id} NOT Found`);
+            return {};
+        }
+    } catch(err) {
+        console.log(`vpUser.service.pg.js::getByID error`, err);
+        throw err;
+    }
 }
 
 async function create(body) {
@@ -94,11 +146,29 @@ async function create(body) {
         delete body.password;
     }
     
-    body.userrole = 'guest'; //new users are all guests.
+    body.userrole = 'user'; //new users are all just users.
 
     var queryColumns = pgUtil.parseColumns(body, 1, [], staticColumns);
     text = `insert into vpuser (${queryColumns.named}) values (${queryColumns.numbered})`;
     console.log(text, queryColumns.values);
+    try {
+        var res = await query(text, queryColumns.values);
+        return res;
+    } catch(err) {
+        console.log(err);
+        if (err.code == 23505 && err.constraint == 'vpuser_pkey') {
+            err.name = 'Uniqueness Constraint Violation';
+            err.hint = 'Please choose a different username.';
+            err.message = `username '${body.username}' is already taken.`;
+        }
+        if (err.code == 23502) {
+            err.name = 'Not-null Constraint Violation';
+            err.hint = 'Please enter all required values.';
+            delete err.detail; //contains entire existing record - insecure
+        }
+        throw err;
+    }
+/* This did seem to work... weird.
     await query(text, queryColumns.values)
         .catch(err => {
             console.log(err);
@@ -110,6 +180,7 @@ async function create(body) {
             throw err;
             })
         .then(res => {return res;});
+*/
 }
 
 async function update(id, body) {

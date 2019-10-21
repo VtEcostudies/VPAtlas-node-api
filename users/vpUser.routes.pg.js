@@ -18,7 +18,10 @@ function authenticate(req, res, next) {
     console.log(`vpUser.routes.pg.authenticate | req.body:`, req.body);
     userService.authenticate(req.body)
         //.then(user => user ? res.json(user) : res.status(400).json({ message: 'Username or password is incorrect' }))
-        .then(user => res.json(user))
+        .then(user => {
+            console.dir(user);
+            res.json(user);
+        })
         .catch(err => next(err));
 }
 
