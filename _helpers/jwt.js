@@ -45,6 +45,19 @@ function jwt() {
     //return;
 }
 
+/*
+    NOTE - here is explanation on how to use express-jwt:
+    
+        https://github.com/auth0/express-jwt#usage
+    
+    It's as simple as this:
+
+        jwt adds req.user to the req object. use it.
+        if it's missing values, we can add them here by setting req.user
+        
+    Actually, it's more secure to use a user record retrieved from the DB
+    here, than to trust the values in the incoming token. Use that, instead.
+*/
 async function isRevoked(req, payload, done) {
     
     console.log(`jwt.js|isRevoked()
@@ -58,6 +71,10 @@ async function isRevoked(req, payload, done) {
     if (!user) {
         return done(null, true);
     }
-
+    
+    req.user = user;
+    
+    console.dir(req.user);
+    
     return done();
 };

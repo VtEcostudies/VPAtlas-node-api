@@ -123,11 +123,11 @@ async function update(id, body) {
     delete body.userrole; //don't allow role change on update yet.
     
     var queryColumns = pgUtil.parseColumns(body, 2, [id], staticColumns);
-    text = `update vpuser set (${queryColumns.named}) = (${queryColumns.numbered}) where "userId"=$1;`;
+    text = `update vpuser set (${queryColumns.named}) = (${queryColumns.numbered}) where "id"=$1;`;
     console.log(text, queryColumns.values);
     return await query(text, queryColumns.values);
 }
 
 async function _delete(id) {
-    return await query(`delete from vpuser where "userId"=$1;`, [id]);
+    return await query(`delete from vpuser where "id"=$1;`, [id]);
 }
