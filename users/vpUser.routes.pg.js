@@ -1,10 +1,13 @@
 ﻿const express = require('express');
 const router = express.Router();
 const userService = require('./vpUser.service.pg');
+const sendmail = require('./sendmail');
 
 // routes
 router.post('/authenticate', authenticate);
 router.post('/register', register);
+router.post('/reset', reset);
+router.post('/confirm', confirm);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
 router.get('/:id', getById);
@@ -74,6 +77,30 @@ function update(req, res, next) {
     }
     console.log(`update id ${req.params.id} req.body:`, req.body);
     userService.update(req.params.id, req.body)
+        .then(() => res.json({}))
+        .catch(err => next(err));
+}
+
+function reset(req, res, next) {
+    console.log(`vpUser.routes.pg.js::reset() | email`, req.body.email);
+    userService.reset(req.body.email)
+        .then(ret => {
+          console.log('vpUser.routes.pg.js::reset | rowCount ', ret.rowCount);
+          if (ret.rowCount == 1) {
+            sendmail.reset(ret.rows[0].email, ret.rows[0].token)
+              .then(ret => {res.json(ret);})
+              .catch(err => {next(err)});
+          } else {
+            console.log('vpUser.routes.pg.js::reset | ERROR', `email ${req.body.email} NOT found.`);
+            next(new Error(`email '${req.body.email}' NOT found.`));
+          }
+        })
+        .catch(err => {console.log('vpUser.routes.pg.js::reset | ERROR', err); next(err);});
+}
+
+function confirm(req, res, next) {
+    console.log(`vpUser.routes.pg.js::confirm() | token`, req.query);
+    userService.confirm(req.query)
         .then(() => res.json({}))
         .catch(err => next(err));
 }

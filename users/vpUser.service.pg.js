@@ -4,17 +4,20 @@ const bcrypt = require('bcryptjs');
 const db = require('_helpers/db_postgres');
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
+const sendmail = require('./sendmail');
 var staticColumns = []; //file scope list of vpuser table columns retrieved on app startup (see 'getColumns()' below)
 
 module.exports = {
     authenticate,
-    getColumns, 
+    getColumns,
     getAll,
     getPage,
     getById,
     getByUserName,
     create,
     update,
+    reset,
+    confirm,
     delete: _delete
 };
 
@@ -29,7 +32,7 @@ pgUtil.getColumns("vpuser", staticColumns)
     .catch(err => {
         console.log(`vpUser.service.pg.pgUtil.getColumns`, err.message);
     });
-    
+
 async function authenticate(body) {
     if (!body.username || !body.password) {throw 'Username and password are required.';}
     try {
@@ -145,7 +148,7 @@ async function create(body) {
         body.hash = bcrypt.hashSync(body.password, 10);
         delete body.password;
     }
-    
+
     body.userrole = 'user'; //new users are all just users.
 
     var queryColumns = pgUtil.parseColumns(body, 1, [], staticColumns);
@@ -192,11 +195,53 @@ async function update(id, body) {
     }
 
     delete body.userrole; //don't allow role change on update yet.
-    
+
     var queryColumns = pgUtil.parseColumns(body, 2, [id], staticColumns);
     text = `update vpuser set (${queryColumns.named}) = (${queryColumns.numbered}) where "id"=$1;`;
     console.log(text, queryColumns.values);
     return await query(text, queryColumns.values);
+}
+
+/*
+  Reset user password by email. Call this route to set a new user password before
+  sending a reset email/token. This route will invalidate the old password and
+  send an email with reset link containing a reset token.
+
+  - verify user email. if found:
+  - set null password hash
+  - set db reset token (for comparison)
+  - send email with url and db reset token
+
+*/
+function reset(email) {
+
+    //https://www.npmjs.com/package/jsonwebtoken
+    const token = jwt.sign({ sub: email }, config.secret, { expiresIn: '1h' });
+
+    text = `update vpuser set (hash, token) = (hash, $2) where "email"=$1 returning id,email,token;`;
+    console.log(text, [email, token]);
+    return query(text, [email, token]);
+/* again, this doesn't work. promise is returned as <pending>...
+    .then(res => {
+      console.log('vpUser.service.pg.js::reset | rowCount ', res.rowCount);
+      if (res.rowCount == 1) {
+        return sendmail.reset(email, token);
+      } else {
+        console.log('vpUser.service.pg.js::reset | ERROR', `email ${email} NOT found.`);
+        return new Promise.reject(new Error(`email ${email} NOT found.`));
+      }
+    })
+    .catch(err => {
+      console.log('vpUser.service.pg.js::reset | ERROR ', err.message);
+      return new Promise(function(resolve, reject) {reject(err.message);});
+      //return err.message;
+    });
+*/
+}
+
+async function confirm(token) {
+  console.log('vpUser.service.pg.js::confirm | token', token);
+  return;
 }
 
 async function _delete(id) {

@@ -25,8 +25,11 @@ function jwt() {
              */
             '/users/authenticate',
             '/users/register',
+            '/users/reset',
+            '/users/confirm',
+
             '/vtinfo/towns',
-            
+
             '/pools/mapped', // /pools/mapped performs a getAll()
             { url: /^\/pools\/mapped\/.*/, methods: ['GET'] }, // /pools/mapped/:id
             { url: /^\/pools\/mapped\/page\/.*/, methods: ['GET'] }, // /pools/mapped/page/:page
@@ -40,41 +43,41 @@ function jwt() {
             { url: /^\/pools\/page\/.*/, methods: ['GET'] }
         ]
     });
-    
+
     //console.log('jwt.js|jwt()|return: ', ret);
     //return;
 }
 
 /*
     NOTE - here is explanation on how to use express-jwt:
-    
+
         https://github.com/auth0/express-jwt#usage
-    
+
     It's as simple as this:
 
         jwt adds req.user to the req object. use it.
         if it's missing values, we can add them here by setting req.user
-        
+
     Actually, it's more secure to use a user record retrieved from the DB
     here, than to trust the values in the incoming token. Use that, instead.
 */
 async function isRevoked(req, payload, done) {
-    
+
     console.log(`jwt.js|isRevoked()
                 |req.body:[${Object.keys(req.body)}] [${Object.values(req.body)}]
                 |payload:[${Object.keys(payload)}] [${Object.values(payload)}]`
                 );
-    
+
     const user = await userService.getById(payload.sub);
 
     // revoke token if user no longer exists
     if (!user) {
         return done(null, true);
     }
-    
+
     req.user = user;
-    
+
     console.dir(req.user);
-    
+
     return done();
 };
