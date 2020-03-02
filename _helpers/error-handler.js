@@ -2,15 +2,15 @@ module.exports = errorHandler;
 
 function errorHandler(err, req, res, next) {
     var ret;
-    
+
     //This doesn't work. Need to find a way to determine when res.header has been set...
     //console.log('error-handler | http status:', res.status);
-    
+
 /*
-NOTE: setting res.status here causes error - can't set headers already  sent to client.
+NOTE: setting res.status here causes error - can't set headers already sent to client.
 https://stackoverflow.com/questions/7042340/error-cant-set-headers-after-they-are-sent-to-the-client
 */
-    
+
     if (typeof (err) === 'string') {
         // custom application error
         console.log('error-handler | err.name: string error | error:', err);
@@ -37,7 +37,7 @@ https://stackoverflow.com/questions/7042340/error-cant-set-headers-after-they-ar
         //ret = res.status(401).json({ message: 'Invalid Token' });
         ret = { message: 'Invalid Token' };
     }
-    
+
     console.log('error-handler.errorHandler',
                 `err.name: ${err.name}`,
                 `err.message: ${err.message}`,
@@ -49,6 +49,6 @@ https://stackoverflow.com/questions/7042340/error-cant-set-headers-after-they-ar
     //NOTE: this does not throw error. we assume that this is the same http error code as already set elsewhere.
     ret = res.status(500).json({ message: err.message, hint: err.hint, detail: err.detail });
     //ret = { message: err.message, hint: err.hint, detail: err.detail };
-    
+
     return ret;
 }

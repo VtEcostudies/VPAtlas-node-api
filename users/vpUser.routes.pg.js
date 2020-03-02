@@ -84,24 +84,14 @@ function update(req, res, next) {
 function reset(req, res, next) {
     console.log(`vpUser.routes.pg.js::reset() | email`, req.body.email);
     userService.reset(req.body.email)
-        .then(ret => {
-          console.log('vpUser.routes.pg.js::reset | rowCount ', ret.rowCount);
-          if (ret.rowCount == 1) {
-            sendmail.reset(ret.rows[0].email, ret.rows[0].token)
-              .then(ret => {res.json(ret);})
-              .catch(err => {next(err)});
-          } else {
-            console.log('vpUser.routes.pg.js::reset | ERROR', `email ${req.body.email} NOT found.`);
-            next(new Error(`email '${req.body.email}' NOT found.`));
-          }
-        })
-        .catch(err => {console.log('vpUser.routes.pg.js::reset | ERROR', err); next(err);});
+        .then(ret => res.json(ret))
+        .catch(err => next(err)});
 }
 
 function confirm(req, res, next) {
-    console.log(`vpUser.routes.pg.js::confirm() | token`, req.query);
+    console.log(`vpUser.routes.pg.js::confirm() | req.query:`, req.query);
     userService.confirm(req.query)
-        .then(() => res.json({}))
+        .then(ret => res.json(ret))
         .catch(err => next(err));
 }
 

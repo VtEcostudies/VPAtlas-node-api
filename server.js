@@ -42,12 +42,12 @@ app.use('/aws/s3', require('./vpUtil/vp_s3_info.routes')); //get connection cred
 //NOTE: this causes error when http status is set in handler. No solution yet.
 app.use(errorHandler);
 
-console.log('command-line arguments:', process.argv);
+//console.log('command-line arguments:', process.argv);
 
 for (var i=0; i<process.argv.length; i++) {
-    var all = process.argv[i].split('=');
-    var act = all[0];
-    var arg = all[1];
+    var all = process.argv[i].split('='); //the ith command-line argument
+    var act = all[0]; //action, left of action=argument
+    var arg = all[1]; //argument, right of action=argument
     console.log(`command-line argument ${i}`, all);
 	switch(act) {
 		case "http":
@@ -61,35 +61,35 @@ for (var i=0; i<process.argv.length; i++) {
 			tls=2;
       argPort=4322;
 			break;
-        case "port":
-            argPort = arg;
-            break;
-        case "prod":
-            tls=1;
-            argPort=4322;
-            break;
-        case "init":
-            vpMappedModel.initVpMapped();
-            break;
-        case "upgrade":
-            switch(arg) {
-                case "mapped":
-                case "vpmapped":
-                    vpMappedModel.upgradeVpMapped();
-                    break;
-                case "county":
-                case "counties":
-                    vtInfoModel.importCounties();
-                    break;
-                case "town":
-                case "towns":
-                    vtInfoModel.importTowns();
-                    break;
-            }
+    case "port":
+        argPort = arg;
+        break;
+    case "prod":
+        tls=1;
+        argPort=4322;
+        break;
+    case "init":
+        vpMappedModel.initVpMapped();
+        break;
+    case "upgrade":
+        switch(arg) {
+            case "mapped":
+            case "vpmapped":
+                vpMappedModel.upgradeVpMapped();
+                break;
+            case "county":
+            case "counties":
+                vtInfoModel.importCounties();
+                break;
+            case "town":
+            case "towns":
+                vtInfoModel.importTowns();
+                break;
+        }
 	}
 }
-//get port
-var srvPort = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
+//set this API's port - dev-local:4000, prod-http:4321, prod-https:4322
+var srvPort = 4000;
 if (argPort) srvPort = argPort;
 
 //create server and listen

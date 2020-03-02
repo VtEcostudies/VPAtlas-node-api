@@ -1,5 +1,7 @@
 const nodemailer = require('nodemailer');
 ﻿const config = require('config.json');
+const os = require("os");
+const env = os.hostname()=='vpatlas.org'?'prod':'dev';
 
 module.exports = {
     reset
@@ -19,7 +21,7 @@ function reset(userMail, token) {
     from: config.vceEmail,
     to: userMail,
     subject: 'VPAtlas Password Reset',
-    html: `<a href=https://vpatlas.org/users/confirm?${token}>Confirm VPAtlas Password Change</a>`
+    html: `<a href=${config.server[env]}/users/confirm?token=${token}>Confirm VPAtlas Password Change</a>`
   };
 
   /*

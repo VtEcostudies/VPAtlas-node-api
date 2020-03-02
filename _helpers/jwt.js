@@ -68,14 +68,14 @@ async function isRevoked(req, payload, done) {
                 |payload:[${Object.keys(payload)}] [${Object.values(payload)}]`
                 );
 
-    const user = await userService.getById(payload.sub);
-
-    // revoke token if user no longer exists
-    if (!user) {
-        return done(null, true);
+    if (payload.sub) {
+      req.user = await userService.getById(payload.sub);
     }
 
-    req.user = user;
+    // revoke token if user no longer exists or not found
+    if (!req.user) {
+        return done(null, true);
+    }
 
     console.dir(req.user);
 

@@ -1,7 +1,14 @@
+const os = require("os");
+const env = os.hostname()=='vpatlas.org'?'prod':'dev';
 const config = require('config.json');
 const { Pool } = require('pg'); //a Postgres Connection Pool, not to be confused with a Vernal Pool
-const connPool = new Pool(config.pg);
-var types = require('pg').types
+const connPool = new Pool(config.pg[env]);
+const types = require('pg').types;
+
+console.log(`hostname: ${os.hostname}`);
+console.log(`environment: ${env}`);
+console.log(`postgres config:`);
+console.dir(config.pg[env]);
 
 /*
  * Fix date display error.
@@ -19,7 +26,7 @@ var types = require('pg').types
  *
  * date OID=1082
  * timestamp OID=1114
- * 
+ *
 */
 parseDate = function(val) {
    //console.log('db_postgres.parseDate', val); //NOTE: this log is hit 2x per row. HUGE API performance hit.
@@ -30,30 +37,7 @@ types.setTypeParser(1082, parseDate);
 
 /*
 NOTES:
-
- */
-module.exports = {
-  
-  query: (text, params) => connPool.query(text, params)
-  
-};
-
-/*
-module.exports = function() {
-  const connPool = new Pool(config.pg.dev);
-  
-  var module = {};
-  
-  module.query = function(text, params) {
-    connPool.query(text, params);
-  };
-
-  return module;
-};
-
-module.exports = function() {
-  const connPool = new Pool(config.pg.dev);
-
-  return {query: (text, params) => connPool.query(text, params)};
-};
 */
+module.exports = {
+  query: (text, params) => connPool.query(text, params)
+};

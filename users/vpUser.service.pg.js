@@ -208,40 +208,65 @@ async function update(id, body) {
   send an email with reset link containing a reset token.
 
   - verify user email. if found:
-  - set null password hash
-  - set db reset token (for comparison)
-  - send email with url and db reset token
-
+  - set db reset token (for comparison on /confirm route)
+  - send email with url and reset token
 */
 function reset(email) {
-
-    //https://www.npmjs.com/package/jsonwebtoken
-    const token = jwt.sign({ sub: email }, config.secret, { expiresIn: '1h' });
-
-    text = `update vpuser set (hash, token) = (hash, $2) where "email"=$1 returning id,email,token;`;
-    console.log(text, [email, token]);
-    return query(text, [email, token]);
-/* again, this doesn't work. promise is returned as <pending>...
-    .then(res => {
-      console.log('vpUser.service.pg.js::reset | rowCount ', res.rowCount);
-      if (res.rowCount == 1) {
-        return sendmail.reset(email, token);
-      } else {
-        console.log('vpUser.service.pg.js::reset | ERROR', `email ${email} NOT found.`);
-        return new Promise.reject(new Error(`email ${email} NOT found.`));
-      }
-    })
-    .catch(err => {
-      console.log('vpUser.service.pg.js::reset | ERROR ', err.message);
-      return new Promise(function(resolve, reject) {reject(err.message);});
-      //return err.message;
+    return new Promise((resolve, reject) => {
+      const token = jwt.sign({ reset:true, email:email }, config.secret, { expiresIn: '3m' });
+      text = `update vpuser set (hash, token) = (hash, $2) where "email"=$1 returning id,email,token;`;
+      console.log(text, [email, token]);
+      query(text, [email, token])
+        .then(res => {
+          console.log('vpUser.service.pg.js::reset | rowCount ', res.rowCount);
+          if (res.rowCount == 1) {
+            sendmail.reset(res.rows[0].email, res.rows[0].token)
+              .then(ret => {resolve(ret);})
+              .catch(err => {reject(err)});
+          } else {
+            console.log('vpUser.service.pg.js::reset | ERROR', `email ${email} NOT found.`);
+            reject(new Error(`email ${email} NOT found.`));
+          }
+        })
+        .catch(err => {
+          console.log('vpUser.service.pg.js::reset | ERROR ', err.message);
+          reject(err.message);
+        });
     });
-*/
 }
 
-async function confirm(token) {
-  console.log('vpUser.service.pg.js::confirm | token', token);
-  return;
+function confirm(qry) {
+  console.log('vpUser.service.pg.js::confirm | req.query', qry);
+
+  return new Promise((resolve, reject) => {
+    jwt.verify(qry.token, config.secret, function(err, payload) {
+      if (err) {
+        console.log('vpUser.service.pg.js::confirm | ERROR', err);
+        reject(err);
+      }
+      payload.now = Date.now();
+      console.dir(payload);
+      //single-use token: only confirm once per token
+      var text = `update vpuser set token=null where "email"=$1 and "token"=$2 returning *;`;
+      //multi-use token: confirm and re-confirm until token expires
+      var text = `select * from vpuser where email=$1 and token=$2;`;
+      console.log(text);
+      query(text, [payload.email, qry.token])
+        .then(res => {
+          console.log(res.rows[0]);
+          if (res.rows[0]) {
+            delete res.rows[0].hash; //remove password hash for security
+            delete res.rows[0].token; //ditto
+            resolve(res.rows[0]);
+          } else {
+            reject(new Error('User email/token NOT found.'))
+          }
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
+  });
 }
 
 async function _delete(id) {
