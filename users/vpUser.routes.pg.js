@@ -7,7 +7,7 @@ const sendmail = require('./sendmail');
 router.post('/authenticate', authenticate);
 router.post('/register', register);
 router.post('/reset', reset);
-router.get('/confirm', verify); //for testing purposes to verify a valid reset token with a GET (ie. browser easy)
+router.post('/verify', verify); //verify a valid reset token
 router.post('/confirm', confirm);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
@@ -91,8 +91,8 @@ function reset(req, res, next) {
 
 //reachable by GET, so easy to test token/email in browser
 function verify(req, res, next) {
-    console.log(`vpUser.routes.pg.js::verify() | req.query:`, req.query);
-    userService.confirm(req.query)
+    console.log(`vpUser.routes.pg.js::verify() | req.body:`, req.body);
+    userService.verify(req.body.token)
         .then(ret => res.json(ret))
         .catch(err => next(err));
 }

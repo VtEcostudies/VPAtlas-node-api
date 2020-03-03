@@ -26,6 +26,7 @@ function jwt() {
             '/users/authenticate',
             '/users/register',
             '/users/reset',
+            '/users/verify',
             '/users/confirm',
 
             '/vtinfo/towns',

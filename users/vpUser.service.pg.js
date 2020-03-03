@@ -214,7 +214,7 @@ async function update(id, body) {
 */
 function reset(email) {
     return new Promise((resolve, reject) => {
-      const token = jwt.sign({ reset:true, email:email }, config.secret, { expiresIn: '3m' });
+      const token = jwt.sign({ reset:true, email:email }, config.secret, { expiresIn: '1h' });
       text = `update vpuser set (hash, token) = (hash, $2) where "email"=$1 returning id,email,token;`;
       console.log(text, [email, token]);
       query(text, [email, token])
@@ -236,23 +236,21 @@ function reset(email) {
     });
 }
 
-function verify(qry) {
-  console.log('vpUser.service.pg.js::verify | req.query', qry);
+function verify(token) {
+  console.log('vpUser.service.pg.js::verify | token', token);
 
   return new Promise((resolve, reject) => {
-    jwt.verify(qry.token, config.secret, function(err, payload) {
+    jwt.verify(token, config.secret, function(err, payload) {
       if (err) {
         console.log('vpUser.service.pg.js::verify | ERROR', err);
         reject(err);
       }
       payload.now = Date.now();
       console.dir(payload);
-      //single-use token: only verify once per token
-      var text = `update vpuser set token=null where "email"=$1 and "token"=$2 returning *;`;
       //multi-use token: verify and re-verify until token expires
       var text = `select * from vpuser where email=$1 and token=$2;`;
       console.log(text);
-      query(text, [payload.email, qry.token])
+      query(text, [payload.email, token])
         .then(res => {
           console.log(res.rows[0]);
           if (res.rows[0]) {
