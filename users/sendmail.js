@@ -21,7 +21,7 @@ function reset(userMail, token) {
     from: config.vceEmail,
     to: userMail,
     subject: 'VPAtlas Password Reset',
-    html: `<a href=${config.server[env]}/users/confirm?token=${token}>Confirm VPAtlas Password Change</a>`
+    html: `<a href=${config.server[env]}/confirm?token=${token}>Confirm VPAtlas Password Change</a>`
   };
 
   /*

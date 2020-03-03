@@ -7,6 +7,7 @@ const sendmail = require('./sendmail');
 router.post('/authenticate', authenticate);
 router.post('/register', register);
 router.post('/reset', reset);
+router.get('/confirm', verify); //for testing purposes to verify a valid reset token with a GET (ie. browser easy)
 router.post('/confirm', confirm);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
@@ -82,15 +83,24 @@ function update(req, res, next) {
 }
 
 function reset(req, res, next) {
-    console.log(`vpUser.routes.pg.js::reset() | email`, req.body.email);
+    console.log(`vpUser.routes.pg.js::reset() | req.body`, req.body);
     userService.reset(req.body.email)
         .then(ret => res.json(ret))
-        .catch(err => next(err)});
+        .catch(err => next(err));
 }
 
-function confirm(req, res, next) {
-    console.log(`vpUser.routes.pg.js::confirm() | req.query:`, req.query);
+//reachable by GET, so easy to test token/email in browser
+function verify(req, res, next) {
+    console.log(`vpUser.routes.pg.js::verify() | req.query:`, req.query);
     userService.confirm(req.query)
+        .then(ret => res.json(ret))
+        .catch(err => next(err));
+}
+
+//can only be reached by POST, so we have control and put data in body
+function confirm(req, res, next) {
+    console.log(`vpUser.routes.pg.js::confirm() | req.body:`, req.body);
+    userService.confirm(req.body.token, req.body.password)
         .then(ret => res.json(ret))
         .catch(err => next(err));
 }

@@ -17,6 +17,7 @@ module.exports = {
     create,
     update,
     reset,
+    verify,
     confirm,
     delete: _delete
 };
@@ -235,20 +236,20 @@ function reset(email) {
     });
 }
 
-function confirm(qry) {
-  console.log('vpUser.service.pg.js::confirm | req.query', qry);
+function verify(qry) {
+  console.log('vpUser.service.pg.js::verify | req.query', qry);
 
   return new Promise((resolve, reject) => {
     jwt.verify(qry.token, config.secret, function(err, payload) {
       if (err) {
-        console.log('vpUser.service.pg.js::confirm | ERROR', err);
+        console.log('vpUser.service.pg.js::verify | ERROR', err);
         reject(err);
       }
       payload.now = Date.now();
       console.dir(payload);
-      //single-use token: only confirm once per token
+      //single-use token: only verify once per token
       var text = `update vpuser set token=null where "email"=$1 and "token"=$2 returning *;`;
-      //multi-use token: confirm and re-confirm until token expires
+      //multi-use token: verify and re-verify until token expires
       var text = `select * from vpuser where email=$1 and token=$2;`;
       console.log(text);
       query(text, [payload.email, qry.token])
@@ -259,7 +260,42 @@ function confirm(qry) {
             delete res.rows[0].token; //ditto
             resolve(res.rows[0]);
           } else {
-            reject(new Error('User email/token NOT found.'))
+            reject(new Error('Cannot verify. User email/token NOT found.'))
+          }
+        })
+        .catch(err => {
+          reject(err);
+        });
+    });
+  });
+}
+
+function confirm(token, password) {
+  // hash password
+  var hash = bcrypt.hashSync(password, 10);
+
+  console.log('vpUser.service.pg.js::confirm | inputs', token, hash);
+
+  return new Promise((resolve, reject) => {
+    jwt.verify(token, config.secret, function(err, payload) {
+      if (err) {
+        console.log('vpUser.service.pg.js::confirm | ERROR', err);
+        reject(err);
+      }
+      payload.now = Date.now();
+      console.dir(payload);
+      //confirm token validity and update password in one stroke...
+      var text = `update vpuser set hash=$3,token=null where "email"=$1 and "token"=$2 returning *;`;
+      console.log(text);
+      query(text, [payload.email, token, hash])
+        .then(res => {
+          console.log(res.rows[0]);
+          if (res.rows[0]) {
+            delete res.rows[0].hash; //remove password hash for security
+            delete res.rows[0].token; //ditto
+            resolve(res.rows[0]);
+          } else {
+            reject(new Error('Cannot confirm. User email/token NOT found.'))
           }
         })
         .catch(err => {
