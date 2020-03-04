@@ -21,7 +21,6 @@ module.exports = router;
 function authenticate(req, res, next) {
     console.log(`vpUser.routes.pg.authenticate | req.body:`, req.body);
     userService.authenticate(req.body)
-        //.then(user => user ? res.json(user) : res.status(400).json({ message: 'Username or password is incorrect' }))
         .then(user => {
             console.dir(user);
             res.json(user);
@@ -31,8 +30,7 @@ function authenticate(req, res, next) {
 
 function register(req, res, next) {
     console.log(`users.pg.routes.register | req.body:`, req.body);
-    userService.create(req.body)
-        //.then(() => res.json({}))
+    userService.register(req.body)
         .then(user => res.json(user))
         .catch(err => next(err));
 }

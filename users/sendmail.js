@@ -4,10 +4,14 @@ const os = require("os");
 const env = os.hostname()=='vpatlas.org'?'prod':'dev';
 
 module.exports = {
+    register: (userMail, token) => reset(userMail, token, false),
     reset
 };
 
-function reset(userMail, token) {
+/*
+Send registration or reset email with token.
+*/
+function reset(userMail, token, reset=true) {
 
   var transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -17,11 +21,14 @@ function reset(userMail, token) {
     }
   });
 
+  var url = `<a href=${config.server[env]}/confirm/registration?token=${token}>Confirm VPAtlas Registration</a>`;
+  if (reset) url = `<a href=${config.server[env]}/confirm/reset?token=${token}>Confirm VPAtlas Password Change</a>`;
+
   var mailOptions = {
     from: config.vceEmail,
     to: userMail,
-    subject: 'VPAtlas Password Reset',
-    html: `<a href=${config.server[env]}/confirm?token=${token}>Confirm VPAtlas Password Change</a>`
+    subject: reset?'VPAtlas Password Reset':'VPAtlas Registration',
+    html: url
   };
 
   /*

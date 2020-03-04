@@ -12,43 +12,37 @@ https://stackoverflow.com/questions/7042340/error-cant-set-headers-after-they-ar
 */
 
     if (typeof (err) === 'string') {
-        // custom application error
+        // custom application console.error();
         console.log('error-handler | err.name: string error | error:', err);
-        return res.status(400).json({ message: err });
+        ret = { message: err };
+        return res.status(400).json(ret);
     }
-
-    if (err.name === 'UniquenessConstraintViolation') {
-        // Postgres Uniqueness Constraint Violation - the return value, err.name, is a custom setting in each service
-        console.log('error-handler | err.name: ', err.name);
-        //ret = res.status(409).json({ message: err.message, hint: err.hint, detail: err.detail });
-        ret = { message: err.message, hint: err.hint, detail: err.detail };
-    }
-
-    if (err.name === 'ValidationError') {
-        // mongoose validation error
-        console.log('error-handler | err.name: ', err.name);
-        //ret = res.status(400).json({ message: err.message, hint: err.hint });
-        ret = { message: err.message, hint: err.hint };
-    }
-
+/*
     if (err.name === 'UnauthorizedError') {
         // jwt authentication error
         console.log('error-handler | err.name:', err.name);
         //ret = res.status(401).json({ message: 'Invalid Token' });
         ret = { message: 'Invalid Token' };
     }
+*/
+    else {
+      ret = {
+        name:err.name,
+        message:err.message,
+        hint:err.hint,
+        detail:err.detail,
+        code:err.code,
+        table:err.table,
+        constraint:err.constraint,
+        column:err.column
+      };
+    }
 
-    console.log('error-handler.errorHandler',
-                `err.name: ${err.name}`,
-                `err.message: ${err.message}`,
-                `err.hint: ${err.hint}`,
-                `err.detail: ${err.detail}`
-                );
+    console.log(`error-handler::errorHandler()`);
+    console.dir(ret);
 
     // default to 500 server error
     //NOTE: this does not throw error. we assume that this is the same http error code as already set elsewhere.
-    ret = res.status(500).json({ message: err.message, hint: err.hint, detail: err.detail });
-    //ret = { message: err.message, hint: err.hint, detail: err.detail };
-
-    return ret;
+    next(res.status(500).json(ret));
+    //return res.status(500).json(ret);
 }

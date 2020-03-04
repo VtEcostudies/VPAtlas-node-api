@@ -8,15 +8,15 @@ CREATE OR REPLACE FUNCTION set_updated_at()
     LANGUAGE 'plpgsql'
 AS $BODY$
 BEGIN
-   NEW."updatedAt" = now();
+   NEW."updatedAt" = now(); 
    RETURN NEW;
 END;
 $BODY$;
 
 --create triggers for each table having the column "updatedAt"
 DROP TRIGGER IF EXISTS trigger_updated_at ON vpuser;
-CREATE OR REPLACE TRIGGER trigger_updated_at
-    BEFORE UPDATE
+CREATE TRIGGER trigger_updated_at
+    BEFORE UPDATE 
     ON vpuser
     FOR EACH ROW
     EXECUTE PROCEDURE public.set_updated_at();

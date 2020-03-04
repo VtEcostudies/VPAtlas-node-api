@@ -14,7 +14,8 @@ module.exports = {
     getPage,
     getById,
     getByUserName,
-    create,
+    //create,
+    register,
     update,
     reset,
     verify,
@@ -34,24 +35,59 @@ pgUtil.getColumns("vpuser", staticColumns)
         console.log(`vpUser.service.pg.pgUtil.getColumns`, err.message);
     });
 
+/*
+Authenticate user. Handle both registration confirmation and plain login.
+
+Registration confirmation is different only in that a registration token is in
+the body. When that's true, query with additional where clause token parameter,
+and on successful auth set token=null and status='confirmed'.
+*/
 async function authenticate(body) {
     if (!body.username || !body.password) {throw 'Username and password are required.';}
     try {
-        const res = await query(`select * from vpuser where username=$1`, [body.username]);
+        var sel = `select * from vpuser where username=$1 and token is null;`;
+        var upd = `update vpuser set token=null,status='confirmed' where username=$1 and token=$2 returning *;`;
+        var args = [body.username];
+        if (body.token) {
+          sel = `select * from vpuser where username=$1 and token=$2;`;
+          args = [body.username, body.token];
+        }
+        console.log(sel, args);
+        const res = await query(sel, args);
         const user = res.rows[0];
         console.log(`vpuser.pg.service.authenticate | user: `, user);
         if (user && bcrypt.compareSync(body.password, user.hash)) {
-            delete user.hash;
-            const token = jwt.sign({ sub: user.id, role: user.userrole }, config.secret);
-            return { //interesting - this generates object key:value pairs from variable names and content...
-                user,
-                token
-            };
+            if (user.status=='confirmed' || body.token) {
+              delete user.hash;
+              const token = jwt.sign({ sub: user.id, role: user.userrole }, config.secret, { expiresIn: config.token.loginExpiry });
+              if (body.token) {
+                console.log(upd, args);
+                query(upd, args)
+                  .then(ret => { return { user, token }; })
+                  .catch(err => {throw(err);});
+              } else {
+                return { user, token }; //interesting - this generates object key:value pairs from variable names and content...
+              }
+            } else {
+              var message = `Invalid user status: '${user.status}.' `;
+              switch (user.status) {
+                case 'registration':
+                  message += 'Please complete the registration process using your emailed registration token.'
+                  break;
+                case 'reset':
+                  message += 'Please complete the password reset process using your emailed reset token.'
+                  break;
+                case 'invalid':
+                  message = 'This user login is invalid because the email account could not be verified.'
+                  break;
+              }
+              throw message;
+            }
         } else {
             throw 'Username or password is incorrect.';
         }
     } catch(err) {
-        throw 'Username or password is incorrect.';
+        throw `Authentication error: ${err}`;
     }
 }
 
@@ -142,6 +178,55 @@ async function getByUserName(username) {
     }
 }
 
+/*
+  Register a user with email registration token flow.
+*/
+function register(body) {
+    return new Promise((resolve, reject) => {
+        body.token = jwt.sign({ registration:true, email:body.email }, config.secret, { expiresIn: config.token.registrationExpiry });
+        body.status = 'registration';
+        body.userrole = 'user'; //default role is 'user' role.
+        // hash password, add to body object, delete password from body object
+        if (body.password) {
+            body.hash = bcrypt.hashSync(body.password, 10);
+            delete body.password;
+        }
+
+        var queryColumns = pgUtil.parseColumns(body, 1, [], staticColumns);
+        text = `insert into vpuser (${queryColumns.named}) values (${queryColumns.numbered}) returning id;`;
+        console.log(text, queryColumns.values);
+        query(text, queryColumns.values)
+          .then(res => {
+            console.log('vpUser.service.pg.js::register | rowCount, user id ', res.rowCount, res.rows[0].id);
+            sendmail.register(body.email, body.token)
+              .then(ret => {resolve(ret);})
+              .catch(err => {reject(err)});
+          })
+          .catch(err => {
+              console.log('vpUser.service.pg.js::register | ERROR ', err.message);
+              if (err.code == 23505 && err.constraint == 'vpuser_pkey') {
+                  err.name = 'Uniqueness Constraint Violation';
+                  err.hint = 'Please choose a different username.';
+                  err.message = `username '${body.username}' is already taken.`;
+              }
+              if (err.code == 23505 && err.constraint == 'unique_email') {
+                  err.name = 'Uniqueness Constraint Violation';
+                  err.hint = 'Please login with the account attached to this email.';
+                  err.message = `email '${body.email}' has already registered.`;
+              }
+              if (err.code == 23502) {
+                  err.name = 'Not-null Constraint Violation';
+                  err.hint = 'Please enter all required values.';
+                  delete err.detail; //contains entire existing record - insecure
+              }
+              reject(err);
+          });
+    });
+}
+
+/*
+Register a user the old way.
+*/
 async function create(body) {
 
     // hash password, add to body object, delete password from body object
@@ -159,11 +244,16 @@ async function create(body) {
         var res = await query(text, queryColumns.values);
         return res;
     } catch(err) {
-        console.log(err);
+        //console.log(err);
         if (err.code == 23505 && err.constraint == 'vpuser_pkey') {
             err.name = 'Uniqueness Constraint Violation';
             err.hint = 'Please choose a different username.';
             err.message = `username '${body.username}' is already taken.`;
+        }
+        if (err.code == 23505 && err.constraint == 'unique_email') {
+            err.name = 'Uniqueness Constraint Violation';
+            err.hint = 'Please login with the account attached to this email.';
+            err.message = `email '${body.email}' has already registered.`;
         }
         if (err.code == 23502) {
             err.name = 'Not-null Constraint Violation';
@@ -172,29 +262,16 @@ async function create(body) {
         }
         throw err;
     }
-/* This did seem to work... weird.
-    await query(text, queryColumns.values)
-        .catch(err => {
-            console.log(err);
-            if (err.code == 23505 && err.constraint == 'vpuser_pkey') {
-                err.name = 'Uniqueness Constraint Violation';
-                err.hint = 'Please choose a different username.';
-                err.message = `username '${body.username}' is already taken.`;
-            }
-            throw err;
-            })
-        .then(res => {return res;});
-*/
 }
 
+/*
+  Simple update of user profile data.
+  Password resets are done via the reset flow.
+  User role change is done by administrative function. (TBD)
+*/
 async function update(id, body) {
 
-    // hash password into body
-    if (body.password) {
-        body.hash = bcrypt.hashSync(body.password, 10);
-        delete body.password;
-    }
-
+    delete body.password; //don't allow password update here. only use reset flow.
     delete body.userrole; //don't allow role change on update yet.
 
     var queryColumns = pgUtil.parseColumns(body, 2, [id], staticColumns);
@@ -214,7 +291,7 @@ async function update(id, body) {
 */
 function reset(email) {
     return new Promise((resolve, reject) => {
-      const token = jwt.sign({ reset:true, email:email }, config.secret, { expiresIn: '1h' });
+      const token = jwt.sign({ reset:true, email:email }, config.secret, { expiresIn: config.token.resetExpiry });
       text = `update vpuser set (hash, token) = (hash, $2) where "email"=$1 returning id,email,token;`;
       console.log(text, [email, token]);
       query(text, [email, token])
@@ -236,6 +313,14 @@ function reset(email) {
     });
 }
 
+/*
+Verify a valid token that maps to a user in the db having the included email.
+
+We handle 2 types of tokens: registration and reset. When the token is parsed,
+it will include a payload with either reset=true or registration=true and an
+email address. By receiving this token and successfully decoding, this function
+verifies that we have a valid user.
+*/
 function verify(token) {
   console.log('vpUser.service.pg.js::verify | token', token);
 
@@ -283,7 +368,7 @@ function confirm(token, password) {
       payload.now = Date.now();
       console.dir(payload);
       //confirm token validity and update password in one stroke...
-      var text = `update vpuser set hash=$3,token=null where "email"=$1 and "token"=$2 returning *;`;
+      var text = `update vpuser set hash=$3,token=null,status='confirmed' where "email"=$1 and "token"=$2 returning *;`;
       console.log(text);
       query(text, [payload.email, token, hash])
         .then(res => {
