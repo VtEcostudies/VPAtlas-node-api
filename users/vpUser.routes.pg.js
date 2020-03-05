@@ -9,6 +9,7 @@ router.post('/register', register);
 router.post('/reset', reset);
 router.post('/verify', verify); //verify a valid reset token
 router.post('/confirm', confirm);
+router.post('/new_email/:id', new_email);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
 router.get('/:id', getById);
@@ -99,6 +100,17 @@ function verify(req, res, next) {
 function confirm(req, res, next) {
     console.log(`vpUser.routes.pg.js::confirm() | req.body:`, req.body);
     userService.confirm(req.body.token, req.body.password)
+        .then(ret => res.json(ret))
+        .catch(err => next(err));
+}
+
+//can only be reached by POST, so we have control and put data in body
+function new_email(req, res, next) {
+    console.log(`vpUser.routes.pg.js::new_email() | req.body:`, req.body);
+    if (req.user.role != 'admin' && req.user.sub != req.params.id) {
+        throw(`Requesting User is not authorized to PUT Users by ID unless it's their own.`);
+    }
+    userService.new_email(req.params.id, req.body.email)
         .then(ret => res.json(ret))
         .catch(err => next(err));
 }

@@ -4,14 +4,15 @@ const os = require("os");
 const env = os.hostname()=='vpatlas.org'?'prod':'dev';
 
 module.exports = {
-    register: (userMail, token) => reset(userMail, token, false),
-    reset
+    register: (userMail, token) => reset(userMail, token, 'registration'),
+    reset: (userMail, token) => reset(userMail, token, 'reset'),
+    new_email: (userMail, token) => reset(userMail, token, 'email')
 };
 
 /*
 Send registration or reset email with token.
 */
-function reset(userMail, token, reset=true) {
+function reset(userMail, token, type='registration') {
 
   var transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -22,12 +23,20 @@ function reset(userMail, token, reset=true) {
   });
 
   var url = `<a href=${config.server[env]}/confirm/registration?token=${token}>Confirm VPAtlas Registration</a>`;
-  if (reset) url = `<a href=${config.server[env]}/confirm/reset?token=${token}>Confirm VPAtlas Password Change</a>`;
+  var sub = 'VPAtlas Registration';
+  if (type == 'reset') {
+    url = `<a href=${config.server[env]}/confirm/reset?token=${token}>Confirm VPAtlas Password Change</a>`;
+    sub = 'VPAtlas Password Reset';
+  }
+  if (type == 'email') {
+    url = `<a href=${config.server[env]}/confirm/email?token=${token}>Confirm VPAtlas Email Change</a>`;
+    sub = 'VPAtlas Email Change';
+  }
 
   var mailOptions = {
     from: config.vceEmail,
     to: userMail,
-    subject: reset?'VPAtlas Password Reset':'VPAtlas Registration',
+    subject: sub,
     html: url
   };
 

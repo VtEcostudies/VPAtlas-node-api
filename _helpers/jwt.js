@@ -64,9 +64,9 @@ function jwt() {
 */
 async function isRevoked(req, payload, done) {
 
-    console.log(`jwt.js|isRevoked()
-                |req.body:[${Object.keys(req.body)}] [${Object.values(req.body)}]
-                |payload:[${Object.keys(payload)}] [${Object.values(payload)}]`
+    console.log(`jwt.js::isRevoked()
+                req.body:[${Object.keys(req.body)}] [${Object.values(req.body)}]
+                payload:[${Object.keys(payload)}] [${Object.values(payload)}]`
                 );
 
     if (payload.sub) {
@@ -78,7 +78,7 @@ async function isRevoked(req, payload, done) {
         return done(null, true);
     }
 
-    console.dir(req.user);
+    //console.dir(req.user);
 
     return done();
 };
