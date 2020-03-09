@@ -80,7 +80,10 @@ async function authenticate(body) {
                 case 'invalid':
                   message = 'This user login is invalid because the email account could not be verified.'
                   break;
-              }
+                case 'new_email':
+                  message = 'This user login is invalid because a change of email address has not been confirmed.'
+                  break;
+            }
               throw message;
             }
         } else {
@@ -218,7 +221,7 @@ function register(body) {
 async function update(id, body) {
 
     delete body.password; //don't allow password update here. only use reset flow.
-    delete body.userrole; //don't allow role change on update yet.
+    //delete body.userrole; //don't allow role change on update yet.
 
     var queryColumns = pgUtil.parseColumns(body, 2, [id], staticColumns);
     text = `update vpuser set (${queryColumns.named}) = (${queryColumns.numbered}) where "id"=$1;`;

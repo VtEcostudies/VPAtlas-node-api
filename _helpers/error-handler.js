@@ -4,7 +4,7 @@ function errorHandler(err, req, res, next) {
     var ret;
 
     //This doesn't work. Need to find a way to determine when res.header has been set...
-    //console.log('error-handler | http status:', res.status);
+    console.log('error-handler | http status:', res.status, err.name, err.message);
 
 /*
 NOTE: setting res.status here causes error - can't set headers already sent to client.
@@ -13,18 +13,18 @@ https://stackoverflow.com/questions/7042340/error-cant-set-headers-after-they-ar
 
     if (typeof (err) === 'string') {
         // custom application console.error();
-        console.log('error-handler | err.name: string error | error:', err);
+        console.log('error-handler | string error | error:', err);
         ret = { message: err };
-        return res.status(400).json(ret);
+        next(res.status(400).json(ret));
     }
-/*
-    if (err.name === 'UnauthorizedError') {
+
+    else if (err.name === 'UnauthorizedError') {
         // jwt authentication error
         console.log('error-handler | err.name:', err.name);
-        //ret = res.status(401).json({ message: 'Invalid Token' });
-        ret = { message: 'Invalid Token' };
+        err.message = 'Invalid Token';
+        next(res.status(401).json(err));
     }
-*/
+
     else {
       ret = {
         name:err.name,
@@ -36,13 +36,10 @@ https://stackoverflow.com/questions/7042340/error-cant-set-headers-after-they-ar
         constraint:err.constraint,
         column:err.column
       };
+      console.log(`error-handler::errorHandler()`);
+      console.dir(ret);
+      // default to 500 server error
+      //NOTE: this does not throw error. we assume that this is the same http error code as already set elsewhere.
+      next(res.status(500).json(ret));
     }
-
-    console.log(`error-handler::errorHandler()`);
-    console.dir(ret);
-
-    // default to 500 server error
-    //NOTE: this does not throw error. we assume that this is the same http error code as already set elsewhere.
-    next(res.status(500).json(ret));
-    //return res.status(500).json(ret);
 }

@@ -13,7 +13,6 @@ router.post('/new_email/:id', new_email);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
 router.get('/:id', getById);
-//router.post('/', create); //same as /register - not needed
 router.put('/:id', update);
 router.delete('/:id', _delete);
 
@@ -60,13 +59,6 @@ function getById(req, res, next) {
     }
     userService.getById(req.params.id)
         .then(user => user ? res.json(user) : res.sendStatus(404))
-        .catch(err => next(err));
-}
-
-function create(req, res, next) {
-    console.log(`create req.body:`,req.body);
-    userService.create(req.body)
-        .then(() => res.json({}))
         .catch(err => next(err));
 }
 
