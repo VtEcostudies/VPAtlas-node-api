@@ -21,11 +21,14 @@ module.exports = router;
 function authenticate(req, res, next) {
     console.log(`vpUser.routes.pg.authenticate | req.body:`, req.body);
     userService.authenticate(req.body)
-        .then(user => {
-            console.dir(user);
-            res.json(user);
+        .then(ret => {
+          console.log('vpUser.routes.pg.js::authenticate | SUCCESS |', ret);
+          res.json(ret);
         })
-        .catch(err => next(err));
+        .catch(err => {
+          console.dir('vpUser.routes.pg.js::authenticate | ERROR', err);
+          next(err)
+        });
 }
 
 function register(req, res, next) {
@@ -68,7 +71,7 @@ function update(req, res, next) {
         throw(`Requesting User is not authorized to PUT Users by ID unless it's their own.`);
     }
     console.log(`update id ${req.params.id} req.body:`, req.body);
-    userService.update(req.params.id, req.body)
+    userService.update(req.params.id, req.body, req.user)
         .then(() => res.json({}))
         .catch(err => next(err));
 }

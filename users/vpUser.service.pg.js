@@ -36,62 +36,73 @@ pgUtil.getColumns("vpuser", staticColumns)
     });
 
 /*
-Authenticate user. Handle both registration confirmation and plain login.
+Authenticate user. Handle both registration, reset, and new_email confirmations
+and the regular login process.
 
-Registration confirmation is different only in that a registration token is in
-the body. When that's true, query with additional where clause token parameter,
-and on successful auth set token=null and status='confirmed'.
+Registration, reset, and new_email confirmations are different only in that a
+token is in the body. To succeed, the incoming token must match the db token,
+which was inserted during the reset operation. When a token is preset, query
+the user db with additional where clause "token" parameter, and on successful
+auth set token=null and status='confirmed'.
+
+Originally, we filtered user selection to 'where token is null'. However, this
+did not allow us to return users whose status is not confirmed, which prevents
+us from returning an instructive error.
+
 */
 async function authenticate(body) {
     if (!body.username || !body.password) {throw 'Username and password are required.';}
-    try {
+    return new Promise(async (resolve, reject) => {
+        var token = null; //authentiction token. return if successful login.
         var select = `select * from vpuser where username=$1;`;
-        var update = `update vpuser set token=null,status='confirmed' where username=$1 and token=$2 returning *;`;
         var args = [body.username];
         if (body.token) {
           select = `select * from vpuser where username=$1 and token=$2;`;
           args = [body.username, body.token];
         }
         console.log(select, args);
-        const res = await query(select, args);
-        const user = res.rows[0];
+        const sres = await query(select, args);
+        const user = sres.rows[0];
         console.log(`vpuser.pg.service.authenticate | user: `, user);
         if (user && bcrypt.compareSync(body.password, user.hash)) {
-            if (user.status=='confirmed' || body.token) { //confirmed and register and new_email...
-              delete user.hash;
-              const token = jwt.sign({ sub: user.id, role: user.userrole }, config.secret, { expiresIn: config.token.loginExpiry });
+            if (user.status=='confirmed' || body.token) { //confirmed, registration token and new_email token
+              delete user.hash; //never return hash via API
+              token = jwt.sign({ sub: user.id, role: user.userrole }, config.secret, { expiresIn: config.token.loginExpiry });
               if (body.token) {
                 console.log(update, args);
+                var update = `update vpuser set token=null,status='confirmed' where username=$1 and token=$2 returning *;`;
                 query(update, args)
-                  .then(ret => { console.log('token verified, nulled.'); return { user, token }; })
-                  .catch(err => {console.log('unknown error on status update.'); throw(err);});
+                  .then(res => {resolve ({"user":user, "token":token })})
+                  .catch(err => {reject (err)});
               } else {
-                return { user, token }; //interesting - this generates object key:value pairs from variable names and content...
+                resolve ({"user":user, "token":token });
               }
             } else {
               var message = `Invalid user status: '${user.status}.' `;
               switch (user.status) {
                 case 'registration':
-                  message += 'Please complete the registration process using your emailed registration token.'
+                  message += 'Please complete the registration process using your emailed registration token.';
                   break;
                 case 'reset':
-                  message += 'Please complete the password reset process using your emailed reset token.'
-                  break;
-                case 'invalid':
-                  message = 'This user login is invalid because the email account could not be verified.'
+                  message += 'Please complete the password reset process using your emailed reset token.';
                   break;
                 case 'new_email':
-                  message = 'This user login is invalid because a change of email address has not been confirmed.'
+                  message += 'Please complete the change of email process using your new email token.';
+                  break;
+                case 'invalid':
+                  message = 'This user is invalid. Please contact a VPAtlas administrator.';
                   break;
             }
-              throw message;
+              reject (message);
             }
         } else {
-            throw 'Username or password is incorrect.';
+            if (token) {
+              reject ('Invalid token.');
+            } else {
+              reject ('Username or password is incorrect.');
+            }
         }
-    } catch(err) {
-        throw err;
-    }
+    });
 }
 
 async function getAll(body={}) {
@@ -214,14 +225,32 @@ function register(body) {
 }
 
 /*
-  Simple update of user profile data.
+  Update of user profile data.
+
   Password resets are done via the reset flow.
-  User role change is done by administrative function. (TBD)
+
+  User values that can only be done by administrative function:
+    - username
+    - alias
+    - role
+    - status
+
+  NOTE: checking userrole=='admin' should be sufficiently secure. We embed
+  user object from db query in the auth jwt, which is not easily decoded. API access is only
+  possible with auth jwt, and user.userrole cannot be set another way.
+
+  If this is not secure enough, we could query the db for login userrole here
+  to double-check.
 */
-async function update(id, body) {
+async function update(id, body, user) {
 
     delete body.password; //don't allow password update here. only use reset flow.
-    //delete body.userrole; //don't allow role change on update yet.
+    if (user.role != 'admin') { //only allow admins to set these values.
+      delete body.username;
+      delete body.userrole;
+      delete body.alias;
+      delete body.status;
+    }
 
     var queryColumns = pgUtil.parseColumns(body, 2, [id], staticColumns);
     text = `update vpuser set (${queryColumns.named}) = (${queryColumns.numbered}) where "id"=$1;`;
