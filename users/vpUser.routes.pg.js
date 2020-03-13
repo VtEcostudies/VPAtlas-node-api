@@ -6,6 +6,7 @@ const sendmail = require('./sendmail');
 // routes
 router.post('/authenticate', authenticate);
 router.post('/register', register);
+router.post('/check', check);
 router.post('/reset', reset);
 router.post('/verify', verify); //verify a valid reset token
 router.post('/confirm', confirm);
@@ -34,6 +35,13 @@ function authenticate(req, res, next) {
 function register(req, res, next) {
     console.log(`users.pg.routes.register | req.body:`, req.body);
     userService.register(req.body)
+        .then(user => res.json(user))
+        .catch(err => next(err));
+}
+
+function check(req, res, next) {
+    console.log(`users.pg.routes.check | req.body:`, req.body);
+    userService.check(req.body)
         .then(user => res.json(user))
         .catch(err => next(err));
 }

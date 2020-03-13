@@ -15,6 +15,7 @@ module.exports = {
     getById,
     getByUserName,
     register,
+    check,
     update,
     reset,
     verify,
@@ -102,6 +103,15 @@ async function authenticate(body) {
               reject ('Username or password is incorrect.');
             }
         }
+    });
+}
+
+/*
+  Auth token check - called regularly by UI to check if token has expired.
+*/
+async function check(body) {
+    return new Promise(async (resolve, reject) => {
+      resolve(null);
     });
 }
 
