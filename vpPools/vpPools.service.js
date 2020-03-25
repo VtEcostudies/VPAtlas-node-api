@@ -36,7 +36,7 @@ pgUtil.getColumns("vpvisit", staticColumns) //run it once on init: to create the
     .catch(err => {
         console.log(`vpPools.service.pg.pgUtil.getColumns | error: `, err.message);
     });
-    
+
 pgUtil.getColumns("vpreview", staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
         return res;
@@ -79,7 +79,7 @@ async function getAll(params={}) {
         vpreview."createdAt" AS "reviewCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
         LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         ${where.text} ${orderClause};`;
@@ -117,7 +117,7 @@ async function getPage(page, params={}) {
         vpreview."createdAt" AS "reviewCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
         LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
@@ -144,7 +144,7 @@ async function getByVisitId(id) {
         vpreview."createdAt" AS "reviewCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
         LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         WHERE "visitId"=$1;`;
@@ -170,7 +170,7 @@ async function getByPoolId(id) {
         vpreview."createdAt" AS "reviewCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
         LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         WHERE "mappedPoolId"=$1;`;

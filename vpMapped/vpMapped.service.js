@@ -40,7 +40,7 @@ async function getCount(body={}) {
 //TO-DO: filter out non-display pools for non-admin users
 //maybe do this by having roles available here, filtering queries based on role.
 async function getStats(body={"username":null}) {
-    const text = `select 
+    const text = `select
 (select count("mappedPoolId") from vpmapped) as total_data,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"!='Eliminated' AND "mappedPoolStatus"!='Duplicate') as total,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Potential') as potential,
@@ -48,6 +48,11 @@ async function getStats(body={"username":null}) {
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Confirmed') as confirmed,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Duplicate') as duplicate,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Eliminated') as eliminated,
+(select count("mappedPoolId") from vpmapped m
+left join vpvisit v on v."visitPoolId"=m."mappedPoolId"
+left join vpreview r on r."reviewVisitId"=v."visitId"
+where r."reviewVisitId" is null and v."visitId" is not null
+) as review,
 (select count(distinct("visitPoolId")) from vpvisit inner join vpmapped on vpmapped."mappedPoolId"=vpvisit."visitPoolId" where "mappedPoolStatus"!='Eliminated' AND "mappedPoolStatus"!='Duplicate') as visited,
 (select count(distinct("visitPoolId")) from vpvisit inner join vpmapped on vpmapped."mappedPoolId"=vpvisit."visitPoolId" where "mappedByUser"='${body.username}' OR "visitUserName"='${body.username}') as mine,
 (select 0) as monitored;`;
@@ -57,7 +62,7 @@ async function getStats(body={"username":null}) {
 
 async function getAll(body={}) {
     const where = pgUtil.whereClause(body, staticColumns);
-    const text = `select vpmapped.*, 
+    const text = `select vpmapped.*,
                 vpmapped."mappedLatitude" as "latitude",
                 vpmapped."mappedLongitude" as "longitude",
                 vpmapped."mappedPoolId" as "poolId",
