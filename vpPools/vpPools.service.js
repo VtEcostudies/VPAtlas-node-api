@@ -62,7 +62,10 @@ async function getAll(params={}) {
     const where = pgUtil.whereClause(params, staticColumns);
     const text = `
         SELECT
-        (SELECT COUNT(*) FROM vpmapped LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
+        (SELECT COUNT(*) FROM vpmapped
+        LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
+        ${where.text}) AS count,
         to_json(mappedtown) AS "mappedTown",
         to_json(visittown) AS "visitTown",
         vpmapped.*,
@@ -100,7 +103,10 @@ async function getPage(page, params={}) {
     var where = pgUtil.whereClause(params, staticColumns); //whereClause filters output against vpvisit.columns
     const text = `
         SELECT
-        (SELECT COUNT(*) FROM vpmapped LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
+        (SELECT COUNT(*) FROM vpmapped
+        LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
+        ${where.text}) AS count,
         to_json(mappedtown) AS "mappedTown",
         to_json(visittown) AS "visitTown",
         vpmapped.*,

@@ -41,7 +41,7 @@ async function getCount(body={}) {
 NOTE:
 */
 async function getAll(params={}) {
-    var orderClause = 'order by "reviewId"';
+    var orderClause = 'order by "reviewId" desc';
     if (params.orderBy) {
         var col = params.orderBy.split("|")[0];
         var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';

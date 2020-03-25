@@ -7,6 +7,7 @@ const config = require('config.json');
 const { Pool } = require('pg'); //a Postgres Connection Pool, not to be confused with a Vernal Pool
 const connPool = new Pool(config.pg[env]);
 const types = require('pg').types;
+const moment = require('moment');
 
 console.log(`hostname: ${os.hostname}`);
 console.log(`environment: ${env}`);
@@ -33,6 +34,7 @@ console.dir(config.pg[env]);
 */
 parseDate = function(val) {
    //console.log('db_postgres.parseDate', val); //NOTE: this log is hit 2x per row. HUGE API performance hit.
+   //return moment(val).format('YYYY-MM-DD@HH:MM:SS'); //NOTE: this doesn't fix all dates...
    return val;
 }
 
