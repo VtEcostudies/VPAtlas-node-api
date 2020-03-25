@@ -99,9 +99,18 @@ async function create(body) {
     var queryColumns = pgUtil.parseColumns(body, 1, [], staticColumns);
     text = `insert into vpreview (${queryColumns.named}) values (${queryColumns.numbered}) returning "reviewId"`;
     console.log(text, queryColumns.values);
-    var res = await query(text, queryColumns.values);
-    console.log('vpReview.service.create | returning: ', res);
-    return res;
+    return new Promise(async (resolve, reject) => {
+      await query(text, queryColumns.values)
+        .then(async rev => {
+          var qry = `update vpmapped set "mappedPoolStatus"=$1 where "mappedPoolId"=$2 returning $3::int as "reviewId"`;
+          var val = [body.reviewPoolStatus, body.reviewPoolId, rev.rows[0].reviewId];
+          console.log('vpReview.service::create', qry, val);
+          await query(qry, val)
+            .then(res => {resolve(res);})
+            .catch(err => {reject(err);});
+        })
+        .catch(err => {reject(err);});
+    })
 }
 
 async function update(id, body) {
@@ -109,7 +118,18 @@ async function update(id, body) {
     var queryColumns = pgUtil.parseColumns(body, 2, [id], staticColumns);
     text = `update vpreview set (${queryColumns.named}) = (${queryColumns.numbered}) where "reviewId"=$1 returning "reviewId"`;
     console.log(text, queryColumns.values);
-    return await query(text, queryColumns.values);
+    return new Promise(async (resolve, reject) => {
+      await query(text, queryColumns.values)
+        .then(async rev => {
+          var qry = `update vpmapped set "mappedPoolStatus"=$1 where "mappedPoolId"=$2 returning $3::int as "reviewId"`;
+          var val = [body.reviewPoolStatus, body.reviewPoolId, rev.rows[0].reviewId];
+          console.log('vpReview.service::update', qry, val);
+          await query(qry, val)
+            .then(res => {resolve(res);})
+            .catch(err => {reject(err);});
+        })
+        .catch(err => {reject(err);});
+    })
 }
 
 async function _delete(id) {

@@ -41,7 +41,7 @@ function create(req, res, next) {
     console.log(`create req.body:`);
     console.dir(req.body);
     service.create(req.body)
-        .then((item) => res.json(item))
+        .then((item) => {res.json(item);})
         .catch(err => {
             console.log('vpReview.routes.create | error: ' , err);
             if (err.code == 23505 && err.constraint == 'vpreview_pkey') {
@@ -55,7 +55,7 @@ function create(req, res, next) {
 function update(req, res, next) {
     console.log('vpReview.routes.update', req.body);
     service.update(req.params.id, req.body)
-        .then((item) => res.json(item))
+        .then((item) => {res.json(item);})
         .catch(err => {
             console.log('vpReview.routes.update | error: ' , err);
             if (err.code == 23505 && err.constraint == 'vpreview_pkey') {

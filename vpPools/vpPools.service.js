@@ -12,7 +12,8 @@ module.exports = {
     getCount,
     getAll,
     getPage,
-    getByVisitId
+    getByVisitId,
+    getByPoolId
 };
 
 
@@ -29,6 +30,14 @@ pgUtil.getColumns("vpmapped", staticColumns) //run it once on init: to create th
     });
 
 pgUtil.getColumns("vpvisit", staticColumns) //run it once on init: to create the array here. also diplays on console.
+    .then(res => {
+        return res;
+    })
+    .catch(err => {
+        console.log(`vpPools.service.pg.pgUtil.getColumns | error: `, err.message);
+    });
+    
+pgUtil.getColumns("vpreview", staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
         return res;
     })
@@ -62,11 +71,15 @@ async function getAll(params={}) {
         vpmapped."mappedPoolId" AS "poolId",
         vpmapped."mappedLatitude" AS "latitude",
         vpmapped."mappedLongitude" AS "longitude",
-        vpvisit.*, 
+        vpvisit.*,
         vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt"
+        vpvisit."createdAt" AS "visitCreatedAt",
+        vpreview.*,
+        vpreview."updatedAt" AS "reviewUpdatedAt",
+        vpreview."createdAt" AS "reviewCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpmapped."mappedPoolId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
         LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         ${where.text} ${orderClause};`;
@@ -96,11 +109,15 @@ async function getPage(page, params={}) {
         vpmapped."mappedPoolId" AS "poolId",
         vpmapped."mappedLatitude" AS "latitude",
         vpmapped."mappedLongitude" AS "longitude",
-        vpvisit.*, 
+        vpvisit.*,
         vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt"
+        vpvisit."createdAt" AS "visitCreatedAt",
+        vpreview.*,
+        vpreview."updatedAt" AS "reviewUpdatedAt",
+        vpreview."createdAt" AS "reviewCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpmapped."mappedPoolId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
         LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
@@ -119,11 +136,15 @@ async function getByVisitId(id) {
         vpmapped."mappedPoolId" AS "poolId",
         vpmapped."mappedLatitude" AS "latitude",
         vpmapped."mappedLongitude" AS "longitude",
-        vpvisit.*, 
+        vpvisit.*,
         vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt"
+        vpvisit."createdAt" AS "visitCreatedAt",
+        vpreview.*,
+        vpreview."updatedAt" AS "reviewUpdatedAt",
+        vpreview."createdAt" AS "reviewCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpmapped."mappedPoolId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
         LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         WHERE "visitId"=$1;`;
@@ -141,11 +162,15 @@ async function getByPoolId(id) {
         vpmapped."mappedPoolId" AS "poolId",
         vpmapped."mappedLatitude" AS "latitude",
         vpmapped."mappedLongitude" AS "longitude",
-        vpvisit.*, 
+        vpvisit.*,
         vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt"
+        vpvisit."createdAt" AS "visitCreatedAt",
+        vpreview.*,
+        vpreview."updatedAt" AS "reviewUpdatedAt",
+        vpreview."createdAt" AS "reviewCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+        LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpmapped."mappedPoolId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
         LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         WHERE "mappedPoolId"=$1;`;
