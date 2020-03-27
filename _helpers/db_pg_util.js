@@ -79,7 +79,7 @@ async function getColumns(tableName, columns=[]) {
     Another problem: the NULL value is only processed with 'IS' OR 'IS NOT' operator.
     Perhaps we can look for NULL values and alter the operator when found.
  */
-function whereClause(params={}, staticColumns=[]) {
+function whereClause(params={}, staticColumns=[], clause='AND') {
     var where = '';
     var values = [];
     var idx = 1;
@@ -94,7 +94,7 @@ function whereClause(params={}, staticColumns=[]) {
               opr = opr==='!=' ? ' IS NOT NULL' : ' IS NULL';
             }
             if (staticColumns.includes(col) || 'logical'===col.substring(0,7)) {
-                if (where == '') where = 'where';
+                if (where == '') where = clause; //'WHERE', or 'AND' depending on caller
                 if ('logical'!=col.substring(0,7)) {
                   if (Array.isArray(params[key])) { //search token has multiple values, passed as array
                     params[key].forEach((item, index) => {

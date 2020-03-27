@@ -9,6 +9,7 @@ const service = require('./vpPools.service');
 
 // routes
 router.get('/count', getCount);
+router.get('/updated', getUpdated);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
 router.get('/visitId/:visitId', getByVisitId);
@@ -19,6 +20,16 @@ module.exports = router;
 function getCount(req, res, next) {
     service.getCount(req.query)
         .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getUpdated(req, res, next) {
+    console.log('vpPools.routes.getUpdated req.query', req.query);
+    service.getUpdated(req.query)
+        .then(items => {
+          console.log('vpPools.routes::getUpdated | rows:', items.rowCount);
+          res.json(items);
+        })
         .catch(err => next(err));
 }
 

@@ -10,6 +10,7 @@ var staticColumns = [];
 
 module.exports = {
     getCount,
+    getUpdated,
     getAll,
     getPage,
     getByVisitId,
@@ -50,6 +51,41 @@ async function getCount(body={}) {
     const text = `select count(*) from vpvisit ${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
+}
+
+async function getUpdated(params={timestamp:'1970-02-28'}) {
+  var orderClause = 'order by "mappedPoolId"';
+  var timestamp = params.timestamp;
+  delete params.timestamp;
+  const where = pgUtil.whereClause(params, staticColumns, 'AND');
+  var text = `SELECT
+  to_json(mappedtown) AS "mappedTown",
+  to_json(visittown) AS "visitTown",
+  vpmapped.*,
+  vpmapped."updatedAt" AS "mappedUpdatedAt",
+  vpmapped."createdAt" AS "mappedCreatedAt",
+  vpmapped."mappedPoolId" AS "poolId",
+  vpmapped."mappedLatitude" AS "latitude",
+  vpmapped."mappedLongitude" AS "longitude",
+  vpvisit.*,
+  vpvisit."updatedAt" AS "visitUpdatedAt",
+  vpvisit."createdAt" AS "visitCreatedAt",
+  vpreview.*,
+  vpreview."updatedAt" AS "reviewUpdatedAt",
+  vpreview."createdAt" AS "reviewCreatedAt"
+  from vpmapped
+  LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+  LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
+  LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
+  LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
+  WHERE
+  (vpmapped."updatedAt">'${timestamp}'::timestamp
+  OR vpvisit."updatedAt">'${timestamp}'::timestamp
+  OR vpreview."updatedAt">'${timestamp}'::timestamp)
+  ${where.text} ${orderClause}
+  `;
+  console.log(text);
+  return await query(text, where.values);
 }
 
 async function getAll(params={}) {
