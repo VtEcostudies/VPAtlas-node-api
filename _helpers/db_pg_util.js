@@ -6,7 +6,7 @@ const query = db.query;
 
 module.exports = {
   getColumns: (tableName, columns) => getColumns(tableName, columns),
-  whereClause: (params, columns) => whereClause(params, columns),
+  whereClause: (params, columns, clause) => whereClause(params, columns, clause),
   parseColumns: (body, idx, cValues, staticColumns) => parseColumns(body, idx, cValues, staticColumns)
 }
 
@@ -79,7 +79,7 @@ async function getColumns(tableName, columns=[]) {
     Another problem: the NULL value is only processed with 'IS' OR 'IS NOT' operator.
     Perhaps we can look for NULL values and alter the operator when found.
  */
-function whereClause(params={}, staticColumns=[], clause='AND') {
+function whereClause(params={}, staticColumns=[], clause='WHERE') {
     var where = '';
     var values = [];
     var idx = 1;
