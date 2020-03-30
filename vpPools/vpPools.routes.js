@@ -11,6 +11,7 @@ const service = require('./vpPools.service');
 router.get('/count', getCount);
 router.get('/updated', getUpdated);
 router.get('/', getAll);
+router.get('/review', getReview);
 router.get('/page/:page', getPage);
 router.get('/visitId/:visitId', getByVisitId);
 router.get('/poolId/:poolId', getByPoolId);
@@ -36,6 +37,13 @@ function getUpdated(req, res, next) {
 function getAll(req, res, next) {
     console.log('vpPools.routes.getAll req.query', req.query);
     service.getAll(req.query)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getReview(req, res, next) {
+    console.log('vpPools.routes.getReview req.query', req.query);
+    service.getReview(req.query)
         .then(items => res.json(items))
         .catch(err => next(err));
 }

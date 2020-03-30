@@ -11,6 +11,7 @@ var staticColumns = [];
 module.exports = {
     getCount,
     getUpdated,
+    getReview,
     getAll,
     getPage,
     getByVisitId,
@@ -69,23 +70,60 @@ async function getUpdated(params={timestamp:'1970-02-28'}) {
   vpmapped."mappedLongitude" AS "longitude",
   vpvisit.*,
   vpvisit."updatedAt" AS "visitUpdatedAt",
-  vpvisit."createdAt" AS "visitCreatedAt",
-  vpreview.*,
-  vpreview."updatedAt" AS "reviewUpdatedAt",
-  vpreview."createdAt" AS "reviewCreatedAt"
+  vpvisit."createdAt" AS "visitCreatedAt"
   from vpmapped
   LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-  LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
   LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
   LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
   WHERE
   (vpmapped."updatedAt">'${timestamp}'::timestamp
-  OR vpvisit."updatedAt">'${timestamp}'::timestamp
-  OR vpreview."updatedAt">'${timestamp}'::timestamp)
+  OR vpvisit."updatedAt">'${timestamp}'::timestamp)
   ${where.text} ${orderClause}
   `;
+  /*
+  vpreview.*,
+  vpreview."updatedAt" AS "reviewUpdatedAt",
+  vpreview."createdAt" AS "reviewCreatedAt"
+  LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
+  OR vpreview."updatedAt">'${timestamp}'::timestamp)
+  */
   console.log(text);
   return await query(text, where.values);
+}
+
+async function getReview(params={timestamp:'1970-02-28'}) {
+  var orderClause = 'order by "mappedPoolId"';
+  const timestamp = params.timestamp;
+  delete params.timestamp;
+  const where = pgUtil.whereClause(params, staticColumns, 'AND');
+  const text = `SELECT
+    to_json(mappedtown) AS "mappedTown",
+    to_json(visittown) AS "visitTown",
+    vpmapped.*,
+    vpmapped."updatedAt" AS "mappedUpdatedAt",
+    vpmapped."createdAt" AS "mappedCreatedAt",
+    vpmapped."mappedPoolId" AS "poolId",
+    vpmapped."mappedLatitude" AS "latitude",
+    vpmapped."mappedLongitude" AS "longitude",
+    vpvisit.*,
+    vpvisit."updatedAt" AS "visitUpdatedAt",
+    vpvisit."createdAt" AS "visitCreatedAt",
+    vpreview.*,
+    vpreview."updatedAt" AS "reviewUpdatedAt",
+    vpreview."createdAt" AS "reviewCreatedAt"
+    from vpmapped
+    LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
+    LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
+    LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
+    LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
+    WHERE
+    (vpmapped."updatedAt">'${timestamp}'::timestamp
+    OR vpvisit."updatedAt">'${timestamp}'::timestamp
+    OR vpreview."updatedAt">'${timestamp}'::timestamp)
+    AND "reviewId" IS NULL AND "visitId" IS NOT NULL
+    ${where.text} ${orderClause};`;
+    console.log(text, where.values);
+    return await query(text, where.values);
 }
 
 async function getAll(params={}) {
@@ -100,7 +138,6 @@ async function getAll(params={}) {
         SELECT
         (SELECT COUNT(*) FROM vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
         ${where.text}) AS count,
         to_json(mappedtown) AS "mappedTown",
         to_json(visittown) AS "visitTown",
@@ -112,13 +149,9 @@ async function getAll(params={}) {
         vpmapped."mappedLongitude" AS "longitude",
         vpvisit.*,
         vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt",
-        vpreview.*,
-        vpreview."updatedAt" AS "reviewUpdatedAt",
-        vpreview."createdAt" AS "reviewCreatedAt"
+        vpvisit."createdAt" AS "visitCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
         LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         ${where.text} ${orderClause};`;
@@ -141,7 +174,6 @@ async function getPage(page, params={}) {
         SELECT
         (SELECT COUNT(*) FROM vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
         ${where.text}) AS count,
         to_json(mappedtown) AS "mappedTown",
         to_json(visittown) AS "visitTown",
@@ -153,13 +185,9 @@ async function getPage(page, params={}) {
         vpmapped."mappedLongitude" AS "longitude",
         vpvisit.*,
         vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt",
-        vpreview.*,
-        vpreview."updatedAt" AS "reviewUpdatedAt",
-        vpreview."createdAt" AS "reviewCreatedAt"
+        vpvisit."createdAt" AS "visitCreatedAt"
         from vpmapped
         LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
         LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
         LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
         ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;

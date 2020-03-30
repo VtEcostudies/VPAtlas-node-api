@@ -37,9 +37,6 @@ async function getCount(body={}) {
     return await query(text, where.values);
 }
 
-/*
-NOTE:
-*/
 async function getAll(params={}) {
     var orderClause = 'order by "reviewId" desc';
     if (params.orderBy) {
@@ -50,7 +47,6 @@ async function getAll(params={}) {
     const where = pgUtil.whereClause(params, staticColumns);
     const text = `
         SELECT
-        (SELECT COUNT(*) FROM vpreview INNER JOIN vpvisit ON vpvisit."visitId"=vpreview."reviewVisitId" ${where.text}) AS count,
         to_json(mappedtown) AS "mappedTown",
         to_json(visittown) AS "visitTown",
         vpreview.*,
