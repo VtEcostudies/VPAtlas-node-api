@@ -38,6 +38,7 @@ app.use('/pools/visit', require('./vpVisit/vpVisit.routes')); //postgres pool vi
 app.use('/pools', require('./vpPools/vpPools.routes')); //postgres 'Mapped Pools' and 'Pool Visits' GETS-only combined
 app.use('/review', require('./vpReview/vpReview.routes')); //postgres reviews db
 app.use('/aws/s3', require('./vpUtil/vp_s3_info.routes')); //get connection credentials for aws s3 bucket by bucketName
+app.use('/parcel', require('./vcgiMapData/vcgiParcel.routes')); //get parcel map geoJSON
 
 // global error handler
 //NOTE: this causes error when http status is set in handler. No solution yet.

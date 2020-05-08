@@ -30,6 +30,9 @@ function jwt() {
             '/users/confirm',
 
             '/vtinfo/towns',
+            '/parcel/townId/*',
+            '/parcel/townName',
+            { url: /^\/parcel\/townName\/.*/, methods: ['GET'] }, // /parcel/townName/:name
 
             '/pools/mapped', // /pools/mapped performs a getAll()
             { url: /^\/pools\/mapped\/.*/, methods: ['GET'] }, // /pools/mapped/:id
