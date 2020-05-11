@@ -10,9 +10,10 @@ const errorHandler = require('_helpers/error-handler');
 const vpMappedModel = require('vpMapped/vpMapped.model.js');
 const vtInfoModel = require('vtInfo/vtInfo.model.js');
 
-// Command-Line Arguments Processing
-// These are processed without prefixed "-"
-// Space-delimited args
+/* Command-Line Arguments Processing
+ These are processed without prefixed "-"
+ Space-delimited args
+*/
 var tls = 0;
 var argPort = 0; //this server's listening port
 

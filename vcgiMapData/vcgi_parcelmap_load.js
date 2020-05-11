@@ -8,38 +8,73 @@
   Notes:
     We can download the entire parcelmap from VCGI, but KML is 1.4G. Mapbox's tool
     to convert KML => geoJSON crashes nodeJs on 'string too large'. Tried to increase
-    node's max strting size, but there were other issues. Whereas with other geoJSON
+    node's max string size, but there were other issues. Whereas with other geoJSON
     files, we can compile them into the UI source code, an attempt to do so here crashed
     the Angular 9x compiler.
 
   Specifics:
   - GET geoJSON map data from VCGI API by town and store in postgres table by town
   as jsonb.
+  - This is complicated because their API limits 'records' (more like features) to
+  about 1000 items. To get a complete geoJSON file for a town, we often have to append
+  features from multiple requests. getTownParcel uses recursion to do this, but it's
+  tricky to use recursion with asynchronous nodeJs. I didn't have time to work all that
+  out, so I left a harmless hack that uses async await.
 */
 const db = require('../_helpers/db_postgres');
 const query = db.query;
 const https = require('https'); //https://nodejs.org/api/http.html
 
-getTowns()
-  .then(async towns => {
-    //console.dir(towns);
-    for (var i=0; i<towns.rows.length; i++) {
-    //for (var i=0; i<1; i++) {
-      let pageSize = 500;
-      let offset = 0;
-      let end = false;
-      let parcel = {};
-      console.log(towns.rows[i].townName);
-      await getTownParcel(towns.rows[i], pageSize, offset, end, parcel);
-    }
-  })
-  .catch(err => {
-    console.log(err.message);
-  })
+/*
+  Command-Line Arguments Processing
+  - Space-delimited args
+*/
 
-function getTowns() {
-    const text = `select * from vptown order by "townName";`;
-    return query(text);
+for (var i=2; i<process.argv.length; i++) {
+  var all = process.argv[i].split('='); //the ith command-line argument
+  var act = all[0]; //action, left of action=argument
+  var arg = all[1]; //argument, right of action=argument
+  console.log(`command-line argument ${i}`, all);
+	switch(act) {
+		case "town":
+      loadParcels(arg);
+			break;
+    case null:
+    case "":
+      loadParcels();
+      break;
+    default:
+      console.log('Invalid command-line argument. Use town=name.')
+      break;
+    }
+}
+
+function loadParcels(townName=null) {
+  console.log('Loading parcels for ', townName?townName:'All Towns')
+  getTowns(townName)
+    .then(async towns => {
+      //console.dir(towns);
+      for (var i=0; i<towns.rows.length; i++) {
+      //for (var i=0; i<1; i++) {
+        let pageSize = 500;
+        let offset = 0;
+        let end = false;
+        let parcel = {};
+        console.log(towns.rows[i].townName);
+        await getTownParcel(towns.rows[i], pageSize, offset, end, parcel);
+      }
+    })
+    .catch(err => {
+      console.log(err.message);
+    })
+}
+
+function getTowns(townName=null) {
+    var where = '';
+    var value = [];
+    if (townName) {where = 'where upper("townName")=upper($1)'; value = [townName];}
+    const text = `select * from vptown ${where} order by "townName";`;
+    return query(text, value);
 }
 
 async function getTownParcel(town, pageSize, offset, end, parcel) {
