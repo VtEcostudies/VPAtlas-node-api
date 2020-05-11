@@ -20,6 +20,10 @@
   features from multiple requests. getTownParcel uses recursion to do this, but it's
   tricky to use recursion with asynchronous nodeJs. I didn't have time to work all that
   out, so I left a harmless hack that uses async await.
+
+  To-Do:
+  - Add the ability to *Update* parcel maps as new data are available on vcgi.
+
 */
 const db = require('../_helpers/db_postgres');
 const query = db.query;
@@ -29,7 +33,6 @@ const https = require('https'); //https://nodejs.org/api/http.html
   Command-Line Arguments Processing
   - Space-delimited args
 */
-
 for (var i=2; i<process.argv.length; i++) {
   var all = process.argv[i].split('='); //the ith command-line argument
   var act = all[0]; //action, left of action=argument
@@ -48,6 +51,7 @@ for (var i=2; i<process.argv.length; i++) {
       break;
     }
 }
+if (process.argv.length < 2) {loadParcels();}
 
 function loadParcels(townName=null) {
   console.log('Loading parcels for ', townName?townName:'All Towns')

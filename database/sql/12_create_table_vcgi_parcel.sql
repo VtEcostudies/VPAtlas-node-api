@@ -3,7 +3,7 @@ CREATE TABLE vcgi_parcel
     "vcgiTownId" integer,
     "vcgiTownName" character varying(100) COLLATE pg_catalog."default" NOT NULL,
     "vcgiParcel" jsonb
-)
+);
 
 ALTER TABLE vcgi_parcel
     OWNER to vpatlas;
@@ -16,7 +16,7 @@ ALTER TABLE vcgi_parcel ADD CONSTRAINT unique_town_name UNIQUE("vcgiTownName");
 CREATE OR REPLACE FUNCTION vcgi_town_name_to_upper()
 RETURNS TRIGGER AS $$
 BEGIN
-   NEW."vcgiTownName" = upper("vcgiTownName"); 
+   NEW."vcgiTownName" = upper(NEW."vcgiTownName"); 
    RETURN NEW;
 END;
 $$ language 'plpgsql';
