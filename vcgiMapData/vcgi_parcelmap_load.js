@@ -51,7 +51,7 @@ for (var i=2; i<process.argv.length; i++) {
       break;
     }
 }
-if (process.argv.length < 2) {loadParcels();}
+if (process.argv.length == 2) {loadParcels();}
 
 function loadParcels(townName=null) {
   console.log('Loading parcels for ', townName?townName:'All Towns')
