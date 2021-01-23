@@ -19,4 +19,4 @@ LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpmapped."mappedPoolId"
 LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
 LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
 --where vpreview."reviewVisitId" is null and vpvisit."visitId" is not null
-where vpreview."reviewId" is null and vpvisit."visitId" is not null
+--where vpreview."reviewId" is null and vpvisit."visitId" is not null
