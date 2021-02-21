@@ -2,6 +2,9 @@
 vpatlas-node-api.komodoproject
 config.json
 
+#geoJSON downloads
+vcgiMapData/town_geoJSON
+
 # Logs
 logs
 *.log

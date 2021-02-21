@@ -28,10 +28,15 @@
 const db = require('../_helpers/db_postgres');
 const query = db.query;
 const https = require('https'); //https://nodejs.org/api/http.html
+const fs = require('fs');
+var town = null; //town to download, if just one
+var dest = 'db'; //destination for downloads: 'db'=postgres, 'fs'=local file
+const update = 1; //flag whether to update parcel data in the db
 
 /*
   Command-Line Arguments Processing
-  - Space-delimited args
+  - Space-delimited args of the form action=value
+  - example: 'node vcgi_parcelmap_load town=strafford dest=fs'
 */
 for (var i=2; i<process.argv.length; i++) {
   var all = process.argv[i].split('='); //the ith command-line argument
@@ -40,18 +45,23 @@ for (var i=2; i<process.argv.length; i++) {
   console.log(`command-line argument ${i}`, all);
 	switch(act) {
 		case "town":
-      loadParcels(arg);
+      town = arg;
 			break;
+    case "dest":
+      dest = arg;
+      break;
     case null:
     case "":
-      loadParcels();
+      //loadParcels();
       break;
     default:
-      console.log('Invalid command-line argument. Use town=name.')
+      console.log('Invalid command-line argument. Use town=name and/or dest=fs/db.')
       break;
     }
 }
-if (process.argv.length == 2) {loadParcels();}
+//if (process.argv.length == 2) {loadParcels(town, dest);} //no arguments
+console.log(`Program arguments | town:${town} | destination: ${dest}`);
+loadParcels(town);
 
 function loadParcels(townName=null) {
   console.log('Loading parcels for ', townName?townName:'All Towns')
@@ -91,8 +101,23 @@ async function getTownParcel(town, pageSize, offset, end, parcel) {
       offset += pageSize;
       if (!end) {await getTownParcel(town, pageSize, offset, end, parcel);}
       else {
-        insertVcgiParcel(town, parcel);
-        console.log('getTownParcel finished getting parcel for', town.townName);
+        console.log(`getTownParcel finished getting parcel for ${town.townName} destination ${dest}`);
+        if ('db' == dest) {
+          await insertVcgiParcel(town, parcel)
+            .then(res => {console.log('insertVcgiParcel SUCCESS |', res.rowCount, res.rows?res.rows[0]:null);})
+            .catch(async err => {
+              console.log('insertVcgiParcel ERROR', err.message);
+              if (23505 == err.code && update) {
+                await updateVcgiParcel(town, parcel)
+                  .then(res => {console.log('updateVcgiParcel SUCCESS |', res.rowCount, res.rows?res.rows[0]:null);})
+                  .catch(err => {console.log('updateVcgiParcel ERROR', err.message);});
+              } else {
+                await saveVcgiParcel(town, parcel);
+              }
+            });
+        } else {
+          await saveVcgiParcel(town, parcel);
+        }
         return parcel;
       }
     })
@@ -173,4 +198,44 @@ function insertVcgiParcel(town, data) {
         reject(err);
       })
   })
+}
+
+/*
+  Update parcel data for one town.
+  town is a vp town Object
+  data is a geoJSON parcel featureCollection for one town from VCGI
+*/
+function updateVcgiParcel(town, data) {
+
+  var sql_update = `update vcgi_parcel set ("vcgiTownName","vcgiParcel") = ($2, $3) where "vcgiTownId"=$1 returning "vcgiTownName"`;
+
+  console.log('updateVcgiParcel', town.townName, sql_update);
+
+  return new Promise((resolve, reject) => {
+    query(sql_update, [town.townId, town.townName, data])
+      .then(res => {
+        resolve(res);
+      })
+      .catch(err => {
+        reject(err);
+      })
+  })
+}
+
+/*
+  save geoJSON to local file
+*/
+async function saveVcgiParcel(town, data) {
+  const fileDir = `town_geoJSON`;
+  const fileName = `${town.townName}.geoJSON`;
+  const fileJson = JSON.stringify(data);
+
+  console.log('saveVcgiParcel', `./${fileDir}/${fileName}`);
+
+  try {
+    const fileStream = fs.createWriteStream(`./${fileDir}/${fileName}`, {flags: 'w'});
+    await fileStream.write(fileJson); //autoClose is 'true' by default
+  } catch(err) {
+    console.log('saveVcgiParcel ERRROR |', err);
+  }
 }
