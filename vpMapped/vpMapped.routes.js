@@ -2,7 +2,9 @@
 const router = express.Router();
 const poolService = require('./vpMapped.service');
 
-// routes
+// routes NOTE: routes with names for same method (ie. GET) must be above routes
+// for things like /:id, or they are missed/skipped.
+router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
 router.get('/count', getCount);
 router.get('/stats', getStats);
@@ -22,12 +24,14 @@ function getColumns(req, res, next) {
 }
 
 function getCount(req, res, next) {
+  console.log('vpMapped.routes | getCount');
     poolService.getCount(req.query)
         .then(pools => res.json(pools))
         .catch(err => next(err));
 }
 
 function getStats(req, res, next) {
+    console.log('vpMapped.routes | getStats');
     poolService.getStats(req.query)
         .then(stats => res.json(stats))
         .catch(err => next(err));
@@ -52,6 +56,18 @@ function getById(req, res, next) {
         .catch(err => next(err));
 }
 
+function getGeoJson(req, res, next) {
+    console.log('vpMapped.routes | getGeoJson');
+    poolService.getGeoJson(req.query)
+        .then(pools => {
+            if (pools.rows && pools.rows[0].geojson) {
+              res.json(pools.rows[0].geojson);
+            }
+            else {res.json(pools);}
+        })
+        .catch(err => next(err));
+}
+
 function create(req, res, next) {
     console.log(`create req.body:`);
     console.dir(req.body);
@@ -60,7 +76,7 @@ function create(req, res, next) {
         .catch(err => {
             if (err.code == 23505 && err.constraint == 'vpmapped_pkey') {
                 err.name = 'UniquenessConstraintViolation';
-                err.message = `Pool ID '${req.body.mappedPoolId}' is already taken. Please choose a different Pool ID.`; 
+                err.message = `Pool ID '${req.body.mappedPoolId}' is already taken. Please choose a different Pool ID.`;
             }
             next(err);
         });
@@ -72,7 +88,7 @@ function update(req, res, next) {
         .catch(err => {
             if (err.code == 23505 && err.constraint == 'vpmapped_pkey') {
                 err.name = 'UniquenessConstraintViolation';
-                err.message = `Pool ID '${req.body.mappedPoolId}' is already taken. Please choose a different Pool ID.`; 
+                err.message = `Pool ID '${req.body.mappedPoolId}' is already taken. Please choose a different Pool ID.`;
             }
             next(err);
         });

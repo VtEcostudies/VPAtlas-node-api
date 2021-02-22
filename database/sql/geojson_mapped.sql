@@ -1,4 +1,3 @@
-COPY (
 SELECT
     row_to_json(fc)
 FROM (
@@ -18,5 +17,4 @@ FROM (
         FROM vpmapped
 		WHERE "mappedPoolStatus" IN ('Potential', 'Probable', 'Confirmed')
     ) AS f
-) AS fc
-) TO 'C:\Users\jloomis\Documents\VCE\VPAtlas\vpAtlas-node-api\database\export\vpatlas_mapped.geojson' with NULL '';
+) AS fc;

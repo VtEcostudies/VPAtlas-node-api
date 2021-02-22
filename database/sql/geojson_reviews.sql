@@ -1,4 +1,3 @@
-COPY (
 SELECT
     row_to_json(fc)
 FROM (
@@ -33,5 +32,4 @@ FROM (
         FROM vpreview
 		INNER JOIN vpvisit v on "reviewPoolId"="visitPoolId"
     ) AS f
-) AS fc
-) TO 'C:\Users\jloomis\Documents\VCE\VPAtlas\vpAtlas-node-api\database\export\vpatlas_review.geojson' with NULL '';
+) AS fc;

@@ -1,3 +1,5 @@
+--DROP VIEW geojson_visit;
+CREATE OR REPLACE VIEW geojson_visit AS 
 SELECT
     row_to_json(fc) as geojson
 FROM (
@@ -125,4 +127,4 @@ FROM (
 			) AS properties
         FROM vpvisit
     ) AS f
-) AS fc;
+) AS fc

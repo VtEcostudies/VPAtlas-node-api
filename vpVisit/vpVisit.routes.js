@@ -2,7 +2,9 @@
 const router = express.Router();
 const service = require('./vpVisit.service');
 
-// routes
+// routes NOTE: routes with names for same method (ie. GET) must be above routes
+// for things like /:id, or they are missed/skipped.
+router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
 router.get('/count', getCount);
 router.get('/', getAll);
@@ -51,6 +53,18 @@ function getById(req, res, next) {
         .catch(err => next(err));
 }
 
+function getGeoJson(req, res, next) {
+    console.log('vpVisit.routes | getGeoJson');
+    service.getGeoJson(req.query)
+        .then(items => {
+            if (items.rows && items.rows[0].geojson) {
+              res.json(items.rows[0].geojson);
+            }
+            else {res.json(items);}
+        })
+        .catch(err => next(err));
+}
+
 function create(req, res, next) {
     console.log(`create req.body:`);
     console.dir(req.body);
@@ -60,7 +74,7 @@ function create(req, res, next) {
             console.log('vpVisit.routes.create | error: ' , err);
             if (err.code == 23505 && err.constraint == 'vpvisit_pkey') {
                 err.name = 'UniquenessConstraintViolation';
-                err.message = `Visit ID '${req.body.visitId}' is already taken. Please choose a different Visit ID.`; 
+                err.message = `Visit ID '${req.body.visitId}' is already taken. Please choose a different Visit ID.`;
             }
             next(err);
         });
@@ -74,7 +88,7 @@ function update(req, res, next) {
             console.log('vpVisit.routes.update | error: ' , err);
             if (err.code == 23505 && err.constraint == 'vpvisit_pkey') {
                 err.name = 'UniquenessConstraintViolation';
-                err.message = `Visit ID '${req.body.visitId}' is already taken. Please choose a different Visit ID.`; 
+                err.message = `Visit ID '${req.body.visitId}' is already taken. Please choose a different Visit ID.`;
             }
             next(err);
         });

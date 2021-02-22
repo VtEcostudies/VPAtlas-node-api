@@ -10,6 +10,7 @@ module.exports = {
     getAll,
     getPage,
     getById,
+    getGeoJson,
     create,
     update,
     delete: _delete
@@ -109,6 +110,68 @@ async function getById(id) {
                 to_json(vptown) as "mappedTown"
                 from vpmapped LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
                 where "mappedPoolId"=$1;`, [id])
+}
+
+async function getGeoJson(body={}) {
+    console.log('vpMapped.service | getGeoJson |', body);
+    //"mappedPoolStatus" IN ('Potential', 'Probable', 'Confirmed')
+    const where = pgUtil.whereClause(body, staticColumns);
+    const sql = `
+    SELECT
+    row_to_json(fc) AS geojson
+    FROM (
+        SELECT
+    		'FeatureCollection' AS type,
+    		'Vermont Vernal Pool Atlas - Mapped Pools' AS name,
+            array_to_json(array_agg(f)) AS features
+        FROM (
+            SELECT
+                'Feature' AS type,
+    			ST_AsGeoJSON(ST_GeomFromText('POINT(' || "mappedLongitude" || ' ' || "mappedLatitude" || ')'))::json as geometry,
+                (SELECT
+    			 	--note: mappedComments, others contain characters that are illegal for geoJSON
+    				row_to_json(p) FROM (
+    					SELECT
+    					vpmapped."mappedPoolId",
+    					vpmapped."mappedByUser",
+    					vpmapped."mappedByUserId",
+    					vpmapped."mappedDateText",
+    					--vpmapped."mappedDateUnixSeconds",
+    					--vpmapped."mappedLatitude",
+    					--vpmapped."mappedLongitude",
+    					vpmapped."mappedConfidence",
+    					vpmapped."mappedSource",
+    					vpmapped."mappedSource2",
+    					vpmapped."mappedPhotoNumber",
+    					vpmapped."mappedLocationAccuracy",
+    					vpmapped."mappedShape",
+    					--vpmapped."mappedComments",
+    					vpmapped."createdAt",
+    					vpmapped."updatedAt",
+    					--vpmapped."mappedlocationInfoDirections",
+    					vpmapped."mappedLandownerPermission",
+    					--vpmapped."mappedLandownerInfo",
+    					vpmapped."mappedLocationUncertainty",
+    					--vpmapped."mappedTownId",
+    					--vpmapped."mappedPoolLocation",
+    					--vpmapped."mappedPoolBorder",
+    					--vpmapped."mappedLandownerName",
+    					--vpmapped."mappedLandownerAddress",
+    					--vpmapped."mappedLandownerTown",
+    					--vpmapped."mappedLandownerStateAbbrev",
+    					--vpmapped."mappedLandownerZip5",
+    					--vpmapped."mappedLandownerPhone",
+    					--vpmapped."mappedLandownerEmail",
+    					vpmapped."mappedPoolStatus",
+    					vpmapped."mappedMethod",
+    					vpmapped."mappedObserverUserName"
+    				) AS p
+    			) AS properties
+        FROM vpmapped ${where.text}
+        ) AS f
+    ) AS fc;`;
+    console.log('vpMapped.service | getGeoJson |', where.text, where.values);
+    return await query(sql, where.values);
 }
 
 async function create(body) {
