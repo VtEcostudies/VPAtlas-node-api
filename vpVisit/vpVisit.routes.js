@@ -54,11 +54,16 @@ function getById(req, res, next) {
 }
 
 function getGeoJson(req, res, next) {
-    console.log('vpVisit.routes | getGeoJson');
+    console.log('vpVisit.routes | getGeoJson', req.query);
     service.getGeoJson(req.query)
         .then(items => {
             if (items.rows && items.rows[0].geojson) {
-              res.json(items.rows[0].geojson);
+              if (req.query.download) {
+                    var file = JSON.stringify(items.rows[0].geojson);
+                    res.setHeader('Content-disposition', 'attachment; filename=vpvisit.geojson');
+                    res.setHeader('Content-type', 'application/json');
+                    res.send(file); //res.send not res.json
+              } else {res.json(items.rows[0].geojson);}
             }
             else {res.json(items);}
         })

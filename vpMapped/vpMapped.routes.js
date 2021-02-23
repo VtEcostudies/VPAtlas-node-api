@@ -26,7 +26,7 @@ function getColumns(req, res, next) {
 function getCount(req, res, next) {
   console.log('vpMapped.routes | getCount');
     poolService.getCount(req.query)
-        .then(pools => res.json(pools))
+        .then(items => res.json(items))
         .catch(err => next(err));
 }
 
@@ -39,31 +39,36 @@ function getStats(req, res, next) {
 
 function getAll(req, res, next) {
     poolService.getAll(req.query)
-        .then(pools => res.json(pools))
+        .then(items => res.json(items))
         .catch(err => next(err));
 }
 
 function getPage(req, res, next) {
     console.log('getPage req.query', req.query);
     poolService.getPage(req.params.page, req.query)
-        .then(pools => res.json(pools))
+        .then(items => res.json(items))
         .catch(err => next(err));
 }
 
 function getById(req, res, next) {
     poolService.getById(req.params.id)
-        .then(pool => pool ? res.json(pool) : res.sendStatus(404))
+        .then(item => item ? res.json(item) : res.sendStatus(404))
         .catch(err => next(err));
 }
 
 function getGeoJson(req, res, next) {
-    console.log('vpMapped.routes | getGeoJson');
+    console.log('vpMapped.routes | getGeoJson', req.query);
     poolService.getGeoJson(req.query)
-        .then(pools => {
-            if (pools.rows && pools.rows[0].geojson) {
-              res.json(pools.rows[0].geojson);
+        .then(items => {
+            if (items.rows && items.rows[0].geojson) {
+              if (req.query.download) {
+                    var file = JSON.stringify(items.rows[0].geojson);
+                    res.setHeader('Content-disposition', 'attachment; filename=vpmapped.geojson');
+                    res.setHeader('Content-type', 'application/json');
+                    res.send(file); //res.send not res.json
+              } else {res.json(items.rows[0].geojson);}
             }
-            else {res.json(pools);}
+            else {res.json(items);}
         })
         .catch(err => next(err));
 }
@@ -72,7 +77,7 @@ function create(req, res, next) {
     console.log(`create req.body:`);
     console.dir(req.body);
     poolService.create(req.body)
-        .then((pool) => res.json(pool))
+        .then((item) => res.json(item))
         .catch(err => {
             if (err.code == 23505 && err.constraint == 'vpmapped_pkey') {
                 err.name = 'UniquenessConstraintViolation';
@@ -84,7 +89,7 @@ function create(req, res, next) {
 
 function update(req, res, next) {
     poolService.update(req.params.id, req.body)
-        .then((pool) => res.json(pool))
+        .then((item) => res.json(item))
         .catch(err => {
             if (err.code == 23505 && err.constraint == 'vpmapped_pkey') {
                 err.name = 'UniquenessConstraintViolation';

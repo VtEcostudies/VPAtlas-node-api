@@ -1,9 +1,11 @@
+--DROP VIEW geojson_reviews;
+CREATE OR REPLACE VIEW geojson_reviews AS 
 SELECT
-    row_to_json(fc)
+    row_to_json(fc) AS geojson
 FROM (
     SELECT
 		'FeatureCollection' AS type,
-		'Vermont Vernal Pool Atlas - Pool Visit Reviews' AS name,
+		'Vermont Vernal Pool Atlas - Pool Reviews' AS name,
         array_to_json(array_agg(f)) AS features
     FROM (
         SELECT

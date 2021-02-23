@@ -2,7 +2,9 @@
 const router = express.Router();
 const service = require('./vpReview.service');
 
-// routes
+// routes NOTE: routes with names for same method (ie. GET) must be above routes
+// for things like /:id, or they are missed/skipped.
+router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
 router.get('/count', getCount);
 router.get('/', getAll);
@@ -34,6 +36,23 @@ function getAll(req, res, next) {
 function getById(req, res, next) {
     service.getById(req.params.id)
         .then(item => item ? res.json(item) : res.sendStatus(404))
+        .catch(err => next(err));
+}
+
+function getGeoJson(req, res, next) {
+    console.log('vpReview.routes | getGeoJson', req.query);
+    service.getGeoJson(req.query)
+        .then(items => {
+            if (items.rows && items.rows[0].geojson) {
+              if (req.query.download) {
+                    var file = JSON.stringify(items.rows[0].geojson);
+                    res.setHeader('Content-disposition', 'attachment; filename=vpreview.geojson');
+                    res.setHeader('Content-type', 'application/json');
+                    res.send(file); //res.send not res.json
+              } else {res.json(items.rows[0].geojson);}
+            }
+            else {res.json(items);}
+        })
         .catch(err => next(err));
 }
 

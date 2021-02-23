@@ -15,7 +15,7 @@ module.exports = {
 
     CORRECTION: it DOES NOT WORK to return an array.
 
-    HOWEVER: it does wlgc to pass and array as an argument to
+    HOWEVER: it does work to pass and array as an argument to
     this funtion, by reference, and update that array here.
 
     OPTIONS: (1) Pass an empty array to be filled here, or
@@ -55,7 +55,7 @@ async function getColumns(tableName, columns=[]) {
     GET http://vpatlas.org/pools/mapped/page?mappedPoolId|LIKE='AAA' (roughly)
 
     TO-DO: find a way to enable the IN operator. As currently implemented, IN
-    can't wlgc because node-postgres automatically applies single quotes around
+    can't work because node-postgres automatically applies single quotes around
     parameter values. If we receive an http request like
 
     GET http://vpatlas.org/pools/mapped/page?mappedPoolStatus|IN=(Potential,Probable)
