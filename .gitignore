@@ -9,6 +9,7 @@ vcgiMapData/town_geoJSON
 logs
 *.log
 npm-debug.log*
+*.out
 
 # Runtime data
 pids

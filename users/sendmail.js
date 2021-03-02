@@ -19,7 +19,8 @@ function reset(userMail, token, type='registration') {
     auth: {
       user: config.vceEmail,
       pass: config.vcePassW
-    }
+    },
+    from: config.vceEmail
   });
 
   var url = `<a href=${config.server[env]}/confirm/registration?token=${token}>Confirm VPAtlas Registration</a>`;
