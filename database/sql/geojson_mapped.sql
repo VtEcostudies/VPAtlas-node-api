@@ -1,20 +1,51 @@
 SELECT
-    row_to_json(fc)
-FROM (
+  row_to_json(fc)
+  FROM (
     SELECT
 		'FeatureCollection' AS type,
 		'Vermont Vernal Pool Atlas - Mapped Pools' AS name,
-		--"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-        array_to_json(array_agg(f)) AS features
+		'{ "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } }'::json as crs,
+    array_to_json(array_agg(f)) AS features
     FROM (
         SELECT
-            'Feature' AS type,
-			ST_AsGeoJSON(ST_GeomFromText('POINT(' || "mappedLongitude" || ' ' || "mappedLatitude" || ')'))::json as geometry,
+          'Feature' AS type,
+          ST_AsGeoJSON(ST_GeomFromText('POINT(' || "mappedLongitude" || ' ' || "mappedLatitude" || ')'))::json as geometry,
+          (SELECT row_to_json(p) FROM
             (SELECT
-			 	--note: mappedComments contains characters that are illegal for geoJSON
-				row_to_json(p) FROM (SELECT "mappedPoolId", "mappedPoolStatus", "mappedMethod", "mappedObserverUserName", "updatedAt") AS p
-			) AS properties
+              "mappedPoolId",
+              "mappedPoolStatus",
+              "mappedMethod",
+              "mappedLongitude", --superceded by GEOMETRY(POINT) above. included for historical reference.
+              "mappedLatitude", --superceded by GEOMETRY(POINT) above. included for historical reference.
+              "mappedObserverUserName",
+              "mappedByUser",
+              "mappedByUserId",
+              "mappedDateText",
+              "mappedMethod",
+              "mappedConfidence",
+              "mappedSource",
+              "mappedSource2",
+              "mappedPhotoNumber",
+              "mappedLocationAccuracy",
+              "mappedShape",
+              "mappedComments",
+              "mappedlocationInfoDirections",
+              "mappedLocationUncertainty",
+              "mappedTownId",
+              "createdAt",
+              "updatedAt",
+              "mappedLandownerPermission",
+              "mappedLandownerInfo",
+              "mappedLandownerName",
+              "mappedLandownerAddress",
+              "mappedLandownerTown",
+              "mappedLandownerStateAbbrev",
+              "mappedLandownerZip5",
+              "mappedLandownerPhone",
+              "mappedLandownerEmail"
+            ) AS p
+          ) AS properties
         FROM vpmapped
-		WHERE "mappedPoolStatus" IN ('Potential', 'Probable', 'Confirmed')
+        WHERE "mappedPoolStatus" IN ('Potential', 'Probable', 'Confirmed')
     ) AS f
-) AS fc;
+  ) AS fc;

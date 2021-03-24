@@ -13,10 +13,10 @@ How express-jwt parses the request is opaque here. However, via Postman include 
 Header Type: Authorization, Bearer Token
 
 Example: Key: Authorization, Value: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1YzhmZmM5YTBmYWViNjIyMWMwNmM5NzgiLCJpYXQiOjE1NTI5OTIwODV9.PRQffRTZZ4jLQ-7nkEtQQ0BFdLsnB5FBmgmLyFyqv90
- */
+*/
 function jwt() {
     const secret = config.secret;
-    const algorithms = ['RS256'];
+    const algorithms = ['HS256']; //NOTE: This has to match user.service jwt.sign algorithm.
     return expressJwt({ secret, algorithms, isRevoked }).unless({
     //var ret = expressJwt({ secret, isRevoked }).unless({
         path: [

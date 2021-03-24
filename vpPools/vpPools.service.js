@@ -11,13 +11,13 @@ var staticColumns = [];
 module.exports = {
     getCount,
     getUpdated,
-    getReview,
+    getOverview,
+    getPoolsIncludeReviews,
     getAll,
     getPage,
     getByVisitId,
     getByPoolId
 };
-
 
 //file scope list of vpvisit table columns retrieved on app startup (see 'getColumns()' below)
 pgUtil.getColumns("vpmapped", staticColumns) //run it once on init: to create the array here. also diplays on console.
@@ -47,6 +47,14 @@ pgUtil.getColumns("vpreview", staticColumns) //run it once on init: to create th
         console.log(`vpPools.service.pg.pgUtil.getColumns | error: `, err.message);
     });
 
+pgUtil.getColumns("vpknown", staticColumns) //run it once on init: to create the array here. also diplays on console.
+    .then(res => {
+        return res;
+    })
+    .catch(err => {
+        console.log(`vpPools.service.pg.pgUtil.getColumns | error: `, err.message);
+    });
+
 async function getCount(body={}) {
     const where = pgUtil.whereClause(body, staticColumns);
     const text = `select count(*) from vpvisit ${where.text};`;
@@ -54,6 +62,9 @@ async function getCount(body={}) {
     return await query(text, where.values);
 }
 
+/*
+  The primary map/table overview query.
+*/
 async function getUpdated(params={timestamp:'1970-02-28'}) {
   var orderClause = 'order by "mappedPoolId"';
   var timestamp = params.timestamp;
@@ -80,18 +91,28 @@ async function getUpdated(params={timestamp:'1970-02-28'}) {
   OR vpvisit."updatedAt">'${timestamp}'::timestamp)
   ${where.text} ${orderClause}
   `;
-  /*
-  vpreview.*,
-  vpreview."updatedAt" AS "reviewUpdatedAt",
-  vpreview."createdAt" AS "reviewCreatedAt"
-  LEFT JOIN vpreview ON vpreview."reviewVisitId"=vpvisit."visitId"
-  OR vpreview."updatedAt">'${timestamp}'::timestamp)
-  */
   console.log(text);
   return await query(text, where.values);
 }
 
-async function getReview(params={timestamp:'1970-02-28'}) {
+/*
+  A new, minimized dataset for the primary map/table overview query.
+  This uses a database VIEW, "poolsGetOverview", which complicates the
+  whereClause logic...
+*/
+async function getOverview(params={timestamp:'1970-02-28'}) {
+  var orderClause = 'order by "poolId"';
+  var timestamp = params.timestamp;
+  delete params.timestamp;
+  const where = pgUtil.whereClause(params, staticColumns, 'AND');
+  var text = `SELECT * FROM "poolsGetOverview"
+    WHERE "updatedAt">'${timestamp}'::timestamp
+    ${where.text} ${orderClause}`;
+  console.log(text);
+  return await query(text, where.values);
+}
+
+async function getPoolsIncludeReviews(params={timestamp:'1970-02-28'}) {
   var orderClause = 'order by "mappedPoolId"';
   const timestamp = params.timestamp;
   delete params.timestamp;

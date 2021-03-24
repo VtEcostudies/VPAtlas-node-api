@@ -1,20 +1,23 @@
-DROP TABLE IF EXISTS vpsurvey_users_roles;
-DROP TABLE IF EXISTS vpusers_roles;
-DROP TABLE IF EXISTS vprole;
-DROP TABLE IF EXISTS vpsurvey_user_amphib_macro;
-DROP TABLE IF EXISTS vpsurvey;
-DROP TABLE IF EXISTS beaufort_wind_scale;
-DROP TABLE IF EXISTS vpsurvey_type;
+
+DROP TABLE IF EXISTS vpsurvey_user_species_counts; --join table
+DROP TABLE IF EXISTS vpsurvey_equipment_status; --join table
+DROP TABLE IF EXISTS vpsurvey_photos; --join table
+DROP TABLE IF EXISTS vpsurvey; --primary table
+DROP TABLE IF EXISTS def_survey_type;
+DROP TABLE IF EXISTS def_beaufort_wind_scale;
+DROP TABLE IF EXISTS def_survey_equipment_status;
+DROP TABLE IF EXISTS def_survey_equipment;
+DROP TABLE IF EXISTS def_survey_species;
 
 /*
-  A vpsurvey_type defines the types of surveys performed on monitored vernal pools.
+  Definition table for the types of surveys performed on monitored vernal pools.
 */
-CREATE TABLE vpsurvey_type (
+CREATE TABLE def_survey_type (
 	"surveyTypeId" INTEGER UNIQUE NOT NULL PRIMARY KEY,
 	"surveyTypeName" TEXT NOT NULL UNIQUE,
 	"surveyTypeDesc" TEXT
 );
-INSERT INTO vpsurvey_type ("surveyTypeId", "surveyTypeName", "surveyTypeDesc") VALUES
+INSERT INTO def_survey_type ("surveyTypeId", "surveyTypeName", "surveyTypeDesc") VALUES
 (1, 'Equipment Setup', 'The first visit of the spring.'),
 (2, 'Early Survey', 'Survey the vernal pool for life soon after it thaws.'),
 (3, 'Late Survey', 'Survey the vernal pool a few weeks after the Early Survey / Visit 2.'),
@@ -22,16 +25,17 @@ INSERT INTO vpsurvey_type ("surveyTypeId", "surveyTypeName", "surveyTypeDesc") V
 (9, 'Additional/Supplemental', 'Any non-essential visit to gather data, anecdotal information, or check on equipment.');
 
 /*
-  Create a definition table for the beaufort scale of wind strength.
+  Definition table for the beaufort scale of wind strength.
 */
-CREATE TABLE beaufort_wind_scale (
+CREATE TABLE def_beaufort_wind_scale (
   "beaufortWindForce" INTEGER UNIQUE NOT NULL PRIMARY KEY,
   "beaufortWindMphMin" INTEGER,
   "beaufortWindMphMax" INTEGER,
   "beaufortWindName" TEXT NOT NULL UNIQUE,
-  "beaufortWindDesc" TEXT
+  "beaufortWindLandDesc" TEXT
 );
-INSERT INTO beaufort_wind_scale ("beaufortWindForce", "beaufortWindMphMin", "beaufortWindMphMax", "beaufortWindName", "beaufortWindDesc") VALUES
+INSERT INTO def_beaufort_wind_scale
+	("beaufortWindForce", "beaufortWindMphMin", "beaufortWindMphMax", "beaufortWindName", "beaufortWindLandDesc") VALUES
 (0, 0, 1, 'Calm', 'Calm. Smoke rises vertically.'),
 (1, 1, 3, 'Light Air', 'Direction of wind shown by smoke drift, but not by wind vanes.'),
 (2, 4, 7, 'Light Breeze', 'Wind felt on face. Leaves rustle. Ordinary vanes moved by wind.'),
@@ -47,18 +51,68 @@ INSERT INTO beaufort_wind_scale ("beaufortWindForce", "beaufortWindMphMin", "bea
 (12, 72, 83, 'Hurricane', 'See Saffir-Simpson Hurricane Scale');
 
 /*
+	Definition table for equipment status values.
+*/
+CREATE TABLE def_survey_equipment_status(
+	"statusId" INTEGER NOT NULL PRIMARY KEY,
+	"status" TEXT NOT NULL
+);
+INSERT INTO def_survey_equipment_status ("statusId", "status") VALUES
+(0, 'Not yet set up'),
+(1, 'Set up this visit'),
+(2, 'Already set up'),
+(10, 'Not yet collected'),
+(11, 'Collected on this visit'),
+(12, 'Already collected'),
+(20, 'Not reconfigured'),
+(21, 'Reconfigured and placed in original location'),
+(22, 'Reconfigured and placed in new location'),
+(30, 'Data not downloaded'),
+(31, 'Data downloaded'),
+(99, 'Never set up');
+
+/*
+	Definition table for survey equipment.
+	Types of equipment available in 2021:
+		- Acoustic Monitor
+		- HOBO logger
+		- AudioMoth
+		- Custom Datalogger designed and built by volunteers
+*/
+CREATE TABLE def_survey_equipment (
+	"equipmentId" INTEGER NOT NULL PRIMARY KEY,
+	"equipmentType" TEXT NOT NULL, --eg. HOBO, AudioMoth, Acoustic Recorder
+	"equipmentDataType" TEXT, --eg. temperature, audio, depth
+	"equipmentDataFormat" TEXT, --eg. [csv], [csv, csv], [wav]
+	"equipmentServiceIntervalMonths" INTEGER DEFAULT 12,
+	CONSTRAINT def_survey_equipment_unique UNIQUE("equipmentType", "equipmentDataType")
+);
+INSERT INTO def_survey_equipment(
+  "equipmentId", "equipmentType", "equipmentDataType", "equipmentDataFormat", "equipmentServiceIntervalMonths") VALUES
+(0, 'HOBO logger', 'temperature', 'csv', 36),
+(1, 'Acoustic Recorder', 'audio', 'wav', 12),
+(2, 'AudioMoth', 'audio', 'wav', 12),
+(3, 'Custom datalogger v1', 'temperature', 'csv', 12),
+(4, 'Custom datalogger v1', 'pool depth', 'csv', 12),
+(5, 'Custom datalogger v1', 'rainfall', 'csv', 12);
+
+/*
+	Primary table for Vernal Pool Monitoring Surveys.
+
 	A vpsurvey is a single pool-monitoring (survey) event.
 	To group surveys into a pool-monitoring season we could:
 		1) Create a join table, vpsurveys_types_year as set of surveys of a single pool done for one year.
-		2) Simply add columns for surveyTypeId and surveyYear to the vpsurvey table
+		2) Simply add columns for surveyTypeId and surveyYear to this vpsurvey table
 
-  NOTE: 'surveyUserId' refers to the user who entered data.
+  NOTES:
+    'surveyUserId' refers to the user who entered data.
+    'surveyYear' is meant to define a set of surveys for a vernal pool season
 */
 create table vpsurvey (
   "surveyId" INTEGER UNIQUE NOT NULL PRIMARY KEY,
+  "surveyPoolId" TEXT NOT NULL REFERENCES vpmapped("mappedPoolId"),
+  "surveyTypeId" INTEGER NOT NULL REFERENCES def_survey_type("surveyTypeId"),
   "surveyUserId" INTEGER NOT NULL REFERENCES vpuser(id),
-  "surveyPoolId" TEXT NOT NULL REFERENCES vpmapped ("mappedPoolId"),
-  "surveyTypeId" INTEGER NOT NULL REFERENCES vpsurvey_type("surveyTypeId"),
   "surveyYear" INTEGER NOT NULL,
   "surveyDateTime" TIMESTAMP NOT NULL,
   "surveyTownId" INTEGER NOT NULL REFERENCES vptown("townId"),
@@ -74,93 +128,98 @@ create table vpsurvey (
   "surveyPhysicalParametersNotes" TEXT,
   "surveyAirTempF" INTEGER,
   "surveyHumidity" INTEGER,
-  "surveyWindBeaufort" INTEGER REFERENCES beaufort_wind_scale("beaufortWindForce"),
+  "surveyWindBeaufort" INTEGER REFERENCES def_beaufort_wind_scale("beaufortWindForce"),
   "surveyWeatherConditions" TEXT,
   "surveyWeatherNotes" TEXT,
   "surveySpermatophores" BOOLEAN DEFAULT false,
   "surveyAmphibMacroNotes" TEXT,
   "surveyEdgeVisualImpairment" INTEGER DEFAULT 0,
-  "surveyInteriorVisualImpairment" INTEGER DEFAULT 0
-  --Acoustic Monitor
-  --HOBO logger
-  --HOBO data
+  "surveyInteriorVisualImpairment" INTEGER DEFAULT 0,
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
 );
 
 /*
-  Breakout / join table for Observers 1 & 2 amphibian and macro invertebrate surveys.
+	Join table for vernal pool monitoring equipment status at surveys.
 
-  NOTES:
-    Users here are Observers.
-    photoUrls are text arrays, allowing multiple values for each column.
+	NOTE: Some equipment status values require a date, when the equipment status
+	change happened on a different date than the survey date.
 */
-CREATE TABLE vpsurvey_user_amphib_macro (
+CREATE TABLE vpsurvey_equipment_status (
+	"equipmentSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
+	"surveyEquipmentId" INTEGER NOT NULL REFERENCES def_survey_equipment("equipmentId"),
+	"surveyEquipmentStatusId" INTEGER NOT NULL REFERENCES def_survey_equipment_status("statusId"),
+	"surveyEquipmentStatusDate" TIMESTAMP DEFAULT NULL,
+	"createdAt" TIMESTAMP DEFAULT NOW(),
+	"updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+/*
+  Join table for Observers 1 & 2 amphibian and macro invertebrate counts.
+
+  There can be only one amphib/macro count survey for a pool survey and observer.
+
+  NOTE: Users here are Observers, but all Observers need to be in vpuser.
+*/
+CREATE TABLE vpsurvey_user_species_counts (
   "amphibMacroSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
   "amphibMacroSurveyUserId" INTEGER NOT NULL REFERENCES vpuser(id),
   "polarizedGlasses" BOOLEAN DEFAULT false,
   "edgeStart" TIMESTAMP NOT NULL,
+  "edgeStop" TIMESTAMP NOT NULL,
   "edgeWOFR" INTEGER DEFAULT 0,
   "edgeSPSA" INTEGER DEFAULT 0,
   "edgeJESA" INTEGER DEFAULT 0,
   "edgeBLSA" INTEGER DEFAULT 0,
   "interiorStart" TIMESTAMP NOT NULL,
+  "interiorStop" TIMESTAMP NOT NULL,
   "interiorWOFR" INTEGER DEFAULT 0,
   "interiorSPSA" INTEGER DEFAULT 0,
   "interiorJESA" INTEGER DEFAULT 0,
   "interiorBLSA" INTEGER DEFAULT 0,
-  "northFairyShrimp" INTEGER DEFAULT 0,
-  "eastFairyShrimp" INTEGER DEFAULT 0,
-  "southFairyShrimp" INTEGER DEFAULT 0,
-  "westFairyShrimp" INTEGER DEFAULT 0,
-  "totalFairyShrimp" INTEGER DEFAULT 0,
-  "northCaddisfly" INTEGER DEFAULT 0,
-  "eastCaddisfly" INTEGER DEFAULT 0,
-  "southCaddisfly" INTEGER DEFAULT 0,
-  "westCaddisfly" INTEGER DEFAULT 0,
-  "totalCaddisfly" INTEGER DEFAULT 0,
-  "photoUrlInteriorWOFR" TEXT[],
-  "photoUrlInteriorSPSA" TEXT[],
-  "photoUrlInteriorJESA" TEXT[],
-  "photoUrlInteriorBLSA" TEXT[],
-  "photoUrlEdgeWOFR" TEXT[],
-  "photoUrlEdgeSPSA" TEXT[],
-  "photoUrlEdgeJESA" TEXT[],
-  "photoUrlEdgeBLSA" TEXT[],
-  "photoUrlFairyShrimp" TEXT[],
-  "photoUrlCaddisfly" TEXT[]
+  "northFASH" INTEGER DEFAULT 0,
+  "eastFASH" INTEGER DEFAULT 0,
+  "southFASH" INTEGER DEFAULT 0,
+  "westFASH" INTEGER DEFAULT 0,
+  "totalFASH" INTEGER DEFAULT 0,
+  "northCDFY" INTEGER DEFAULT 0,
+  "eastCDFY" INTEGER DEFAULT 0,
+  "southCDFY" INTEGER DEFAULT 0,
+  "westCDFY" INTEGER DEFAULT 0,
+  "totalCDFY" INTEGER DEFAULT 0,
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
 );
 
 /*
-	User roles table to support join tables for users and observers
+  Definition table for photographable vernal pool indicator species.
 */
-CREATE TABLE vprole (
-	"roleId" INTEGER NOT NULL PRIMARY KEY,
-	"roleName" TEXT NOT NULL UNIQUE,
-	"roleDesc" TEXT
+CREATE TABLE def_survey_species (
+  "surveySpeciesAbbrev" TEXT NOT NULL UNIQUE,
+  "surveySpeciesCommon" TEXT NOT NULL UNIQUE,
+  "surveySpeciesScientific" TEXT NOT NULL UNIQUE
 );
-INSERT INTO vprole ("roleId", "roleName", "roleDesc") VALUES
-(0, 'Observer', 'VPAtlas and VPMonitor Observer. Can be added as an Observer for Visits and Surveys.'),
-(1, 'User', 'VPAtlas User - able to create new Visits and modify their own Visits.'),
-(2, 'Monitor', 'Vernal Pool Monitor User - able to create new Surveys and modify their own Surveys for an assigned pool.'),
-(3, 'Coordinator', 'Vernal Pool Monitor Coordinator - able to Review Surveys.'),
-(4, 'Administrator', 'VPAtlas Administrator - able to Review Visits and Surveys.');
+INSERT INTO def_survey_species ("surveySpeciesAbbrev", "surveySpeciesCommon", "surveySpeciesScientific") VALUES
+('WOFR','Wood Frog', 'Lithobates sylvaticus'),
+('SPSA','Spotted Salamander','Ambystoma maculatum'),
+('JESA','Jefferson Salamander','Ambystoma jeffersonianum'),
+('BLSA','Blue-spotted Salamander','Ambystoma laterale'),
+('FASH','FairyShrimp','Eubranchipus bundyi'),
+('CDFY','Caddisfly','Trichoptera'),
+('POOL','Vernal Pool','Poolus vernale');
 
 /*
-	Administrative join table associating users with roles in the system.
+  Join table for survey photos by user and species
 */
-CREATE TABLE vpusers_roles (
-	"userId" INTEGER NOT NULL REFERENCES vpuser("id"),
-	"roleId" INTEGER NOT NULL REFERENCES vprole("roleId")
+CREATE TABLE vpsurvey_photos (
+  "surveyPhotoSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
+  "surveyPhotoSpecies" TEXT NOT NULL REFERENCES def_survey_species("surveySpeciesAbbrev"),
+  "surveyPhotoUrl" TEXT NOT NULL
 );
 
-/*
-	Join table for survey users and survey observers.
-
-  This is not needed. Handled in vpsurvey_user_amphib_macro
-*/
-/*
-create table vpsurvey_users_roles (
-	"userRoleSurveyId" integer NOT NULL REFERENCES vpsurvey("surveyId"),
-	"surveyUserId" integer NOT NULL REFERENCES vpuser(id),
-	"surveyUserRoleId" integer NOT NULL REFERENCES vpuser_role("roleId")
-);
-*/
+CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey
+  FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
+CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey_user_species_counts
+  FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
+CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey_equipment_status
+  FOR EACH ROW EXECUTE PROCEDURE set_updated_at();

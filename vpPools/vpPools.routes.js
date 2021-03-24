@@ -10,8 +10,9 @@ const service = require('./vpPools.service');
 // routes
 router.get('/count', getCount);
 router.get('/updated', getUpdated);
+router.get('/overview', getOverview);
 router.get('/', getAll);
-router.get('/review', getReview);
+router.get('/review', getPoolsIncludeReviews);
 router.get('/page/:page', getPage);
 router.get('/visitId/:visitId', getByVisitId);
 router.get('/poolId/:poolId', getByPoolId);
@@ -21,6 +22,16 @@ module.exports = router;
 function getCount(req, res, next) {
     service.getCount(req.query)
         .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getOverview(req, res, next) {
+    console.log('vpPools.routes.getOverview req.query', req.query);
+    service.getOverview(req.query)
+        .then(items => {
+          console.log('vpPools.routes::getOverview | rows:', items.rowCount);
+          res.json({"rowCount":items.rowCount, "rows":items.rows});
+        })
         .catch(err => next(err));
 }
 
@@ -41,9 +52,9 @@ function getAll(req, res, next) {
         .catch(err => next(err));
 }
 
-function getReview(req, res, next) {
-    console.log('vpPools.routes.getReview req.query', req.query);
-    service.getReview(req.query)
+function getPoolsIncludeReviews(req, res, next) {
+    console.log('vpPools.routes.getPoolsIncludeReviews req.query', req.query);
+    service.getPoolsIncludeReviews(req.query)
         .then(items => res.json(items))
         .catch(err => next(err));
 }
