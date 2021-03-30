@@ -35,11 +35,6 @@ pgUtil.getColumns("vpknown", staticColumns) //run it once on init: to create the
 
 pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
-        staticColumns.push(`vptown."townName"`); //Add this for town filter query
-        staticColumns.push(`visittown."townName"`); //Add this for town filter query
-        staticColumns.push(`mappedtown."townName"`); //Add this for town filter query
-        staticColumns.push(`knowntown."townName"`); //Add this for town filter query
-        staticColumns.push(`surveytown."townName"`); //Add this for town filter query
         return res;
     })
     .catch(err => {
@@ -73,7 +68,9 @@ async function getOverview(params={}) {
     const where = pgUtil.whereClause(params, staticColumns, 'AND');
     const text = `
 SELECT
-vptown.*,
+vptown."townId",
+vptown."townName",
+vpcounty."countyName",
 vpknown."poolId",
 SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
 SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
@@ -93,9 +90,10 @@ vpvisit."visitLatitude",
 vpvisit."visitLongitude",
 vpvisit."updatedAt" AS "visitUpdatedAt"
 FROM vpknown
-INNER JOIN vpmapped ON vpknown."poolId"=vpmapped."mappedPoolId"
-INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-LEFT JOIN vptown ON vpknown."knownTownId"=vptown."townId"
+INNER JOIN vpmapped ON "mappedPoolId"="poolId"
+INNER JOIN vpvisit ON "visitPoolId"="poolId"
+LEFT JOIN vptown ON "knownTownId"="townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
 WHERE "visitId" > 0
 ${where.text} ${orderClause};`;
     console.log(text, where.values);

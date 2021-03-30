@@ -171,8 +171,8 @@ CREATE TABLE vpsurvey_equipment_status (
   NOTE: Users here are Observers, but all Observers need to be in vpuser.
 */
 CREATE TABLE vpsurvey_user_species_counts (
-  "amphibMacroSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
-  "amphibMacroSurveyUserId" INTEGER NOT NULL REFERENCES vpuser(id),
+  "speciesSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
+  "speciesSurveyUserId" INTEGER NOT NULL REFERENCES vpuser(id),
   "polarizedGlasses" BOOLEAN DEFAULT false,
   "edgeStart" TIMESTAMP NOT NULL,
   "edgeStop" TIMESTAMP NOT NULL,
