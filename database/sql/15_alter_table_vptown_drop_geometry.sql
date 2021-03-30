@@ -8,4 +8,10 @@ UPDATE vptown SET "townName"='Saint Johnsbury', "townAlias"='St. Johnsbury' WHER
 UPDATE vptown SET "townName"='Saint George', "townAlias"='St. George' WHERE "townId"=82;
 UPDATE vptown SET "townName"='Rutland Town', "townAlias"='Rutland' WHERE "townId"=252;
 
+select * from vptown
+where "townName" LIKE '%Johnsbury%'
+OR "townName" LIKE '%Rutland%'
+OR "townName" LIKE '%Albans%'
+OR "townName" LIKE '%George%';
+
 ALTER TABLE vpmapped DROP COLUMN "mappedPoolStatus";

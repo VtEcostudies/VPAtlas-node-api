@@ -20,7 +20,7 @@ FROM (
                 vpknown."sourceVisitId",
                 vpknown."sourceSurveyId",
                 vpknown."updatedAt" AS "knownUpdatedAt",
-                vpvisit.*
+                vpvisit.*,
                 vpvisit."createdAt" AS "visitCreatedAt",
                 vpvisit."updatedAt" AS "visitUpdatedAt"
               ) AS p
