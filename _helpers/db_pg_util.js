@@ -93,6 +93,7 @@ function whereClause(params={}, staticColumns=[], clause='WHERE') {
             if (!Array.isArray(params[key]) && params[key].toLowerCase()=='null') { //null value requires special operators
               opr = opr==='!=' ? ' IS NOT NULL' : ' IS NULL';
             }
+            //console.log('db_pg_util::whereClause |', col);
             if (staticColumns.includes(col) || 'logical'===col.substring(0,7)) {
                 if (where == '') where = clause; //'WHERE', or 'AND' depending on caller
                 if ('logical'!=col.substring(0,7)) {

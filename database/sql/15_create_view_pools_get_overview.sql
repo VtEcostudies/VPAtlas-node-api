@@ -1,8 +1,7 @@
-CREATE VIEW "poolsGetOverview" AS
+DROP VIEW IF EXISTS "poolsGetOverview";
+CREATE OR REPLACE VIEW "poolsGetOverview" AS
 SELECT
-  to_json(knowntown) AS "knownTown",
-  --to_json(mappeduser) as "mappedUser",
-  --to_json(visituser) as "visitUser",
+  vptown.*,
   vpknown."poolId",
   SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
   SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
@@ -12,18 +11,28 @@ SELECT
   vpknown."updatedAt",
   vpmapped."mappedByUser",
   vpmapped."mappedMethod",
-  vpmapped."mappedLocationAccuracy",
-  vpmapped."mappedObserverUserName",
+  vpmapped."mappedConfidence",
+  vpmapped."mappedLocationUncertainty",
+  --vpmapped."mappedObserverUserName",
+  vpmapped."updatedAt" AS "mappedUpdatedAt",
   vpvisit."visitId",
+  vpvisit."visitPoolId",
   vpvisit."visitUserName",
   vpvisit."visitDate",
   vpvisit."visitVernalPool",
-  vpvisit."updatedAt" AS "visitUpdatedAt"
+  vpvisit."visitLatitude",
+  vpvisit."visitLongitude",
+  vpvisit."updatedAt" AS "visitUpdatedAt",
+  vpreview."reviewId",
+  vpreview."reviewQACode",
+  vpreview."reviewPoolStatus",
+  vpreview."updatedAt" AS "reviewUpdatedAt"
   FROM vpknown
   INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpknown."poolId"
-  LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-  LEFT JOIN vptown AS knowntown ON vpknown."knownTownId"=knowntown."townId";
+  LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpknown."poolId"
+  LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpknown."poolId"
+  LEFT JOIN vptown ON vpknown."knownTownId"=vptown."townId";
 
-  SELECT * FROM "poolsGetOverview"
-  WHERE "updatedAt"<now()::timestamp
-  AND "poolStatus"='Confirmed';
+SELECT * FROM "poolsGetOverview"
+WHERE "updatedAt"<now()::timestamp
+AND "poolStatus"='Confirmed';

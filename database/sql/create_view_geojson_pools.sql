@@ -11,13 +11,27 @@ FROM (
     FROM (
       SELECT
         'Feature' AS type,
-		     ST_AsGeoJSON(ST_GeomFromText('POINT(' || visits."visitLongitude" || ' ' || visits."visitLatitude" || ')'))::json as geometry,
-            (SELECT
-    				    row_to_json(p) FROM (
-                  SELECT visits.*, mapped.*
-				        ) AS p
-	           ) AS properties
-          FROM vpmapped mapped LEFT JOIN (
+        ST_AsGeoJSON("poolLocation")::json as geometry,
+        (SELECT
+          row_to_json(p) FROM (SELECT
+            known."poolId",
+            known."poolLocation",
+            to_json(vptown) AS "knownTown",
+            known."sourceVisitId",
+            known."sourceSurveyId",
+            known."updatedAt" AS "knownUpdatedAt",
+            mapped.*,
+            mapped."createdAt" AS "mappedCreatedAt",
+            mapped."updatedAt" AS "mappedUpdatedAt",
+            visits.*,
+            visits."createdAt" AS "visitCreatedAt",
+            visits."updatedAt" AS "visitUpdatedAt",
+            review.*,
+            review."createdAt" AS "reviewCreatedAt",
+            review."updatedAt" AS "reviewUpdatedAt"
+          ) AS p
+        ) AS properties
+          FROM vpknown known LEFT JOIN (
           	SELECT vc.visit_count, v.* FROM vpvisit v INNER JOIN (
           		SELECT
           			"visitPoolId" as vcvpid, count("visitPoolId") as visit_count
@@ -31,8 +45,11 @@ FROM (
           	ON v."visitPoolId"=vcvpid
           	ORDER BY vc.visit_count desc, v."visitPoolId"
           ) AS visits
-          ON mapped."mappedPoolId"=visits."visitPoolId"
-          WHERE "mappedPoolStatus" IN ('Potential','Probable','Confirmed')
+          ON known."poolId"=visits."visitPoolId"
+          INNER JOIN vpmapped AS mapped ON mapped."mappedPoolId"=known."poolId"
+          INNER JOIN vpreview AS review ON review."reviewPoolId"=known."poolId"
+          INNER JOIN vptown on known."knownTownId"=vptown."townId"
+          --WHERE "mappedPoolStatus" IN ('Potential','Probable','Confirmed')
           ORDER BY visits.visit_count desc, visits."visitPoolId"
     ) AS f
 ) AS fc;

@@ -8,6 +8,7 @@ router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
 router.get('/count', getCount);
 router.get('/stats', getStats);
+router.get('/overview', getOverview);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
 router.get('/:id', getById);
@@ -34,6 +35,12 @@ function getStats(req, res, next) {
     console.log('vpMapped.routes | getStats');
     poolService.getStats(req.query)
         .then(stats => res.json(stats))
+        .catch(err => next(err));
+}
+
+function getOverview(req, res, next) {
+    poolService.getOverview(req.query)
+        .then(items => res.json(items))
         .catch(err => next(err));
 }
 

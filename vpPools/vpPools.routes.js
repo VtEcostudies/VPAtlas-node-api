@@ -8,16 +8,22 @@ const router = express.Router();
 const service = require('./vpPools.service');
 
 // routes
+router.get('/columns', getColumns);
 router.get('/count', getCount);
-router.get('/updated', getUpdated);
-router.get('/overview', getOverview);
+router.get('/overview', getOverview); //minimal dataset to support faster mapping views
 router.get('/', getAll);
-router.get('/review', getPoolsIncludeReviews);
+router.get('/review', getPoolsNeedReview);
 router.get('/page/:page', getPage);
 router.get('/visitId/:visitId', getByVisitId);
 router.get('/poolId/:poolId', getByPoolId);
 
 module.exports = router;
+
+function getColumns(req, res, next) {
+    service.getColumns()
+        .then(columns => res.json(columns))
+        .catch(err => next(err));
+}
 
 function getCount(req, res, next) {
     service.getCount(req.query)
@@ -35,16 +41,6 @@ function getOverview(req, res, next) {
         .catch(err => next(err));
 }
 
-function getUpdated(req, res, next) {
-    console.log('vpPools.routes.getUpdated req.query', req.query);
-    service.getUpdated(req.query)
-        .then(items => {
-          console.log('vpPools.routes::getUpdated | rows:', items.rowCount);
-          res.json(items);
-        })
-        .catch(err => next(err));
-}
-
 function getAll(req, res, next) {
     console.log('vpPools.routes.getAll req.query', req.query);
     service.getAll(req.query)
@@ -52,9 +48,9 @@ function getAll(req, res, next) {
         .catch(err => next(err));
 }
 
-function getPoolsIncludeReviews(req, res, next) {
-    console.log('vpPools.routes.getPoolsIncludeReviews req.query', req.query);
-    service.getPoolsIncludeReviews(req.query)
+function getPoolsNeedReview(req, res, next) {
+    console.log('vpPools.routes.getPoolsNeedReview req.query', req.query);
+    service.getPoolsNeedReview(req.query)
         .then(items => res.json(items))
         .catch(err => next(err));
 }

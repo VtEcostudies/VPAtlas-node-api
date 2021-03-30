@@ -38,7 +38,6 @@ app.use('/pools/mapped', require('./vpMapped/vpMapped.routes')); //postgres mapp
 app.use('/pools/visit', require('./vpVisit/vpVisit.routes')); //postgres pool visits db
 app.use('/pools', require('./vpPools/vpPools.routes')); //postgres 'Mapped Pools' and 'Pool Visits' GETS-only combined
 app.use('/review', require('./vpReview/vpReview.routes')); //postgres reviews db
-app.use('/pools/review', require('./vpReview/vpReview.routes')); //get pool reviews also this way (for geoJSON consistency)
 app.use('/aws/s3', require('./vpUtil/vp_s3_info.routes')); //get connection credentials for aws s3 bucket by bucketName
 app.use('/parcel', require('./vcgiMapData/vcgiParcel.routes')); //get parcel map geoJSON
 

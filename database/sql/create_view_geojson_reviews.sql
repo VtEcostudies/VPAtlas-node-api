@@ -11,26 +11,32 @@ FROM (
     FROM (
         SELECT
             'Feature' AS type,
-			ST_AsGeoJSON(ST_GeomFromText('POINT(' || v."visitLongitude" || ' ' || v."visitLatitude" || ')'))::json as geometry,
+            ST_AsGeoJSON("poolLocation")::json as geometry,
             (SELECT
-				row_to_json(p) FROM (SELECT
-					vpreview."reviewId",
-					vpreview."reviewUserName",
-					vpreview."reviewUserId",
-					vpreview."reviewPoolId",
-					vpreview."reviewVisitIdLegacy",
-					vpreview."reviewVisitId",
-					vpreview."reviewQACode",
-					vpreview."reviewQAAlt",
-					vpreview."reviewQAPerson",
-					vpreview."reviewQADate",
-					vpreview."reviewQANotes",
-					vpreview."createdAt",
-					vpreview."updatedAt",
-					vpreview."reviewPoolStatus"
-				) AS p
-			) AS properties
-        FROM vpreview
-		INNER JOIN vpvisit v on "reviewPoolId"="visitPoolId"
+              row_to_json(p) FROM (SELECT
+                vpknown."poolId",
+                vpknown."poolLocation",
+                to_json(vptown) AS "knownTown",
+                vpknown."sourceVisitId",
+                vpknown."sourceSurveyId",
+                vpknown."updatedAt" AS "knownUpdatedAt",
+              	vpreview."reviewId",
+              	vpreview."reviewUserName",
+              	vpreview."reviewUserId",
+              	vpreview."reviewPoolId",
+              	vpreview."reviewVisitIdLegacy",
+              	vpreview."reviewVisitId",
+              	vpreview."reviewQACode",
+              	vpreview."reviewQAAlt",
+              	vpreview."reviewQAPerson",
+              	vpreview."reviewQADate",
+              	vpreview."reviewQANotes",
+              	vpreview."createdAt" AS "reviewCreatedAt",
+              	vpreview."updatedAt" AS "reviewUpdatedAt",
+              	vpreview."reviewPoolStatus"
+              ) AS p
+            ) AS properties
+        FROM vpknown
+        INNER JOIN vpreview v on "reviewPoolId"="poolId"
     ) AS f
 ) AS fc;

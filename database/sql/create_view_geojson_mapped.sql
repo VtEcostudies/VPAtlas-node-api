@@ -11,11 +11,16 @@ SELECT
     FROM (
         SELECT
           'Feature' AS type,
-          ST_AsGeoJSON(ST_GeomFromText('POINT(' || "mappedLongitude" || ' ' || "mappedLatitude" || ')'))::json as geometry,
+          ST_AsGeoJSON("poolLocation")::json as geometry,
           (SELECT row_to_json(p) FROM
             (SELECT
+              vpknown."poolId",
+              vpknown."poolLocation",
+              to_json(vptown) AS "knownTown",
+              vpknown."sourceVisitId",
+              vpknown."sourceSurveyId",
+              vpknown."updatedAt" AS "knownUpdatedAt",
               "mappedPoolId",
-              "mappedPoolStatus",
               "mappedMethod",
               "mappedLongitude", --superceded by GEOMETRY(POINT) above. included for historical reference.
               "mappedLatitude", --superceded by GEOMETRY(POINT) above. included for historical reference.
@@ -34,11 +39,11 @@ SELECT
               "mappedlocationInfoDirections",
               "mappedLocationUncertainty",
               "mappedTownId",
-              "createdAt",
-              "updatedAt",
-              "mappedLandownerPermission",
-              "mappedLandownerInfo"
+              vpmapped."createdAt" as "mappedCreatedAt",
+              vpmapped."updatedAt" as "mappedUpdatedAt",
+              "mappedLandownerPermission"
 /*
+              "mappedLandownerInfo",
               "mappedLandownerName",
               "mappedLandownerAddress",
               "mappedLandownerTown",
@@ -49,7 +54,13 @@ SELECT
 */
             ) AS p
           ) AS properties
-        FROM vpmapped
-        WHERE "mappedPoolStatus" IN ('Potential', 'Probable', 'Confirmed')
+        FROM vpknown
+        INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpknown."poolId"
+        INNER JOIN vptown on vpknown."knownTownId"=vptown."townId"
     ) AS f
   ) AS fc;
+
+COPY (
+  SELECT * from geojson_mapped
+)
+TO 'C:\Users\jloomis\Documents\VCE\VPAtlas\vpAtlas-node-api\database\export\vpatlas_mapped.geojson' with NULL '';

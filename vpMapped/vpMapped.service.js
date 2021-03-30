@@ -7,6 +7,7 @@ module.exports = {
     getColumns,
     getCount,
     getStats,
+    getOverview,
     getAll,
     getPage,
     getById,
@@ -19,11 +20,31 @@ module.exports = {
 //file scope list of vpmapped table columns retrieved on app startup (see 'getColumns()' below)
 pgUtil.getColumns("vpmapped", staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
-        staticColumns.push(`vptown."townName"`); //Add this for town filter query
         return res;
     })
     .catch(err => {
-        console.log(`vpMapped.service.pg.pgUtil.getColumns | error: `, err.message);
+        console.log(`vpMapped.service.pg.pgUtil.getColumns | table:vpmapped | error: `, err.message);
+    });
+
+pgUtil.getColumns("vpknown", staticColumns) //run it once on init: to create the array here. also diplays on console.
+    .then(res => {
+        return res;
+    })
+    .catch(err => {
+        console.log(`vpMapped.service.pg.pgUtil.getColumns | table:vpknown | error: `, err.message);
+    });
+
+pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the array here. also diplays on console.
+    .then(res => {
+        staticColumns.push(`vptown."townName"`); //Add this for town filter query
+        staticColumns.push(`visittown."townName"`); //Add this for town filter query
+        staticColumns.push(`mappedtown."townName"`); //Add this for town filter query
+        staticColumns.push(`knowntown."townName"`); //Add this for town filter query
+        staticColumns.push(`surveytown."townName"`); //Add this for town filter query
+        return res;
+    })
+    .catch(err => {
+        console.log(`vpMapped.service.pg.pgUtil.getColumns | table:vptown | error: `, err.message);
     });
 
 function getColumns() {
@@ -41,40 +62,33 @@ async function getCount(body={}) {
 //TO-DO: filter out non-display pools for non-admin users
 //maybe do this by having roles available here, filtering queries based on role.
 async function getStats(body={"username":null}) {
-    const text = `select
-(select count("mappedPoolId") from vpmapped) as total_data,
-(select count("mappedPoolId") from vpmapped where "mappedPoolStatus"!='Eliminated' AND "mappedPoolStatus"!='Duplicate'
-) as total,
-(select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Potential') as potential,
-(select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Probable') as probable,
-(select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Confirmed') as confirmed,
-(select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Duplicate') as duplicate,
-(select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Eliminated') as eliminated,
-(select count("mappedPoolId") from vpmapped m
-left join vpvisit v on v."visitPoolId"=m."mappedPoolId"
-left join vpreview r on r."reviewVisitId"=v."visitId"
-where r."reviewVisitId" is null and v."visitId" is not null
-) as review,
-(select count(distinct("visitPoolId")) from vpvisit inner join vpmapped on vpmapped."mappedPoolId"=vpvisit."visitPoolId"
-where "mappedPoolStatus"!='Eliminated' AND "mappedPoolStatus"!='Duplicate'
-) as visited,
-(select count(distinct("mappedPoolId")) from vpmapped left join vpvisit on vpmapped."mappedPoolId"=vpvisit."visitPoolId"
- where "mappedByUser"='${body.username}' OR "visitUserName"='${body.username}'
-) as mine,
-(select 0) as monitored;`;
-    return await query(text);
+    if ('null' == body.username || !body.username) {body.username='unknownnobodyperson';}
+    console.log('getStats | body.username=', body.username);
+    const text = `
+      SET body.username = ${body.username};
+      SELECT * from pool_stats;
+      `;
+    //return await query(text); //this can't work with a multi-command statement. results are returned per-command.
+    var res = await query(text);
+    console.log(res[1].rows);
+    return {"rowCount":res[1].rowCount, "rows":res[1].rows};
+}
 
+async function getOverview(body={}) {
+    const where = pgUtil.whereClause(body, staticColumns);
+    const text = `
+      SELECT * FROM "mappedGetOverview"
+      ${where.text};`;
+    console.log(text, where.values);
+    return await query(text, where.values);
 }
 
 async function getAll(body={}) {
+    console.log('vpmapped.service::getAll | ', staticColumns);
     const where = pgUtil.whereClause(body, staticColumns);
-    const text = `select vpmapped.*,
-                vpmapped."mappedLatitude" as "latitude",
-                vpmapped."mappedLongitude" as "longitude",
-                vpmapped."mappedPoolId" as "poolId",
-                to_json(vptown) as "mappedTown"
-                from vpmapped LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
-                ${where.text};`;
+    const text = `
+      SELECT * FROM "mappedGetOverview"
+      ${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
@@ -90,86 +104,88 @@ async function getPage(page, params={}) {
         orderClause = `order by "${col}" ${dir}`;
     }
     var where = pgUtil.whereClause(params, staticColumns); //whereClause filters output against vpmapped.columns
-    const text = `select (select count(*) from vpmapped ${where.text}),
-                vpmapped.*,
-                vpmapped."mappedLatitude" as "latitude",
-                vpmapped."mappedLongitude" as "longitude",
-                vpmapped."mappedPoolId" as "poolId",
-                to_json(vptown) as "mappedTown"
-                from vpmapped LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
-                ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
+    const text = `
+      SELECT (SELECT count(*) from vpmapped ${where.text}),
+      * FROM "mappedGetOverview"
+      ${where.text} ${orderClause}
+      offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
 
 async function getById(id) {
-    return await query(`select vpmapped.*,
-                vpmapped."mappedLatitude" as "latitude",
-                vpmapped."mappedLongitude" as "longitude",
-                vpmapped."mappedPoolId" as "poolId",
-                to_json(vptown) as "mappedTown"
-                from vpmapped LEFT join vptown on vpmapped."mappedTownId"=vptown."townId"
-                where "mappedPoolId"=$1;`, [id])
+    const text = `
+    SELECT
+    vptown.*,
+    to_json(vptown) as "mappedTown",
+    vpknown."poolId",
+    SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+    SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+    vpknown."poolStatus",
+    vpknown."sourceVisitId",
+    vpknown."sourceSurveyId",
+    vpknown."updatedAt" AS "knownUpdatedAt",
+    vpmapped.*
+    FROM vpknown INNER JOIN vpmapped ON "mappedPoolId"="poolId"
+    LEFT JOIN vptown on "knownTownId"="townId"
+    WHERE "mappedPoolId"=$1;`
+    return await query(text, [id])
 }
 
 async function getGeoJson(body={}) {
     console.log('vpMapped.service | getGeoJson |', body);
-    //"mappedPoolStatus" IN ('Potential', 'Probable', 'Confirmed')
     const where = pgUtil.whereClause(body, staticColumns);
     const sql = `
     SELECT
-    row_to_json(fc) AS geojson
-    FROM (
+      row_to_json(fc)
+      FROM (
         SELECT
     		'FeatureCollection' AS type,
     		'Vermont Vernal Pool Atlas - Mapped Pools' AS name,
-            array_to_json(array_agg(f)) AS features
+    		'{ "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } }'::json as crs,
+        array_to_json(array_agg(f)) AS features
         FROM (
             SELECT
-                'Feature' AS type,
-    			ST_AsGeoJSON(ST_GeomFromText('POINT(' || "mappedLongitude" || ' ' || "mappedLatitude" || ')'))::json as geometry,
+              'Feature' AS type,
+              ST_AsGeoJSON("poolLocation")::json as geometry,
+              (SELECT row_to_json(p) FROM
                 (SELECT
-    			 	--note: mappedComments, others contain characters that are illegal for geoJSON
-    				row_to_json(p) FROM (
-    					SELECT
-    					vpmapped."mappedPoolId",
-    					vpmapped."mappedByUser",
-    					vpmapped."mappedByUserId",
-    					vpmapped."mappedDateText",
-    					--vpmapped."mappedDateUnixSeconds",
-    					--vpmapped."mappedLatitude",
-    					--vpmapped."mappedLongitude",
-    					vpmapped."mappedConfidence",
-    					vpmapped."mappedSource",
-    					vpmapped."mappedSource2",
-    					vpmapped."mappedPhotoNumber",
-    					vpmapped."mappedLocationAccuracy",
-    					vpmapped."mappedShape",
-    					--vpmapped."mappedComments",
-    					vpmapped."createdAt",
-    					vpmapped."updatedAt",
-    					--vpmapped."mappedlocationInfoDirections",
-    					vpmapped."mappedLandownerPermission",
-    					--vpmapped."mappedLandownerInfo",
-    					vpmapped."mappedLocationUncertainty",
-    					--vpmapped."mappedTownId",
-    					--vpmapped."mappedPoolLocation",
-    					--vpmapped."mappedPoolBorder",
-    					--vpmapped."mappedLandownerName",
-    					--vpmapped."mappedLandownerAddress",
-    					--vpmapped."mappedLandownerTown",
-    					--vpmapped."mappedLandownerStateAbbrev",
-    					--vpmapped."mappedLandownerZip5",
-    					--vpmapped."mappedLandownerPhone",
-    					--vpmapped."mappedLandownerEmail",
-    					vpmapped."mappedPoolStatus",
-    					vpmapped."mappedMethod",
-    					vpmapped."mappedObserverUserName"
-    				) AS p
-    			) AS properties
-        FROM vpmapped ${where.text}
+                  vpknown."poolId",
+                  vpknown."poolLocation",
+                  to_json(vptown) AS "knownTown",
+                  vpknown."sourceVisitId",
+                  vpknown."sourceSurveyId",
+                  vpknown."updatedAt" AS "knownUpdatedAt",
+                  "mappedPoolId",
+                  "mappedMethod",
+                  "mappedLongitude", --superceded by GEOMETRY(POINT) above. included for historical reference.
+                  "mappedLatitude", --superceded by GEOMETRY(POINT) above. included for historical reference.
+                  "mappedObserverUserName",
+                  "mappedByUser",
+                  "mappedByUserId",
+                  "mappedDateText",
+                  "mappedMethod",
+                  "mappedConfidence",
+                  "mappedSource",
+                  "mappedSource2",
+                  "mappedPhotoNumber",
+                  "mappedLocationAccuracy",
+                  "mappedShape",
+                  "mappedComments",
+                  "mappedlocationInfoDirections",
+                  "mappedLocationUncertainty",
+                  "mappedTownId",
+                  vpmapped."createdAt" as "mappedCreatedAt",
+                  vpmapped."updatedAt" as "mappedUpdatedAt",
+                  "mappedLandownerPermission"
+                ) AS p
+              ) AS properties
+            FROM vpknown
+            INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpknown."poolId"
+            INNER JOIN vptown on vpknown."knownTownId"=vptown."townId"
+            ${where.text}
         ) AS f
-    ) AS fc;`;
+      ) AS fc`;
     console.log('vpMapped.service | getGeoJson |', where.text, where.values);
     return await query(sql, where.values);
 }

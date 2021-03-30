@@ -2,6 +2,7 @@
 DROP TABLE IF EXISTS vpsurvey_user_species_counts; --join table
 DROP TABLE IF EXISTS vpsurvey_equipment_status; --join table
 DROP TABLE IF EXISTS vpsurvey_photos; --join table
+DROP TABLE IF EXISTS vpsurvey_year; --join table
 DROP TABLE IF EXISTS vpsurvey; --primary table
 DROP TABLE IF EXISTS def_survey_type;
 DROP TABLE IF EXISTS def_beaufort_wind_scale;
@@ -100,20 +101,17 @@ INSERT INTO def_survey_equipment(
 	Primary table for Vernal Pool Monitoring Surveys.
 
 	A vpsurvey is a single pool-monitoring (survey) event.
-	To group surveys into a pool-monitoring season we could:
-		1) Create a join table, vpsurveys_types_year as set of surveys of a single pool done for one year.
-		2) Simply add columns for surveyTypeId and surveyYear to this vpsurvey table
+	To group surveys into a pool-monitoring season we create a join table,
+	vpsurvey_year to associate surveys of a single pool done for one season/year.
 
   NOTES:
     'surveyUserId' refers to the user who entered data.
-    'surveyYear' is meant to define a set of surveys for a vernal pool season
 */
 create table vpsurvey (
   "surveyId" INTEGER UNIQUE NOT NULL PRIMARY KEY,
   "surveyPoolId" TEXT NOT NULL REFERENCES vpmapped("mappedPoolId"),
   "surveyTypeId" INTEGER NOT NULL REFERENCES def_survey_type("surveyTypeId"),
   "surveyUserId" INTEGER NOT NULL REFERENCES vpuser(id),
-  "surveyYear" INTEGER NOT NULL,
   "surveyDateTime" TIMESTAMP NOT NULL,
   "surveyTownId" INTEGER NOT NULL REFERENCES vptown("townId"),
   "surveyLocation" geometry(Point),
@@ -137,6 +135,17 @@ create table vpsurvey (
   "surveyInteriorVisualImpairment" INTEGER DEFAULT 0,
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+/*
+	Join table for surveys and survey seasons/years.
+
+	NOTE: This table is necessary because surveys can be used in more than
+	one survey season/year.
+*/
+CREATE TABLE vpsurvey_year (
+	"surveyYear" DATE NOT NULL,
+	"surveyYearSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("poolId")
 );
 
 /*

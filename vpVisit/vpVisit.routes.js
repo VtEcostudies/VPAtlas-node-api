@@ -7,6 +7,7 @@ const service = require('./vpVisit.service');
 router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
 router.get('/count', getCount);
+router.get('/overview', getOverview);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
 router.get('/:id', getById);
@@ -31,6 +32,12 @@ function getCount(req, res, next) {
 function getStats(req, res, next) {
     service.getStats(req.query)
         .then(stats => res.json(stats))
+        .catch(err => next(err));
+}
+
+function getOverview(req, res, next) {
+    service.getOverview(req.query)
+        .then(items => res.json(items))
         .catch(err => next(err));
 }
 
