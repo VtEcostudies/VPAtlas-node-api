@@ -126,6 +126,10 @@ async function getPoolsNeedReview(params={timestamp:'1970-02-28'}) {
     return await query(text, where.values);
 }
 
+/*
+  getAll serves API endpoints needing *all* fields. This no longer serves map/table
+  views.
+*/
 async function getAll(params={}) {
     var orderClause = 'order by "mappedPoolId"';
     if (params.orderBy) {

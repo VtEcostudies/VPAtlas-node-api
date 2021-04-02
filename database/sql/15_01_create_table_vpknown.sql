@@ -1,3 +1,4 @@
+
 --Create zero-values in foreign key tables so remote keys are optional (by using zero placeholder value).
 INSERT INTO vpmapped
 ("mappedPoolId","mappedByUser","mappedDateText","mappedLatitude","mappedLongitude","mappedMethod","mappedPoolStatus")
@@ -12,7 +13,7 @@ INSERT INTO vpsurvey ("surveyId","surveyPoolId","surveyTypeId","surveyUserId","s
 	VALUES
 (0, 'None', 9, 0, '1970', '1970-01-01', 0);
 
---DROP TABLE IF EXISTS vpknown;
+DROP TABLE IF EXISTS vpknown;
 
 /*
 	Join table for known pool data.
@@ -22,7 +23,7 @@ INSERT INTO vpsurvey ("surveyId","surveyPoolId","surveyTypeId","surveyUserId","s
 	However, I did not experiment with *removing* SRID info from VCGIS data.
 
 */
-CREATE TABLE vpknown (
+--CREATE TABLE vpknown (
 	"poolId" TEXT NOT NULL UNIQUE REFERENCES vpmapped("mappedPoolId"),
 	"poolLocation" geometry(POINT, 4326) NOT NULL,  --EPSG:4326 is WGS84 is ...
 	"poolStatus" POOLSTATUS NOT NULL DEFAULT('Potential'),
@@ -73,6 +74,13 @@ ORDER BY "visitPoolId";
 --ALTER TABLE vpmapped ADD COLUMN "mappedPoolStatus" POOLSTATUS DEFAULT 'Potential';
 ALTER TABLE vpmapped ALTER COLUMN "mappedPoolStatus" SET DEFAULT 'Potential';
 
+--somehow, updatedAt trigger was missing from vpmapped?
+CREATE TRIGGER trigger_updated_at
+    BEFORE UPDATE
+    ON vpmapped
+    FOR EACH ROW
+    EXECUTE PROCEDURE public.set_updated_at();
+
 --DROP FUNCTION insert_vpknown_after_insert_vpmapped();
 
 --create trigger function to insert vpknown row after vpmapped insert
@@ -86,7 +94,7 @@ BEGIN
 	 VALUES(
 		NEW."mappedPoolId",
 		ST_GEOMFROMTEXT('POINT(' || NEW."mappedLongitude" || ' ' ||  NEW."mappedLatitude" || ')', 4326),
-	  	NEW."mappedPoolStatus"
+	  NEW."mappedPoolStatus"
 	 );
    RETURN NEW;
 END;
@@ -124,3 +132,27 @@ CREATE TRIGGER trigger_delete_vpknown_before_delete_vpmapped
     ON vpmapped
     FOR EACH ROW
     EXECUTE PROCEDURE delete_vpknown_before_delete_vpmapped();
+
+--create trigger function to update vpknown data after vpmapped update
+--we preserve the column mappedPoolStatus to enable this to be done easily
+CREATE OR REPLACE FUNCTION update_vpknown_after_update_vpmapped()
+    RETURNS trigger
+	LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+		UPDATE vpknown SET
+		"poolLocation" = ST_GEOMFROMTEXT('POINT(' || NEW."mappedLongitude" || ' ' ||  NEW."mappedLatitude" || ')', 4326),
+		"poolStatus" = NEW."mappedPoolStatus"
+		WHERE "poolId" = NEW."mappedPoolId";
+		RETURN NEW;
+END;
+$BODY$;
+
+ALTER FUNCTION update_vpknown_after_update_vpmapped()
+    OWNER TO vpatlas;
+
+CREATE TRIGGER trigger_update_vpknown_after_update_vpmapped
+    AFTER UPDATE
+    ON vpmapped
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_vpknown_after_update_vpmapped();

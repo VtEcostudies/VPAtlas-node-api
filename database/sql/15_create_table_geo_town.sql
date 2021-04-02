@@ -44,9 +44,20 @@ $BODY$;
 ALTER FUNCTION set_townid_from_pool_location()
     OWNER TO vpatlas;
 
---create trigger on vpknown to update vpknown.knownTownId when vpknown.poolLocation changes
+--create triggers on vpknown to update vpknown.knownTownId when vpknown.poolLocation changes
 --we do this because a JOIN query to locate town from poolLocation is too slow
-CREATE TRIGGER trigger_update_townid
+
+--DROP TRIGGER trigger_update_townid_after_insert_vpknown ON vpknown;
+--create trigger on vpknown to update vpknown.knownTownId on vpknown insert
+CREATE TRIGGER trigger_update_townid_after_insert_vpknown
+    AFTER UPDATE
+    ON vpknown
+    FOR EACH ROW
+    EXECUTE PROCEDURE set_townid_from_pool_location();
+
+--DROP TRIGGER trigger_update_townid_after_update_pool_location;
+--create trigger on vpknown to update vpknown.knownTownId when vpknown.poolLocation updated
+CREATE TRIGGER trigger_update_townid_after_update_pool_location
     AFTER UPDATE
     ON vpknown
     FOR EACH ROW
