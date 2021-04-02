@@ -28,3 +28,26 @@ update vpknown
 set "knownTownId"="geoTownId"
 from geo_town
 where ST_WITHIN("poolLocation", "geoTownPolygon");
+
+--create trigger function to update vpknown.knownTownId when vpknown.poolLocation changes
+--we do this because a JOIN query to locate town from poolLocation is too slow
+CREATE FUNCTION set_townid_from_pool_location()
+    RETURNS trigger
+		LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+   NEW."knownTownId" = (SELECT "geoTownId" FROM geo_town WHERE ST_WITHIN(NEW."poolLocation","geoTownPolygon"));
+   RETURN NEW;
+END;
+$BODY$;
+
+ALTER FUNCTION set_townid_from_pool_location()
+    OWNER TO vpatlas;
+
+--create trigger on vpknown to update vpknown.knownTownId when vpknown.poolLocation changes
+--we do this because a JOIN query to locate town from poolLocation is too slow
+CREATE TRIGGER trigger_update_townid
+    AFTER UPDATE
+    ON vpknown
+    FOR EACH ROW
+    EXECUTE PROCEDURE set_townid_from_pool_location();

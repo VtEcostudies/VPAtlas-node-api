@@ -13,5 +13,3 @@ where "townName" LIKE '%Johnsbury%'
 OR "townName" LIKE '%Rutland%'
 OR "townName" LIKE '%Albans%'
 OR "townName" LIKE '%George%';
-
-ALTER TABLE vpmapped DROP COLUMN "mappedPoolStatus";

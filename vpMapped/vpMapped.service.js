@@ -36,11 +36,6 @@ pgUtil.getColumns("vpknown", staticColumns) //run it once on init: to create the
 
 pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
-        staticColumns.push(`vptown."townName"`); //Add this for town filter query
-        staticColumns.push(`visittown."townName"`); //Add this for town filter query
-        staticColumns.push(`mappedtown."townName"`); //Add this for town filter query
-        staticColumns.push(`knowntown."townName"`); //Add this for town filter query
-        staticColumns.push(`surveytown."townName"`); //Add this for town filter query
         return res;
     })
     .catch(err => {
@@ -117,7 +112,6 @@ async function getById(id) {
     const text = `
     SELECT
     vptown.*,
-    to_json(vptown) as "mappedTown",
     vpknown."poolId",
     SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
     SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,

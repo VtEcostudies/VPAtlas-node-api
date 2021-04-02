@@ -14,6 +14,7 @@ SELECT
   vpmapped."mappedPoolId",
   vpmapped."mappedByUser",
   vpmapped."mappedMethod",
+  vpmapped."mappedPoolStatus",
   vpmapped."mappedConfidence",
   vpmapped."mappedObserverUserName",
   vpmapped."mappedLandownerPermission",
