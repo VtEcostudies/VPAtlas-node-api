@@ -59,7 +59,11 @@ function getPage(req, res, next) {
 
 function getById(req, res, next) {
     poolService.getById(req.params.id)
-        .then(item => item ? res.json(item) : res.sendStatus(404))
+        //.then(item => item ? res.json(item) : res.sendStatus(404))
+        .then(item => {
+          console.log('vpMapped.routes::getById |', item.rows[0]);
+          item ? res.json(item) : res.sendStatus(404)
+        })
         .catch(err => next(err));
 }
 

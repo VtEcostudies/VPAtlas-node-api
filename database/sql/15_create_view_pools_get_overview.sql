@@ -1,41 +1,40 @@
 DROP VIEW IF EXISTS "poolsGetOverview";
 CREATE OR REPLACE VIEW "poolsGetOverview" AS
 SELECT
-  vptown."townId",
-  vptown."townName",
-  vpcounty."countyName",
-  vpknown."poolId",
-  SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-  SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-  vpknown."poolStatus",
-  vpknown."sourceVisitId",
-  vpknown."sourceSurveyId",
-  vpknown."updatedAt",
-  vpmapped."mappedByUser",
-  vpmapped."mappedMethod",
-  vpmapped."mappedConfidence",
-  vpmapped."mappedLocationUncertainty",
-  --vpmapped."mappedObserverUserName",
+  "townId",
+  "townName",
+  "countyName",
+  "mappedPoolId" AS "poolId",
+  "mappedPoolStatus" AS "poolStatus",
+  SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+  SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+  "mappedPoolId" AS "poolId",
+  "mappedPoolStatus" AS "poolStatus",
+  "mappedByUser",
+  "mappedMethod",
+  "mappedConfidence",
+  "mappedLocationUncertainty",
+  --"mappedObserverUserId",
   vpmapped."updatedAt" AS "mappedUpdatedAt",
-  vpvisit."visitId",
-  vpvisit."visitPoolId",
-  vpvisit."visitUserName",
-  vpvisit."visitDate",
-  vpvisit."visitVernalPool",
-  vpvisit."visitLatitude",
-  vpvisit."visitLongitude",
+  "visitId",
+  "visitPoolId",
+  "visitUserName",
+  "visitDate",
+  "visitVernalPool",
+  "visitLatitude",
+  "visitLongitude",
   vpvisit."updatedAt" AS "visitUpdatedAt",
-  vpreview."reviewId",
-  vpreview."reviewQACode",
-  vpreview."reviewPoolStatus",
+  "reviewId",
+  "reviewQACode",
+  "reviewPoolStatus",
   vpreview."updatedAt" AS "reviewUpdatedAt"
-  FROM vpknown
-  INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpknown."poolId"
-  LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpknown."poolId"
-  LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpknown."poolId"
-  LEFT JOIN vptown ON vpknown."knownTownId"=vptown."townId"
-  LEFT JOIN vpcounty ON "govCountyId"="townCountyId";
+  FROM vpmapped
+  LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+  LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
+  LEFT JOIN vptown ON "mappedTownId"="townId"
+  LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+  --LEFT JOIN vpuser ON "mappedByUserId"="id";
 
 SELECT * FROM "poolsGetOverview"
-WHERE "updatedAt"<now()::timestamp
+WHERE "mappedUpdatedAt"<now()::timestamp
 --AND "poolStatus"='Confirmed';

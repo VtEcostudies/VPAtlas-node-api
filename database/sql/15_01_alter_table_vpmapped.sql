@@ -1,27 +1,38 @@
 
-DELETE FROM vpmapped where "mappedPoolId"='None';
-DELETE FROM vpvisit where "visitId"=0;
-DELETE FROM vpsurvey where "surveyId"=0;
-
 --ALTER TABLE vpmapped ADD COLUMN "mappedPoolStatus" POOLSTATUS DEFAULT 'Potential';
 --ALTER TABLE vpmapped ALTER COLUMN "mappedPoolStatus" SET DEFAULT 'Potential';
 
---populate vpmapped geometrry with currently-known mapped pool data
+--populate vpmapped geometry with currently-known mapped pool data
 UPDATE vpmapped SET
 "mappedPoolStatus" = "poolStatus"
 FROM vpknown
 WHERE "poolId"="mappedPoolId";
 
---DROP TABLE IF EXISTS vpknown;
+DROP TABLE IF EXISTS vpknown CASCADE;
 
-ALTER TABLE vpmapped ALTER COLUMN "mappedPoolLocation" TYPE GEOMETRY(Geometry);
+DROP TRIGGER trigger_insert_vpknown_after_insert_vpmapped ON vpmapped;
+DROP FUNCTION IF EXISTS insert_vpknown_after_insert_vpmapped();
+DROP TRIGGER trigger_delete_vpknown_before_delete_vpmapped ON vpmapped;
+DROP FUNCTION IF EXISTS delete_vpknown_before_delete_vpmapped();
+DROP TRIGGER trigger_update_vpknown_after_update_vpmapped ON vpmapped;
+DROP FUNCTION IF EXISTS update_vpknown_after_update_vpmapped();
+
+DELETE FROM vpmapped where "mappedPoolId"='None';
+DELETE FROM vpvisit where "visitId"=0;
+DELETE FROM vpsurvey where "surveyId"=0;
+
+ALTER TABLE vpmapped ALTER COLUMN "mappedPoolLocation" TYPE GEOMETRY(Geometry, 4326);
+ALTER TABLE vpmapped ALTER COLUMN "mappedPoolBorder" TYPE GEOMETRY(Geometry, 4326);
+
+--Update vpmapped geolocation with original mapped data
+UPDATE vpmapped SET
+	"mappedPoolLocation" = ST_GeomFromText('POINT(' || "mappedLongitude" || ' ' || "mappedLatitude" || ')');
 
 --Update vpmapped geolocation with the most recent visit data
 UPDATE vpmappped SET
-"mappedpoolLocation" = ST_GeomFromText('POINT(' || "visitLongitude" || ' ' || "visitLatitude" || ')'),
-"sourceVisitId" = "visitId"
+	"mappedpoolLocation" = ST_GeomFromText('POINT(' || "visitLongitude" || ' ' || "visitLatitude" || ')')
 FROM vpvisit
-WHERE "poolId"="visitPoolId"
+WHERE "mappedPoolId"="visitPoolId"
 AND "visitLongitude"::INTEGER != 0
 AND "visitLatitude"::INTEGER != 0
 AND "visitId" IN (
@@ -46,31 +57,11 @@ CREATE TRIGGER trigger_updated_at
     FOR EACH ROW
     EXECUTE PROCEDURE public.set_updated_at();
 
---DROP TRIGGER trigger_insert_vpknown_after_insert_vpmapped ON vpmapped;
---DROP FUNCTION insert_vpknown_after_insert_vpmapped();
---DROP TRIGGER trigger_delete_vpknown_before_delete_vpmapped ON vpmapped;
---DROP FUNCTION delete_vpknown_before_delete_vpmapped();
+--fix a but in create mapped pool where mappedMethod is incorrect
+select * from vpmapped where "mappedMethod"='Visited';
+update vpmapped set "mappedMethod"='Visit' where "mappedMethod"='Visited';
 
---create trigger function to update vpknown data after vpmapped update
---we preserve the column mappedPoolStatus to enable this to be done easily
-CREATE OR REPLACE FUNCTION update_vpknown_after_update_vpmapped()
-    RETURNS trigger
-	LANGUAGE 'plpgsql'
-AS $BODY$
-BEGIN
-		UPDATE vpknown SET
-		"poolLocation" = ST_GEOMFROMTEXT('POINT(' || NEW."mappedLongitude" || ' ' ||  NEW."mappedLatitude" || ')', 4326),
-		"poolStatus" = NEW."mappedPoolStatus"
-		WHERE "poolId" = NEW."mappedPoolId";
-		RETURN NEW;
-END;
-$BODY$;
-
-ALTER FUNCTION update_vpknown_after_update_vpmapped()
-    OWNER TO vpatlas;
-
-CREATE TRIGGER trigger_update_vpknown_after_update_vpmapped
-    AFTER UPDATE
-    ON vpmapped
-    FOR EACH ROW
-    EXECUTE PROCEDURE update_vpknown_after_update_vpmapped();
+--create a data type for mappedMethod to avoid future problems
+CREATE TYPE vp_mapped_method AS ENUM ('Aerial', 'Known', 'Visit');
+ALTER TYPE vp_mapped_method OWNER TO vpatlas;
+ALTER TABLE vpmapped ALTER COLUMN "mappedMethod" TYPE vp_mapped_method USING "mappedMethod"::vp_mapped_method;

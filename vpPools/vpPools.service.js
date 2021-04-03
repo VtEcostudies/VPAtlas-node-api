@@ -44,14 +44,6 @@ pgUtil.getColumns("vpreview", staticColumns) //run it once on init: to create th
         console.log(`vpPools.service.pg.pgUtil.getColumns | error: `, err.message);
     });
 
-pgUtil.getColumns("vpknown", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpPools.service.pg.pgUtil.getColumns | error: `, err.message);
-    });
-
 pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
         return res;
@@ -89,13 +81,43 @@ async function getOverview(params={timestamp:'1970-02-28'}) {
   var timestamp = params.timestamp;
   delete params.timestamp;
   const where = pgUtil.whereClause(params, staticColumns, 'AND');
-  var text = `SELECT * FROM "poolsGetOverview"
-    WHERE
-    ("updatedAt">'${timestamp}'::timestamp
-    OR "mappedUpdatedAt">'${timestamp}'::timestamp
-    OR "visitUpdatedAt">'${timestamp}'::timestamp
-    OR "reviewUpdatedAt">'${timestamp}'::timestamp)
-    ${where.text} ${orderClause}`;
+  var text = `
+SELECT
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+"mappedByUser",
+"mappedMethod",
+"mappedConfidence",
+"mappedLocationUncertainty",
+--"mappedObserverUserId",
+vpmapped."updatedAt" AS "mappedUpdatedAt",
+"visitId",
+"visitPoolId",
+"visitUserName",
+"visitDate",
+"visitVernalPool",
+"visitLatitude",
+"visitLongitude",
+vpvisit."updatedAt" AS "visitUpdatedAt",
+"reviewId",
+"reviewQACode",
+"reviewPoolStatus",
+vpreview."updatedAt" AS "reviewUpdatedAt"
+FROM vpmapped
+LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
+LEFT JOIN vptown ON "mappedTownId"="townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+WHERE
+(vpmapped."updatedAt">'${timestamp}'::timestamp
+OR vpvisit."updatedAt">'${timestamp}'::timestamp
+OR vpreview."updatedAt">'${timestamp}'::timestamp)
+${where.text} ${orderClause}`;
   console.log(text);
   return await query(text, where.values);
 }
@@ -110,18 +132,49 @@ async function getPoolsNeedReview(params={timestamp:'1970-02-28'}) {
   delete params.timestamp;
   const where = pgUtil.whereClause(params, staticColumns, 'AND');
   text = `
-  SELECT * FROM "poolsGetOverview"
-  WHERE
-    ("reviewId" IS NULL AND "visitId" IS NOT NULL
-    OR ("reviewUpdatedAt" IS NOT NULL AND "mappedUpdatedAt" > "reviewUpdatedAt")
-    OR ("reviewUpdatedAt" IS NOT NULL AND "visitUpdatedAt" > "reviewUpdatedAt"))
-  AND
-    ("mappedUpdatedAt">'${timestamp}'::timestamp
-    OR "visitUpdatedAt">'${timestamp}'::timestamp
-    OR "reviewUpdatedAt">'${timestamp}'::timestamp)
-  ${where.text}
-  ${orderClause};
-  `;
+SELECT
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+"mappedByUser",
+"mappedMethod",
+"mappedConfidence",
+"mappedLocationUncertainty",
+--"mappedObserverUserId",
+vpmapped."updatedAt" AS "mappedUpdatedAt",
+"visitId",
+"visitPoolId",
+"visitUserName",
+"visitDate",
+"visitVernalPool",
+"visitLatitude",
+"visitLongitude",
+vpvisit."updatedAt" AS "visitUpdatedAt",
+"reviewId",
+"reviewQACode",
+"reviewPoolStatus",
+vpreview."updatedAt" AS "reviewUpdatedAt"
+FROM vpmapped
+LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
+LEFT JOIN vptown ON "mappedTownId"="townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+--LEFT JOIN vpuser ON "mappedByUserId"="id";
+WHERE
+("reviewId" IS NULL AND "visitId" IS NOT NULL
+OR ("reviewUpdatedAt" IS NOT NULL AND "mappedUpdatedAt" > "reviewUpdatedAt")
+OR ("reviewUpdatedAt" IS NOT NULL AND "visitUpdatedAt" > "reviewUpdatedAt"))
+AND
+(vpmapped."updatedAt">'${timestamp}'::timestamp
+OR vpvisit."updatedAt">'${timestamp}'::timestamp
+OR vpreview."updatedAt">'${timestamp}'::timestamp)
+${where.text}
+${orderClause};
+`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
@@ -141,15 +194,13 @@ async function getAll(params={}) {
     const text = `
 SELECT
 (SELECT COUNT(*) FROM vpmapped LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
-vptown.*,
-vpknown."poolId",
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-vpknown."poolStatus",
-vpknown."sourceVisitId",
-vpknown."sourceSurveyId",
-vpknown."createdAt" AS "knownCreatedAt",
-vpknown."updatedAt" AS "knownUpdatedAt	",
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
 vpmapped.*,
 vpmapped."createdAt" AS "mappedCreatedAt",
 vpmapped."updatedAt" AS "mappedUpdatedAt",
@@ -159,11 +210,11 @@ vpvisit."updatedAt" AS "visitUpdatedAt",
 vpreview.*,
 vpreview."createdAt" AS "reviewCreatedAt",
 vpreview."updatedAt" AS "reviewUpdatedAt"
-FROM vpknown
-INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpknown."poolId"
-LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpknown."poolId"
-LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpknown."poolId"
-LEFT JOIN vptown ON vpknown."knownTownId"=vptown."townId"
+FROM vpmapped
+LEFT JOIN vpvisit ON vpvisit."visitPoolId"="mappedPoolId"
+LEFT JOIN vpreview ON vpreview."reviewPoolId"="mappedPoolId"
+LEFT JOIN vptown ON "mappedTownId"=vptown."townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
 ${where.text} ${orderClause};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -183,15 +234,13 @@ async function getPage(page, params={}) {
     const text = `
 SELECT
 (SELECT COUNT(*) FROM vpmapped LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
-vptown.*,
-vpknown."poolId",
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-vpknown."poolStatus",
-vpknown."sourceVisitId",
-vpknown."sourceSurveyId",
-vpknown."createdAt" AS "knownCreatedAt",
-vpknown."updatedAt" AS "knownUpdatedAt	",
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
 vpmapped.*,
 vpmapped."createdAt" AS "mappedCreatedAt",
 vpmapped."updatedAt" AS "mappedUpdatedAt",
@@ -201,11 +250,11 @@ vpvisit."updatedAt" AS "visitUpdatedAt",
 vpreview.*,
 vpreview."createdAt" AS "reviewCreatedAt",
 vpreview."updatedAt" AS "reviewUpdatedAt"
-FROM vpknown
-INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpknown."poolId"
-LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpknown."poolId"
-LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpknown."poolId"
-LEFT JOIN vptown ON vpknown."knownTownId"=vptown."townId"
+FROM vpmapped
+LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
+LEFT JOIN vptown ON "mappedTownId"=vptown."townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
 ${where.text} ${orderClause}
 offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
@@ -215,15 +264,13 @@ offset ${offset} limit ${pageSize};`;
 async function getByVisitId(id) {
     const text = `
 SELECT
-vptown.*,
-vpknown."poolId",
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-vpknown."poolStatus",
-vpknown."sourceVisitId",
-vpknown."sourceSurveyId",
-vpknown."createdAt" AS "knownCreatedAt",
-vpknown."updatedAt" AS "knownUpdatedAt	",
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
 vpmapped.*,
 vpmapped."createdAt" AS "mappedCreatedAt",
 vpmapped."updatedAt" AS "mappedUpdatedAt",
@@ -233,11 +280,11 @@ vpvisit."updatedAt" AS "visitUpdatedAt",
 vpreview.*,
 vpreview."createdAt" AS "reviewCreatedAt",
 vpreview."updatedAt" AS "reviewUpdatedAt"
-FROM vpknown
-INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpknown."poolId"
-LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpknown."poolId"
-LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpknown."poolId"
-LEFT JOIN vptown ON vpknown."knownTownId"=vptown."townId"
+FROM vpmapped
+LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
+LEFT JOIN vptown ON "mappedTownId"=vptown."townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
 WHERE "visitId"=$1;`;
     return await query(text, [id])
 }
@@ -245,15 +292,13 @@ WHERE "visitId"=$1;`;
 async function getByPoolId(id) {
     const text = `
 SELECT
-vptown.*,
-vpknown."poolId",
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-vpknown."poolStatus",
-vpknown."sourceVisitId",
-vpknown."sourceSurveyId",
-vpknown."createdAt" AS "knownCreatedAt",
-vpknown."updatedAt" AS "knownUpdatedAt	",
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
 vpmapped.*,
 vpmapped."createdAt" AS "mappedCreatedAt",
 vpmapped."updatedAt" AS "mappedUpdatedAt",
@@ -263,11 +308,11 @@ vpvisit."updatedAt" AS "visitUpdatedAt",
 vpreview.*,
 vpreview."createdAt" AS "reviewCreatedAt",
 vpreview."updatedAt" AS "reviewUpdatedAt"
-FROM vpknown
-INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpknown."poolId"
-LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpknown."poolId"
-LEFT JOIN vpreview ON vpreview."reviewPoolId"=vpknown."poolId"
-LEFT JOIN vptown ON vpknown."knownTownId"=vptown."townId"
+FROM vpmapped
+LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
+LEFT JOIN vptown ON "mappedTownId"=vptown."townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
 WHERE "mappedPoolId"=$1;`;
     return await query(text, [id])
 }

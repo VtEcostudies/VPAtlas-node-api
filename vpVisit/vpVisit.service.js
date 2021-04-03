@@ -25,20 +25,12 @@ pgUtil.getColumns("vpvisit", staticColumns) //run it once on init: to create the
         console.log(`vpVisit.service.pg.pgUtil.getColumns | table:vpvisit | error: `, err.message);
     });
 
-pgUtil.getColumns("vpknown", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpPools.service.pg.pgUtil.getColumns | table:vpknown | error: `, err.message);
-    });
-
 pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
         return res;
     })
     .catch(err => {
-        console.log(`vpPools.service.pg.pgUtil.getColumns | table:vptown | error: `, err.message);
+        console.log(`vpVisit.service.pg.pgUtil.getColumns | table:vptown | error: `, err.message);
     });
 
 function getColumns() {
@@ -107,30 +99,26 @@ async function getAll(params={}) {
         var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';
         orderClause = `order by "${col}" ${dir}`;
     }
-    const where = pgUtil.whereClause(params, staticColumns, 'AND');
+    const where = pgUtil.whereClause(params, staticColumns);
     const text = `
 SELECT
 (SELECT COUNT(*) FROM vpmapped INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
-vptown.*,
-vpknown."poolId",
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-vpknown."poolStatus",
-vpknown."sourceVisitId",
-vpknown."sourceSurveyId",
-vpknown."createdAt" AS "knownCreatedAt",
-vpknown."updatedAt" AS "knownUpdatedAt	",
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
 vpmapped.*,
 vpmapped."updatedAt" AS "mappedUpdatedAt",
 vpmapped."createdAt" AS "mappedCreatedAt",
 vpvisit.*,
 vpvisit."updatedAt" AS "visitUpdatedAt",
 vpvisit."createdAt" AS "visitCreatedAt"
-from vpknown
-INNER JOIN vpmapped ON vpknown."poolId"=vpmapped."mappedPoolId"
-INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-LEFT JOIN vptown ON vpknown."knownTownId"=vptown."townId"
-WHERE "visitId" > 0
+from vpmapped
+INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+LEFT JOIN vptown ON "mappedTownId"="townId"
 ${where.text} ${orderClause};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -150,26 +138,22 @@ async function getPage(page, params={}) {
     const text = `
 SELECT
 (SELECT COUNT(*) FROM vpmapped INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
-vptown.*,
-vpknown."poolId",
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-vpknown."poolStatus",
-vpknown."sourceVisitId",
-vpknown."sourceSurveyId",
-vpknown."createdAt" AS "knownCreatedAt",
-vpknown."updatedAt" AS "knownUpdatedAt	",
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
 vpmapped.*,
 vpmapped."updatedAt" AS "mappedUpdatedAt",
 vpmapped."createdAt" AS "mappedCreatedAt",
 vpvisit.*,
 vpvisit."updatedAt" AS "visitUpdatedAt",
 vpvisit."createdAt" AS "visitCreatedAt"
-from vpknown
-INNER JOIN vpmapped ON vpknown."poolId"=vpmapped."mappedPoolId"
-INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-LEFT JOIN vptown ON vpknown."knownTownId"=vptown."townId"
-WHERE "visitId" > 0
+from vpmapped
+INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+LEFT JOIN vptown ON "mappedTownId"="townId"
 ${where.text} ${orderClause}
 offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
@@ -178,27 +162,24 @@ offset ${offset} limit ${pageSize};`;
 
 async function getById(id) {
     const text = `
-      SELECT
-      vptown.*,
-      vpknown."poolId",
-      SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-      SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-      vpknown."poolStatus",
-      vpknown."sourceVisitId",
-      vpknown."sourceSurveyId",
-      vpknown."createdAt" AS "knownCreatedAt",
-      vpknown."updatedAt" AS "knownUpdatedAt	",
-      vpmapped.*,
-      vpmapped."updatedAt" AS "mappedUpdatedAt",
-      vpmapped."createdAt" AS "mappedCreatedAt",
-      vpvisit.*,
-      vpvisit."updatedAt" AS "visitUpdatedAt",
-      vpvisit."createdAt" AS "visitCreatedAt"
-      from vpknown
-      INNER JOIN vpmapped ON vpknown."poolId"=vpmapped."mappedPoolId"
-      INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-      LEFT JOIN vptown ON vpknown."knownTownId"=vptown."townId"
-      WHERE "visitId"=$1;`;
+SELECT
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+vpmapped.*,
+vpmapped."updatedAt" AS "mappedUpdatedAt",
+vpmapped."createdAt" AS "mappedCreatedAt",
+vpvisit.*,
+vpvisit."updatedAt" AS "visitUpdatedAt",
+vpvisit."createdAt" AS "visitCreatedAt"
+from vpmapped
+INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+LEFT JOIN vptown ON "mappedTownId"="townId"
+WHERE "visitId"=$1;`;
     return await query(text, [id])
 }
 
@@ -216,15 +197,15 @@ async function getGeoJson(body={}) {
         FROM (
             SELECT
                 'Feature' AS type,
-                ST_AsGeoJSON("poolLocation")::json as geometry,
+                ST_AsGeoJSON("mappedPoolLocation")::json as geometry,
                 (SELECT
                   row_to_json(p) FROM (SELECT
-                    vpknown.*,
+                    vpmapped.*,
                     vpvisit.*
                   ) AS p
               ) AS properties
-            FROM vpknown
-            INNER JOIN vpvisit on "visitPoolId"="poolId"
+            FROM vpmapped
+            INNER JOIN vpvisit on "visitPoolId"="mappedPoolId"
             WHERE "visitId" > 0
             ${where.text}
         ) AS f

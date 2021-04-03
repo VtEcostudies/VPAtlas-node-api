@@ -26,14 +26,6 @@ pgUtil.getColumns("vpmapped", staticColumns) //run it once on init: to create th
         console.log(`vpMapped.service.pg.pgUtil.getColumns | table:vpmapped | error: `, err.message);
     });
 
-pgUtil.getColumns("vpknown", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpMapped.service.pg.pgUtil.getColumns | table:vpknown | error: `, err.message);
-    });
-
 pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
         return res;
@@ -72,8 +64,27 @@ async function getStats(body={"username":null}) {
 async function getOverview(body={}) {
     const where = pgUtil.whereClause(body, staticColumns);
     const text = `
-      SELECT * FROM "mappedGetOverview"
-      ${where.text};`;
+SELECT
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+"mappedPoolId",
+"mappedPoolStatus",
+"mappedByUser",
+"mappedMethod",
+"mappedConfidence",
+"mappedObserverUserName",
+"mappedLandownerPermission",
+"createdAt",
+"updatedAt"
+FROM vpmapped
+LEFT JOIN vptown ON "mappedTownId"="townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
@@ -82,8 +93,21 @@ async function getAll(body={}) {
     console.log('vpmapped.service::getAll | ', staticColumns);
     const where = pgUtil.whereClause(body, staticColumns);
     const text = `
-      SELECT * FROM "mappedGetOverview"
-      ${where.text};`;
+SELECT
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+vpmapped.*,
+"createdAt" AS "mappedCreatedAt",
+"updatedAt" AS "mappedUpdatedAt"
+FROM vpmapped
+LEFT JOIN vptown ON "mappedTownId"="townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
@@ -100,30 +124,44 @@ async function getPage(page, params={}) {
     }
     var where = pgUtil.whereClause(params, staticColumns); //whereClause filters output against vpmapped.columns
     const text = `
-      SELECT (SELECT count(*) from vpmapped ${where.text}),
-      * FROM "mappedGetOverview"
-      ${where.text} ${orderClause}
-      offset ${offset} limit ${pageSize};`;
+SELECT (SELECT count(*) from vpmapped ${where.text}),
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+vpmapped.*,
+"createdAt" AS "mappedCreatedAt",
+"updatedAt" AS "mappedUpdatedAt"
+FROM vpmapped
+LEFT JOIN vptown ON "mappedTownId"="townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+${where.text} ${orderClause}
+offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
 
 async function getById(id) {
     const text = `
-    SELECT
-    vptown.*,
-    vpknown."poolId",
-    SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-    SPLIT_PART(ST_AsLatLonText("poolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-    vpknown."poolStatus",
-    vpknown."sourceVisitId",
-    vpknown."sourceSurveyId",
-    vpknown."updatedAt" AS "knownUpdatedAt",
-    vpmapped.*
-    FROM vpknown INNER JOIN vpmapped ON "mappedPoolId"="poolId"
-    LEFT JOIN vptown on "knownTownId"="townId"
-    WHERE "mappedPoolId"=$1;`
-    return await query(text, [id])
+SELECT
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+"createdAt" AS "mappedCreatedAt",
+"updatedAt" AS "mappedUpdatedAt",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+vpmapped.*
+FROM vpmapped
+LEFT JOIN vptown ON "mappedTownId"="townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+WHERE "mappedPoolId"=$1;`
+    return await query(text, [id]);
 }
 
 async function getGeoJson(body={}) {
@@ -141,42 +179,16 @@ async function getGeoJson(body={}) {
         FROM (
             SELECT
               'Feature' AS type,
-              ST_AsGeoJSON("poolLocation")::json as geometry,
+              ST_AsGeoJSON("mappedPoolLocation")::json as geometry,
               (SELECT row_to_json(p) FROM
                 (SELECT
-                  vpknown."poolId",
-                  vpknown."poolLocation",
-                  to_json(vptown) AS "knownTown",
-                  vpknown."sourceVisitId",
-                  vpknown."sourceSurveyId",
-                  vpknown."updatedAt" AS "knownUpdatedAt",
-                  "mappedPoolId",
-                  "mappedMethod",
-                  "mappedLongitude", --superceded by GEOMETRY(POINT) above. included for historical reference.
-                  "mappedLatitude", --superceded by GEOMETRY(POINT) above. included for historical reference.
-                  "mappedObserverUserName",
-                  "mappedByUser",
-                  "mappedByUserId",
-                  "mappedDateText",
-                  "mappedMethod",
-                  "mappedConfidence",
-                  "mappedSource",
-                  "mappedSource2",
-                  "mappedPhotoNumber",
-                  "mappedLocationAccuracy",
-                  "mappedShape",
-                  "mappedComments",
-                  "mappedlocationInfoDirections",
-                  "mappedLocationUncertainty",
-                  "mappedTownId",
-                  vpmapped."createdAt" as "mappedCreatedAt",
-                  vpmapped."updatedAt" as "mappedUpdatedAt",
-                  "mappedLandownerPermission"
+                  "mappedPoolId" AS "poolId",
+                  "mappedPoolStatus" AS "poolStatus",
+                  vpmapped.*
                 ) AS p
               ) AS properties
-            FROM vpknown
-            INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpknown."poolId"
-            INNER JOIN vptown on vpknown."knownTownId"=vptown."townId"
+            FROM vpmapped
+            INNER JOIN vptown on "mappedTownId"=vptown."townId"
             ${where.text}
         ) AS f
       ) AS fc`;
