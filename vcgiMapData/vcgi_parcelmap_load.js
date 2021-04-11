@@ -226,7 +226,7 @@ function updateVcgiParcel(town, data) {
   save geoJSON to local file
 */
 async function saveVcgiParcel(town, data) {
-  const fileDir = `town_parcel_geoJSON`;
+  const fileDir = `parcel_geoJSON`;
   const fileName = `${town.townName}.geoJSON`;
   const fileJson = JSON.stringify(data);
 

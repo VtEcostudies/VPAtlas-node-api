@@ -57,7 +57,7 @@ CREATE TRIGGER trigger_updated_at
     FOR EACH ROW
     EXECUTE PROCEDURE public.set_updated_at();
 
---fix a but in create mapped pool where mappedMethod is incorrect
+--fix a bug in create mapped pool where mappedMethod is incorrect
 select * from vpmapped where "mappedMethod"='Visited';
 update vpmapped set "mappedMethod"='Visit' where "mappedMethod"='Visited';
 

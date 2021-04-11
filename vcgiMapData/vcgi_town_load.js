@@ -10,6 +10,9 @@
   https://opendata.arcgis.com/datasets/0e4a5d2d58ac40bf87cd8aa950138ae8_39.geojson
 
   Specifics:
+    - parse geoJSON towns file having a feature property TOWNNAME
+    - use TOWNNAME to find town oject in vptown
+    - ...
 
   To-Do:
 
@@ -36,79 +39,91 @@ for (var i=2; i<process.argv.length; i++) {
 		case "town":
       town = arg;
 			break;
-    case "dest":
-      dest = arg;
-      break;
-    case null:
-    case "":
-      //loadTowns();
-      break;
     default:
-      console.log('Invalid command-line argument. Use town=name and/or dest=fs/db.')
+      console.log('Invalid command-line argument. Use town=name.')
       break;
     }
 }
-//if (process.argv.length == 2) {loadTowns(town, dest);} //no arguments
-console.log(`Program arguments | town:${town} | destination: ${dest}`);
+
+console.log(`Program arguments | town:${town}`);
 
 loadTowns(town);
 
 function loadTowns() {
   // read towns geoJSON file
-  fs.readFile('./town_geoJSON/vcgi_town_polygons.geojson', 'utf-8', async (err, data) => {
+  fs.readFile('./other  _geoJSON/vcgi_town_polygons.geojson', 'utf-8', async (err, data) => {
       if (err) {
           throw err;
       }
 
-      // parse JSON object
+      // parse geoJSON object read from file
       const towns = JSON.parse(data.toString());
 
       console.log(towns.name, towns.crs);
 
       for (i=0; i<towns.features.length; i++) {
-      //for (i=0; i<1; i++) {
           var feat = towns.features[i];
           var name = feat.properties.TOWNNAME;
-          await getTowns(name)
-            .then(towns => {
-              if (1 != towns.rows.length) {
-                console.log(`ERROR | getTowns | rowCount:${towns.rows.length}`);
-                fs.writeFile(`./town_geoJSON/error_getTowns_${name}.txt`, JSON.stringify(towns), (err) =>{
-                  console.log('ERROR | fs.writeFile |', err);
-                });
-              } else {
-                var town = towns.rows[0];
+          await getTown(name)
+            .then(town => {
                 console.log(town);
-                var tGeo = {
+                var townGeo = {
                   "crs":towns.crs,
                   "type":feat.geometry.type,
                   "coordinates":feat.geometry.coordinates
                 };
-                insertGeoTown(town, tGeo)
+                insertGeoTown(town, townGeo)
                   .then(res => {
-
+                    //Success. Nothing to say.
                   })
                   .catch(err => {
-                    fs.writefile(`./town_geoJSON/error_insertGeoTown_${name}.txt`, JSON.stringify(err));
+                    fs.writeFile(`./town_geoJSON/error_insertGeoTown_${name}.txt`, JSON.stringify(err), (err) => {
+                      console.log('ERROR | fs.writeFile |', err);
+                    });
                   })
                 }
             })
             .catch(err => {
-              console.log('ERROR', err.message);
+              console.log(`ERROR | getTown | rowCount:${err.rows.length}`);
+              fs.writeFile(`./town_geoJSON/error_getTown_${name}.txt`, JSON.stringify(err), (err) => {
+                console.log('ERROR | fs.writeFile |', err);
+              });
             })
       }
   });
 }
 
 /*
-  Just get one town, but return whatever and handle it in the calling code.
+  Get array of towns (well, a node-pg result set).
+  Optionally, perform exact-match search by townName.
+  Optionally, perform different comparison search. PostGRES allows:
+    - LIKE (must use % as wildcard)
+    - NOT LIKE
+    - !=
 */
-function getTowns(townName) {
+function getTowns(townName='', operator=`=`) {
     var where = '';
     var value = [];
-    if (townName) {where = 'where upper("townName")=upper($1)'; value = [townName];}
+    if (townName) {where = `where upper("townName") ${operator} upper($1)`; value = [townName];}
     const text = `select * from vptown ${where} order by "townName";`;
     return query(text, value);
+}
+
+/*
+  Get one town by name.
+  Returns single object for town, or error.
+*/
+function getTown(townName='', operator=`=`) {
+  return new Promise((resolve, reject) => {
+    getTowns(townName, operator)
+      .then(res => {
+        if (res.rows && 1 == res.rows.length) {resolve(res.rows[0]);}
+        else {reject({error:true, message:"Wrong number of rows.", rows:res.rows});}
+      })
+      .catch(err => {
+        reject(err);
+      });
+  })
 }
 
 /*

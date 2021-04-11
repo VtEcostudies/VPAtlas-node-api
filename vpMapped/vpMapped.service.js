@@ -35,8 +35,10 @@ pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the 
     });
 
 function getColumns() {
-    console.log(`vpMapped.service.pg.getColumns | staticColumns:`, staticColumns);
-    return staticColumns;
+    return new Promise((resolve, reject) => {
+      console.log(`vpMapped.service.pg.getColumns | staticColumns:`, staticColumns);
+      resolve(staticColumns);
+    });
 }
 
 async function getCount(body={}) {

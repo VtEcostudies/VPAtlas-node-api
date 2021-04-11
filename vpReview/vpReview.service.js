@@ -17,18 +17,25 @@ module.exports = {
 //file scope list of vpreview table columns retrieved on app startup (see 'getColumns()' below)
 pgUtil.getColumns("vpreview", staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
-        staticColumns.push(`vptown."townName"`); //Add this for town filter query
-        staticColumns.push(`visittown."townName"`); //Add this for town filter query
-        staticColumns.push(`mappedtown."townName"`); //Add this for town filter query
         return res;
     })
     .catch(err => {
         console.log(`vpReview.service.pg.pgUtil.getColumns | error: `, err.message);
     });
 
+pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the array here. also diplays on console.
+    .then(res => {
+        return res;
+    })
+    .catch(err => {
+        console.log(`vpReview.service.pg.pgUtil.getColumns | table:vptown | error: `, err.message);
+    });
+
 function getColumns() {
-    console.log(`vpReview.service.pg.getColumns | staticColumns:`, staticColumns);
-    return staticColumns;
+    return new Promise((resolve, reject) => {
+      console.log(`vpReview.service.pg.getColumns | staticColumns:`, staticColumns);
+      resolve(staticColumns);
+    });
 }
 
 async function getCount(body={}) {
@@ -105,28 +112,32 @@ async function getGeoJson(body={}) {
           FROM (
               SELECT
                   'Feature' AS type,
-      			ST_AsGeoJSON(ST_GeomFromText('POINT(' || v."visitLongitude" || ' ' || v."visitLatitude" || ')'))::json as geometry,
+      			         ST_AsGeoJSON(
+                       ST_GeomFromText('POINT(' || "mappedLongitude" || ' ' || "mappedLatitude" || ')'))::json
+                       AS geometry,
                   (SELECT
-      			 	--note: comments/notes contain characters that are illegal for geoJSON
       				row_to_json(p) FROM (SELECT
-      					vpreview."reviewId",
-      					vpreview."reviewUserName",
-      					vpreview."reviewUserId",
-      					vpreview."reviewPoolId",
-      					vpreview."reviewVisitIdLegacy",
-      					vpreview."reviewVisitId",
-      					vpreview."reviewQACode",
-      					vpreview."reviewQAAlt",
-      					vpreview."reviewQAPerson",
-      					vpreview."reviewQADate",
-      					--vpreview."reviewQANotes",
-      					vpreview."createdAt",
-      					vpreview."updatedAt",
-      					vpreview."reviewPoolStatus"
+      					"reviewId",
+      					"reviewUserName",
+      					"reviewUserId",
+      					"reviewPoolId",
+      					"reviewVisitIdLegacy",
+      					"reviewVisitId",
+      					"reviewQACode",
+      					"reviewQAAlt",
+      					"reviewQAPerson",
+      					"reviewQADate",
+      					"reviewQANotes",
+      					"createdAt",
+      					"updatedAt",
+      					"reviewPoolStatus",
+                "visitLongitude",
+                "visitLatitude"
       				) AS p
       			) AS properties
               FROM vpreview
-      		INNER JOIN vpvisit v on "reviewPoolId"="visitPoolId"
+      		INNER JOIN vpvisit ON "reviewPoolId"="visitPoolId"
+          INNER JOIN vpmapped ON "reviewPoolId"="mappedPoolId"
           ) AS f
       ) AS fc; `;
     console.log('vpReview.service | getGeoJson |', where.text, where.values);

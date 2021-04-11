@@ -56,7 +56,10 @@ function getPage(req, res, next) {
 
 function getById(req, res, next) {
     service.getById(req.params.id)
-        .then(item => item ? res.json(item) : res.sendStatus(404))
+        .then(item => {
+          console.log(item.rows);
+          item ? res.json(item) : res.sendStatus(404);
+        })
         .catch(err => next(err));
 }
 
