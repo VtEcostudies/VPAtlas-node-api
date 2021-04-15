@@ -17,21 +17,15 @@ module.exports = {
 };
 
 //file scope list of vpvisit table columns retrieved on app startup (see 'getColumns()' below)
-pgUtil.getColumns("vpvisit", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpVisit.service.pg.pgUtil.getColumns | table:vpvisit | error: `, err.message);
-    });
-
-pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpVisit.service.pg.pgUtil.getColumns | table:vptown | error: `, err.message);
-    });
+const tables = [
+  "vpvisit",
+  "vptown"
+];
+for (i=0; i<tables.length; i++) {
+  pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
+    .then(res => {return res;})
+    .catch(err => {console.log(`vpVisit.service.pg.pgUtil.getColumns | table:${tables[i]} | error: `, err.message);});
+}
 
 function getColumns() {
     return new Promise((resolve, reject) => {
@@ -164,7 +158,7 @@ offset ${offset} limit ${pageSize};`;
 /*
   NOW get 2 points for each Visit, and return as a 2-element JSON object:
 
-  {mapped:{}, visit:{}}
+  {both: {mapped:{}, visit:{}}}
 */
 async function getById(id) {
     var text = `
@@ -203,35 +197,14 @@ async function getById(id) {
     LEFT JOIN vptown ON "mappedTownId"="townId"
     LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
     WHERE "visitId"=$1;`;
-/*
-    text=`
-    SELECT
-    "townId",
-    "townName",
-    "countyName",
-    "mappedPoolId" AS "poolId",
-    "mappedPoolStatus" AS "poolStatus",
-    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-    vpmapped.*,
-    vpmapped."updatedAt" AS "mappedUpdatedAt",
-    vpmapped."createdAt" AS "mappedCreatedAt",
-    vpvisit.*,
-    vpvisit."updatedAt" AS "visitUpdatedAt",
-    vpvisit."createdAt" AS "visitCreatedAt"
-    from vpmapped
-    INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
-    LEFT JOIN vptown ON "mappedTownId"="townId"
-    LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
-    WHERE "visitId"=$1;`;
-*/
+
     return await query(text, [id])
 }
 
 /*
   NOTE: WE DO NOT NEED TO USE ST_AsGeoJSON("mappedPoolLocation")::json to convert gemetry to geoJSON.
 
-  Simply use this:
+  Simply use eg. this:
 
   SELECT
     to_json("mappedPoolLocation"), "mappedPoolLocation", "mappedPoolStatus"

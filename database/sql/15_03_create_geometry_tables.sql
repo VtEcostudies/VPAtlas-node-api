@@ -17,7 +17,7 @@ create table geo_state (
 	CONSTRAINT geo_state_pkey PRIMARY KEY ("geoId"),
 	CONSTRAINT fk_geo_state_id FOREIGN KEY ("geoId") REFERENCES vpstate ("stateId")
 )
---TRUNCATE TABLE geo_;
+--TRUNCATE TABLE geo_state;
 
 --DROP TABLE geo_town;
 create table geo_county (

@@ -55,8 +55,9 @@ async function getAll(params={}) {
     const where = pgUtil.whereClause(params, staticColumns);
     const text = `
         SELECT
-        to_json(mappedtown) AS "mappedTown",
-        to_json(visittown) AS "visitTown",
+        "townId",
+        "townName",
+        "countyName",
         vpreview.*,
         vpreview."updatedAt" AS "reviewUpdatedAt",
         vpreview."createdAt" AS "reviewCreatedAt",
@@ -69,8 +70,8 @@ async function getAll(params={}) {
         FROM vpreview
         INNER JOIN vpvisit ON vpvisit."visitId"=vpreview."reviewVisitId"
         INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpreview."reviewPoolId"
-        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
-        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
+        LEFT JOIN vptown ON "mappedTownId"="townId"
+        LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
         ${where.text} ${orderClause};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -79,8 +80,9 @@ async function getAll(params={}) {
 async function getById(id) {
     const text = `
         SELECT
-        to_json(mappedtown) AS "mappedTown",
-        to_json(visittown) AS "visitTown",
+        "townId",
+        "townName",
+        "countyName",
         vpreview.*,
         vpreview."updatedAt" AS "reviewUpdatedAt",
         vpreview."createdAt" AS "reviewCreatedAt",
@@ -93,8 +95,8 @@ async function getById(id) {
         FROM vpreview
         INNER JOIN vpvisit ON vpvisit."visitId"=vpreview."reviewVisitId"
         INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpreview."reviewPoolId"
-        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
-        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
+        LEFT JOIN vptown ON "mappedTownId"="townId"
+        LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
         WHERE "reviewId"=$1;`;
     return await query(text, [id])
 }

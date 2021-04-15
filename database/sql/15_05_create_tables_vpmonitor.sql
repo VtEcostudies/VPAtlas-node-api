@@ -1,5 +1,6 @@
 
-DROP TABLE IF EXISTS vpsurvey_user_species_counts; --join table
+DROP TABLE IF EXISTS vpsurvey_uploads; --log table
+DROP TABLE IF EXISTS vpsurvey_observer_species_counts; --join table
 DROP TABLE IF EXISTS vpsurvey_equipment_status; --join table
 DROP TABLE IF EXISTS vpsurvey_photos; --join table
 DROP TABLE IF EXISTS vpsurvey_year; --join table
@@ -108,33 +109,43 @@ INSERT INTO def_survey_equipment(
     'surveyUserId' refers to the user who entered data.
 */
 create table vpsurvey (
-  "surveyId" INTEGER UNIQUE NOT NULL PRIMARY KEY,
-  "surveyPoolId" TEXT NOT NULL REFERENCES vpmapped("mappedPoolId"),
-  "surveyTypeId" INTEGER NOT NULL REFERENCES def_survey_type("surveyTypeId"),
-  "surveyUserId" INTEGER NOT NULL REFERENCES vpuser(id),
-  "surveyDateTime" TIMESTAMP NOT NULL,
-  "surveyTownId" INTEGER NOT NULL REFERENCES vptown("townId"),
-  "surveyLocation" geometry(Point),
-  "surveyBorder" geometry(MultiPolygon),
-  "surveyIceCover" INTEGER DEFAULT 0,
-  "surveyWaterLevel" INTEGER DEFAULT 0,
-  "surveySubmergedVeg" INTEGER DEFAULT 0,
-  "surveyFloatingVeg" INTEGER DEFAULT 0,
-  "surveyEmergentVeg" INTEGER DEFAULT 0,
-  "surveyShrubs" INTEGER DEFAULT 0,
-  "surveyTrees" INTEGER DEFAULT 0,
-  "surveyPhysicalParametersNotes" TEXT,
-  "surveyAirTempF" INTEGER,
-  "surveyHumidity" INTEGER,
-  "surveyWindBeaufort" INTEGER REFERENCES def_beaufort_wind_scale("beaufortWindForce"),
-  "surveyWeatherConditions" TEXT,
-  "surveyWeatherNotes" TEXT,
-  "surveySpermatophores" BOOLEAN DEFAULT false,
-  "surveyAmphibMacroNotes" TEXT,
-  "surveyEdgeVisualImpairment" INTEGER DEFAULT 0,
-  "surveyInteriorVisualImpairment" INTEGER DEFAULT 0,
-  "createdAt" TIMESTAMP DEFAULT NOW(),
-  "updatedAt" TIMESTAMP DEFAULT NOW()
+	"surveyId" SERIAL UNIQUE NOT NULL PRIMARY KEY,
+	"surveyPoolId" TEXT NOT NULL REFERENCES vpmapped("mappedPoolId"),
+	"surveyTypeId" INTEGER NOT NULL REFERENCES def_survey_type("surveyTypeId"),
+	"surveyUserEmail" TEXT NOT NULL, --DO NOT apply reference to email to allow user emails to change
+	"surveyUserId" INTEGER REFERENCES vpuser(id), --see TRIGGER FUNCTION set_survey_user_id_from_survey_user_email()
+	"surveyDate" DATE NOT NULL,
+	"surveyTime" TIME NOT NULL,
+	--"surveyYear" DATE NOT NULL,
+	--"surveyTownId" INTEGER NOT NULL REFERENCES vptown("townId"),
+	"surveyPoolLatitude" NUMERIC(11,8),
+	"surveyPoolLongitude" NUMERIC(11,8),
+	"surveyPoolLocationGeo" geometry(Geometry, 4326),
+	"surveyPoolBorderJson" jsonb,
+	"surveyPoolBorderGeo" geometry(Geometry, 4326),
+	"surveyAcousticMonitor" TEXT,
+	"surveyHoboLogger" TEXT,
+	"surveyHoboData" TEXT,
+	"surveyCustomLogger" TEXT,
+	"surveyIceCover" INTEGER,
+	"surveyWaterLevel" INTEGER,
+	"surveySubmergedVeg" INTEGER,
+	"surveyFloatingVeg" INTEGER,
+	"surveyEmergentVeg" INTEGER,
+	"surveyShrubs" INTEGER,
+	"surveyTrees" INTEGER,
+	"surveyPhysicalParametersNotes" TEXT,
+	"surveyAirTempF" NUMERIC(5,2),
+	"surveyHumidity" NUMERIC(5,2),
+	"surveyWindBeaufort" INTEGER REFERENCES def_beaufort_wind_scale("beaufortWindForce"),
+	"surveyWeatherConditions" TEXT,
+	"surveyWeatherNotes" TEXT,
+	"surveySpermatophores" BOOLEAN DEFAULT false,
+	"surveyAmphibMacroNotes" TEXT,
+	"surveyEdgeVisualImpairment" INTEGER,
+	"surveyInteriorVisualImpairment" INTEGER,
+	"createdAt" TIMESTAMP DEFAULT NOW(),
+	"updatedAt" TIMESTAMP DEFAULT NOW()
 );
 
 /*
@@ -145,7 +156,7 @@ create table vpsurvey (
 */
 CREATE TABLE vpsurvey_year (
 	"surveyYear" DATE NOT NULL,
-	"surveyYearSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("poolId")
+	"surveyYearSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId")
 );
 
 /*
@@ -155,7 +166,7 @@ CREATE TABLE vpsurvey_year (
 	change happened on a different date than the survey date.
 */
 CREATE TABLE vpsurvey_equipment_status (
-	"equipmentSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
+	"surveyEquipmentSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
 	"surveyEquipmentId" INTEGER NOT NULL REFERENCES def_survey_equipment("equipmentId"),
 	"surveyEquipmentStatusId" INTEGER NOT NULL REFERENCES def_survey_equipment_status("statusId"),
 	"surveyEquipmentStatusDate" TIMESTAMP DEFAULT NULL,
@@ -170,32 +181,33 @@ CREATE TABLE vpsurvey_equipment_status (
 
   NOTE: Users here are Observers, but all Observers need to be in vpuser.
 */
-CREATE TABLE vpsurvey_user_species_counts (
-  "speciesSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
-  "speciesSurveyUserId" INTEGER NOT NULL REFERENCES vpuser(id),
-  "polarizedGlasses" BOOLEAN DEFAULT false,
-  "edgeStart" TIMESTAMP NOT NULL,
-  "edgeStop" TIMESTAMP NOT NULL,
-  "edgeWOFR" INTEGER DEFAULT 0,
-  "edgeSPSA" INTEGER DEFAULT 0,
-  "edgeJESA" INTEGER DEFAULT 0,
-  "edgeBLSA" INTEGER DEFAULT 0,
-  "interiorStart" TIMESTAMP NOT NULL,
-  "interiorStop" TIMESTAMP NOT NULL,
-  "interiorWOFR" INTEGER DEFAULT 0,
-  "interiorSPSA" INTEGER DEFAULT 0,
-  "interiorJESA" INTEGER DEFAULT 0,
-  "interiorBLSA" INTEGER DEFAULT 0,
-  "northFASH" INTEGER DEFAULT 0,
-  "eastFASH" INTEGER DEFAULT 0,
-  "southFASH" INTEGER DEFAULT 0,
-  "westFASH" INTEGER DEFAULT 0,
-  "totalFASH" INTEGER DEFAULT 0,
-  "northCDFY" INTEGER DEFAULT 0,
-  "eastCDFY" INTEGER DEFAULT 0,
-  "southCDFY" INTEGER DEFAULT 0,
-  "westCDFY" INTEGER DEFAULT 0,
-  "totalCDFY" INTEGER DEFAULT 0,
+CREATE TABLE vpsurvey_observer_species_counts (
+  "surveySpeciesSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
+	"surveySpeciesObsEmail" TEXT NOT NULL REFERENCES vpuser("email"),
+  "surveySpeciesObsId" INTEGER REFERENCES vpuser(id),
+  "surveySpeciesPolarizedGlasses" BOOLEAN DEFAULT false,
+  "surveySpeciesEdgeStart" TIMESTAMP NOT NULL,
+  "surveySpeciesEdgeStop" TIMESTAMP NOT NULL,
+  "surveySpeciesEdgeWOFR" INTEGER,
+  "surveySpeciesEdgeSPSA" INTEGER,
+  "surveySpeciesEdgeJESA" INTEGER,
+  "surveySpeciesEdgeBLSA" INTEGER,
+  "surveySpeciesInteriorStart" TIMESTAMP NOT NULL,
+  "surveySpeciesInteriorStop" TIMESTAMP NOT NULL,
+  "surveySpeciesInteriorWOFR" INTEGER,
+  "surveySpeciesInteriorSPSA" INTEGER,
+  "surveySpeciesInteriorJESA" INTEGER,
+  "surveySpeciesInteriorBLSA" INTEGER,
+  "surveySpeciesNorthFASH" INTEGER,
+  "surveySpeciesEastFASH" INTEGER,
+  "surveySpeciesSouthFASH" INTEGER,
+  "surveySpeciesWestFASH" INTEGER,
+  "surveySpeciesTotalFASH" INTEGER,
+  "surveySpeciesNorthCDFY" INTEGER,
+  "surveySpeciesEastCDFY" INTEGER,
+  "surveySpeciesSouthCDFY" INTEGER,
+  "surveySpeciesWestCDFY" INTEGER,
+  "surveySpeciesTotalCDFY" INTEGER,
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -228,7 +240,45 @@ CREATE TABLE vpsurvey_photos (
 
 CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey
   FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
-CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey_user_species_counts
+CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey_observer_species_counts
   FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
 CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey_equipment_status
   FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
+
+CREATE TABLE vpsurvey_uploads (
+	"surveyUploadId" SERIAL UNIQUE,
+	"surveyUpload_fieldname" TEXT NOT NULL,
+	"surveyUpload_mimetype" TEXT NOT NULL,
+	"surveyUpload_path" TEXT NOT NULL,
+	"surveyUpload_size" INTEGER,
+	"surveyUploadSuccess" BOOLEAN,
+	"surveyUploadSurveyId" INTEGER REFERENCES vpsurvey("surveyId"),
+	"surveyUploadRowCount" INTEGER
+);
+
+--REMOVE constraint on survey email. This allows users' emails to change.
+ALTER TABLE vpsurvey DROP CONSTRAINT IF EXISTS "vpsurvey_surveyUserEmail_fkey";
+
+DROP FUNCTION IF EXISTS set_survey_user_id_from_survey_user_email();
+CREATE OR REPLACE FUNCTION set_survey_user_id_from_survey_user_email()
+    RETURNS trigger
+		LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+	NEW."surveyUserId" = (SELECT "id" FROM vpuser WHERE "email"=NEW."surveyUserEmail");
+	RAISE NOTICE 'set_survey_user_id_from_survey_user_email() email:% | userId:%', NEW."surveyUserEmail", NEW."surveyUserId";
+	RETURN NEW;
+END;
+$BODY$;
+
+ALTER FUNCTION set_survey_user_id_from_survey_user_email()
+    OWNER TO vpatlas;
+
+DROP TRIGGER IF EXISTS trigger_before_insert_set_survey_user_id_from_survey_user_email ON vpsurvey;
+CREATE TRIGGER trigger_before_insert_set_survey_user_id_from_survey_user_email BEFORE INSERT ON vpsurvey
+  FOR EACH ROW EXECUTE PROCEDURE set_survey_user_id_from_survey_user_email();
+DROP TRIGGER IF EXISTS trigger_before_update_set_survey_user_id_from_survey_user_email ON vpsurvey;
+CREATE TRIGGER trigger_before_update_set_survey_user_id_from_survey_user_email BEFORE UPDATE ON vpsurvey
+  FOR EACH ROW EXECUTE PROCEDURE set_survey_user_id_from_survey_user_email();
+
+UPDATE vpsurvey SET "surveyUserEmail"="surveyUserEmail";

@@ -9,6 +9,12 @@ const connPool = new Pool(config.pg[env]);
 const types = require('pg').types;
 const moment = require('moment');
 
+//https://stackoverflow.com/questions/37300997/multi-row-insert-with-pg-promise
+const pgp = require('pg-promise')({
+    capSQL: true // capitalize all generated SQL
+});
+const pgpDb = pgp(config.pg[env]);
+
 console.log(`hostname: ${os.hostname}`);
 console.log(`environment: ${env}`);
 console.log(`postgres config:`);
@@ -44,5 +50,7 @@ types.setTypeParser(1082, parseDate);
 NOTES:
 */
 module.exports = {
-  query: (text, params) => connPool.query(text, params)
+  query: (text, params) => connPool.query(text, params),
+  pgp: pgp,
+  pgpDb: pgpDb
 };

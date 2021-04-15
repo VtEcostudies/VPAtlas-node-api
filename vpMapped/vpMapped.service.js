@@ -18,21 +18,15 @@ module.exports = {
 };
 
 //file scope list of vpmapped table columns retrieved on app startup (see 'getColumns()' below)
-pgUtil.getColumns("vpmapped", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpMapped.service.pg.pgUtil.getColumns | table:vpmapped | error: `, err.message);
-    });
-
-pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpMapped.service.pg.pgUtil.getColumns | table:vptown | error: `, err.message);
-    });
+const tables = [
+  "vpmapped",
+  "vptown"
+];
+for (i=0; i<tables.length; i++) {
+  pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
+    .then(res => {return res;})
+    .catch(err => {console.log(`vpMapped.service.pg.pgUtil.getColumns | table:${tables[i]} | error: `, err.message);});
+}
 
 function getColumns() {
     return new Promise((resolve, reject) => {

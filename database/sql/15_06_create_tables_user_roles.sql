@@ -31,3 +31,34 @@ CREATE TABLE vpusers_roles (
 	"roleId" INTEGER NOT NULL REFERENCES vprole("roleId"),
   CONSTRAINT "vpuser_role_unique" UNIQUE("userId", "roleId")
 );
+
+ALTER TABLE vpmapped RENAME COLUMN "mappedByUserId" TO "mappedUserId";
+
+ALTER TABLE vpmapped
+	ADD CONSTRAINT "vpmapped_mappedUserId_fkey"
+	FOREIGN KEY ("mappedUserId")
+	REFERENCES vpuser ("id");
+
+DROP FUNCTION IF EXISTS set_mapped_user_id_from_mapped_by_user();
+CREATE OR REPLACE FUNCTION set_mapped_user_id_from_mapped_by_user()
+    RETURNS trigger
+		LANGUAGE 'plpgsql'
+AS $BODY$
+BEGIN
+	NEW."mappedUserId" = (SELECT "id" FROM vpuser WHERE "username"=NEW."mappedByUser");
+	RAISE NOTICE 'set_mapped_user_id_from_mapped_by_user() userName:% | userId:%', NEW."mappedByUser", NEW."mappedUserId";
+	RETURN NEW;
+END;
+$BODY$;
+
+ALTER FUNCTION set_mapped_user_id_from_mapped_by_user()
+    OWNER TO vpatlas;
+
+DROP TRIGGER IF EXISTS trigger_before_insert_set_mapped_user_id_from_mapped_by_user ON vpsurvey;
+CREATE TRIGGER trigger_before_insert_set_mapped_user_id_from_mapped_by_user BEFORE INSERT ON vpsurvey
+  FOR EACH ROW EXECUTE PROCEDURE set_mapped_user_id_from_mapped_by_user();
+DROP TRIGGER IF EXISTS trigger_before_update_set_mapped_user_id_from_mapped_by_user ON vpsurvey;
+CREATE TRIGGER trigger_before_update_set_mapped_user_id_from_mapped_by_user BEFORE UPDATE ON vpsurvey
+  FOR EACH ROW EXECUTE PROCEDURE set_mapped_user_id_from_mapped_by_user();
+
+UPDATE vpmapped SET "mappedByUser"="mappedByUser";

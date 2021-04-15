@@ -30,6 +30,8 @@ function jwt() {
             '/users/verify',
             '/users/confirm',
 
+            '/utils/where',
+
             '/vtinfo/towns',
             '/parcel/townId/*',
             '/parcel/townName',
@@ -45,7 +47,13 @@ function jwt() {
 
             '/pools', // /pools performs a getAll()
             { url: /^\/pools\/.*/, methods: ['GET'] },
-            { url: /^\/pools\/page\/.*/, methods: ['GET'] }
+            { url: /^\/pools\/page\/.*/, methods: ['GET'] },
+
+            '/survey', // /survey performs a getAll()
+            '/survey/upload',
+            '/survey/columns',
+            { url: /^\/survey\/.*/, methods: ['GET'] },
+            { url: /^\/survey\/page\/.*/, methods: ['GET'] }
         ]
     });
 

@@ -19,38 +19,20 @@ module.exports = {
     getByPoolId
 };
 
-//file scope list of vpvisit table columns retrieved on app startup (see 'getColumns()' below)
-pgUtil.getColumns("vpmapped", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpPools.service.pg.pgUtil.getColumns | error: `, err.message);
-    });
-
-pgUtil.getColumns("vpvisit", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpPools.service.pg.pgUtil.getColumns | error: `, err.message);
-    });
-
-pgUtil.getColumns("vpreview", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpPools.service.pg.pgUtil.getColumns | error: `, err.message);
-    });
-
-pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpPools.service.pg.pgUtil.getColumns | error: `, err.message);
-    });
+//file scope list of vpPools tables' columns retrieved at app startup (see 'getColumns()' below)
+const tables = [
+  "vpmapped",
+  "vpvisit",
+  "vpreview",
+  "vpsurvey",
+  "vpsurvey_observer_species_counts",
+  "vptown"
+];
+for (i=0; i<tables.length; i++) {
+  pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
+    .then(res => {return res;})
+    .catch(err => {console.log(`vpPools.service.pg.pgUtil.getColumns | table:${tables[i]} | error: `, err.message);});
+}
 
 function getColumns() {
   return new Promise((resolve, reject) => {
@@ -107,16 +89,22 @@ vpvisit."updatedAt" AS "visitUpdatedAt",
 "reviewId",
 "reviewQACode",
 "reviewPoolStatus",
-vpreview."updatedAt" AS "reviewUpdatedAt"
+vpreview."updatedAt" AS "reviewUpdatedAt",
+"surveyId",
+surveyuser.username,
+vpsurvey."updatedAt" AS "surveyUpdatedAt"
 FROM vpmapped
 LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
 LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
+LEFT JOIN vpsurvey ON "surveyPoolId"="mappedPoolId"
 LEFT JOIN vptown ON "mappedTownId"="townId"
 LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+LEFT JOIN vpuser AS surveyuser ON "surveyUserId"="id"
 WHERE
 (vpmapped."updatedAt">'${timestamp}'::timestamp
 OR vpvisit."updatedAt">'${timestamp}'::timestamp
-OR vpreview."updatedAt">'${timestamp}'::timestamp)
+OR vpreview."updatedAt">'${timestamp}'::timestamp
+OR vpsurvey."updatedAt">'${timestamp}'::timestamp)
 ${where.text} ${orderClause}`;
   console.log(text);
   return await query(text, where.values);
@@ -157,21 +145,25 @@ vpvisit."updatedAt" AS "visitUpdatedAt",
 "reviewId",
 "reviewQACode",
 "reviewPoolStatus",
-vpreview."updatedAt" AS "reviewUpdatedAt"
+vpreview."updatedAt" AS "reviewUpdatedAt",
+"surveyId",
+vpsurvey."updatedAt" AS "surveyUpdatedAt"
 FROM vpmapped
 LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
 LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
+LEFT JOIN vpsurvey ON "surveyPoolId"="mappedPoolId"
 LEFT JOIN vptown ON "mappedTownId"="townId"
 LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
 --LEFT JOIN vpuser ON "mappedByUserId"="id";
 WHERE
 ("reviewId" IS NULL AND "visitId" IS NOT NULL
-OR ("reviewUpdatedAt" IS NOT NULL AND "mappedUpdatedAt" > "reviewUpdatedAt")
-OR ("reviewUpdatedAt" IS NOT NULL AND "visitUpdatedAt" > "reviewUpdatedAt"))
+OR (vpreview."updatedAt" IS NOT NULL AND vpmapped."updatedAt" > vpreview."updatedAt")
+OR (vpreview."updatedAt" IS NOT NULL AND vpvisit."updatedAt" > vpreview."updatedAt"))
 AND
 (vpmapped."updatedAt">'${timestamp}'::timestamp
 OR vpvisit."updatedAt">'${timestamp}'::timestamp
-OR vpreview."updatedAt">'${timestamp}'::timestamp)
+OR vpreview."updatedAt">'${timestamp}'::timestamp
+OR vpsurvey."updatedAt">'${timestamp}'::timestamp)
 ${where.text}
 ${orderClause};
 `;
@@ -209,10 +201,14 @@ vpvisit."createdAt" AS "visitCreatedAt",
 vpvisit."updatedAt" AS "visitUpdatedAt",
 vpreview.*,
 vpreview."createdAt" AS "reviewCreatedAt",
-vpreview."updatedAt" AS "reviewUpdatedAt"
+vpreview."updatedAt" AS "reviewUpdatedAt",
+"surveyId",
+vpsurvey."createdAt" AS "surveyCreatedAt",
+vpsurvey."updatedAt" AS "surveyUpdatedAt"
 FROM vpmapped
 LEFT JOIN vpvisit ON vpvisit."visitPoolId"="mappedPoolId"
 LEFT JOIN vpreview ON vpreview."reviewPoolId"="mappedPoolId"
+LEFT JOIN vpsurvey ON "surveyPoolId"="mappedPoolId"
 LEFT JOIN vptown ON "mappedTownId"=vptown."townId"
 LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
 ${where.text} ${orderClause};`;
@@ -249,10 +245,14 @@ vpvisit."createdAt" AS "visitCreatedAt",
 vpvisit."updatedAt" AS "visitUpdatedAt",
 vpreview.*,
 vpreview."createdAt" AS "reviewCreatedAt",
-vpreview."updatedAt" AS "reviewUpdatedAt"
+vpreview."updatedAt" AS "reviewUpdatedAt",
+"surveyId",
+vpsurvey."createdAt" AS "surveyCreatedAt",
+vpsurvey."updatedAt" AS "surveyUpdatedAt"
 FROM vpmapped
-LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
-LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
+LEFT JOIN vpvisit ON vpvisit."visitPoolId"="mappedPoolId"
+LEFT JOIN vpreview ON vpreview."reviewPoolId"="mappedPoolId"
+LEFT JOIN vpsurvey ON "surveyPoolId"="mappedPoolId"
 LEFT JOIN vptown ON "mappedTownId"=vptown."townId"
 LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
 ${where.text} ${orderClause}

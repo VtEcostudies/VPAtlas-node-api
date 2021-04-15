@@ -7,8 +7,6 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const jwt = require('_helpers/jwt');
 const errorHandler = require('_helpers/error-handler');
-const vpMappedModel = require('vpMapped/vpMapped.model.js');
-const vtInfoModel = require('vtInfo/vtInfo.model.js');
 
 /* Command-Line Arguments Processing
  These are processed without prefixed "-"
@@ -38,8 +36,10 @@ app.use('/pools/mapped', require('./vpMapped/vpMapped.routes')); //postgres mapp
 app.use('/pools/visit', require('./vpVisit/vpVisit.routes')); //postgres pool visits db
 app.use('/pools', require('./vpPools/vpPools.routes')); //postgres 'Mapped Pools' and 'Pool Visits' GETS-only combined
 app.use('/review', require('./vpReview/vpReview.routes')); //postgres reviews db
+app.use('/survey', require('./vpSurvey/vpSurvey.routes')); //postgres survey db
 app.use('/aws/s3', require('./vpUtil/vp_s3_info.routes')); //get connection credentials for aws s3 bucket by bucketName
 app.use('/parcel', require('./vcgiMapData/vcgiParcel.routes')); //get parcel map geoJSON
+app.use('/utils', require('./vpUtil/vpUtils.routes')); //utils to test API features
 
 // global error handler
 //NOTE: this causes error when http status is set in handler. No solution yet.
@@ -71,24 +71,6 @@ for (var i=0; i<process.argv.length; i++) {
         tls=1;
         argPort=4322;
         break;
-    case "init":
-        vpMappedModel.initVpMapped();
-        break;
-    case "upgrade":
-        switch(arg) {
-            case "mapped":
-            case "vpmapped":
-                vpMappedModel.upgradeVpMapped();
-                break;
-            case "county":
-            case "counties":
-                vtInfoModel.importCounties();
-                break;
-            case "town":
-            case "towns":
-                vtInfoModel.importTowns();
-                break;
-        }
 	}
 }
 //set this API's port - dev-local:4000, prod-http:4321, prod-https:4322

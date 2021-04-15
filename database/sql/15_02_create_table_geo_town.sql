@@ -40,11 +40,23 @@ CREATE OR REPLACE FUNCTION set_geometry_townid_from_pool_lat_lon()
 		LANGUAGE 'plpgsql'
 AS $BODY$
 BEGIN
-	IF (NEW."mappedLatitude" != OLD."mappedLatitude" OR NEW."mappedLongitude" != OLD."mappedLongitude") THEN
+	--RAISE NOTICE 'set_geometry_townid_from_pool_lat_lon() | NEW.lat%, NEW.lon%, OLD.lat:%, OLD.lon:%',
+	--	NEW."mappedLatitude",NEW."mappedLongitude",OLD."mappedLatitude",OLD."mappedLongitude";
+	--NOTE: the comparisons below **FAIL** when OLD values are <NULL>, which is true on INSERT. Not nice, pg.
+	IF (NEW."mappedLatitude" != OLD."mappedLatitude"
+		OR NEW."mappedLongitude" != OLD."mappedLongitude"
+		OR OLD."mappedLatitude" IS NULL
+		OR OLD."mappedLongitude" IS NULL
+	   ) THEN
 		RAISE NOTICE 'set_geometry_townid_from_pool_lat_lon() | Set geoLocation from vpmapped lat/lon | lat:% | lon:%', NEW."mappedLatitude", NEW."mappedLongitude";
 		NEW."mappedPoolLocation" = ST_GEOMFROMTEXT('POINT(' || NEW."mappedLongitude" || ' ' ||  NEW."mappedLatitude" || ')', 4326);
 	END IF;
 	NEW."mappedTownId" = (SELECT "geoTownId" FROM geo_town WHERE ST_WITHIN(NEW."mappedPoolLocation","geoTownPolygon"));
+
+	IF NEW."mappedTownId" IS NULL THEN
+		NEW."mappedTownId" = 0;
+	END IF;
+
 	RETURN NEW;
 END;
 $BODY$;
@@ -52,17 +64,19 @@ $BODY$;
 ALTER FUNCTION set_geometry_townid_from_pool_lat_lon()
     OWNER TO vpatlas;
 
---DROP TRIGGER trigger_set_pool_locinfo_after_insert_vpmapped ON vpmapped;
+DROP TRIGGER trigger_set_pool_locinfo_after_insert_vpmapped ON vpmapped;
+DROP TRIGGER trigger_set_pool_locinfo_before_insert_vpmapped ON vpmapped;
 --create trigger on vpmapped to set mappedPoolLocation, mappedTownId from lat/lon on insert
-CREATE TRIGGER trigger_set_pool_locinfo_after_insert_vpmapped
+CREATE TRIGGER trigger_set_pool_locinfo_before_insert_vpmapped
     BEFORE INSERT
     ON vpmapped
     FOR EACH ROW
     EXECUTE PROCEDURE set_geometry_townid_from_pool_lat_lon();
 
---DROP TRIGGER trigger_set_pool_locinfo_after_update_vpmapped ON vpmapped;
+DROP TRIGGER trigger_set_pool_locinfo_after_update_vpmapped ON vpmapped;
+DROP TRIGGER trigger_set_pool_locinfo_before_update_vpmapped ON vpmapped;
 --create trigger on vpmapped to set mappedPoolLocation, mappedTownId from lat/lon on update
-CREATE TRIGGER trigger_set_pool_locinfo_after_update_vpmapped
+CREATE TRIGGER trigger_set_pool_locinfo_before_update_vpmapped
     BEFORE UPDATE
     ON vpmapped
     FOR EACH ROW
