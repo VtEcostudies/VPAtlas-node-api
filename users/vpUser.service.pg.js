@@ -14,6 +14,7 @@ module.exports = {
     getPage,
     getById,
     getByUserName,
+    getRoles,
     register,
     check,
     update,
@@ -24,17 +25,22 @@ module.exports = {
     delete: _delete
 };
 
-function getColumns() {
-    console.log(`vpUser.service.getColumns | staticColumns:`, staticColumns);
-    return staticColumns;
+const tables = [
+  "vpuser",
+  "vpuser_alias"
+];
+for (i=0; i<tables.length; i++) {
+  pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
+    .then(res => {return res;})
+    .catch(err => {console.log(`vpUser.service.pg.pgUtil.getColumns | table:${tables[i]} | error: `, err.message);});
 }
 
-//run it once on init: to create the array here. also diplays on console.
-pgUtil.getColumns("vpuser", staticColumns)
-    .then(res => {return res;})
-    .catch(err => {
-        console.log(`vpUser.service.pg.pgUtil.getColumns`, err.message);
+function getColumns() {
+    return new Promise((resolve, reject) => {
+      console.log(`vpUser.service.pg.getColumns | staticColumns:`, staticColumns);
+      resolve(staticColumns);
     });
+}
 
 /*
 Authenticate user. Handle both registration, reset, and new_email confirmations
@@ -115,9 +121,17 @@ async function check(body) {
     });
 }
 
-async function getAll(body={}) {
-    const where = pgUtil.whereClause(body, staticColumns);
-    const text = `select * from vpuser ${where.text};`;
+async function getAll(params={}) {
+    var orderClause = 'ORDER BY "updatedAt" DESC';
+    if (params.orderBy) {
+        var col = params.orderBy.split("|")[0];
+        var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';
+        orderClause = `ORDER BY "${col}" ${dir}`;
+    }
+    const where = pgUtil.whereClause(params, staticColumns);
+    const text = `
+    SELECT * FROM vpuser
+    ${where.text} ${orderClause};`;
     console.log(`vpUser.service.pg.js getAll`, text, where.values);
     try {
         var res = await query(text, where.values);
@@ -186,6 +200,10 @@ async function getByUserName(username) {
         console.log(`vpUser.service.pg.js::getByID error`, err);
         throw err;
     }
+}
+
+async function getRoles() {
+  return await query(`select * from vprole`);
 }
 
 /*
@@ -262,8 +280,12 @@ async function update(id, body, user) {
       delete body.status;
     }
 
-    var queryColumns = pgUtil.parseColumns(body, 2, [id], staticColumns);
-    text = `update vpuser set (${queryColumns.named}) = (${queryColumns.numbered}) where "id"=$1;`;
+    /*
+      We receive Alias as an array, and store in vpuser but also in a separate
+      table, vpuser_alias. A database TRIGGER handles those insert/updates in postgres.
+    */
+    const queryColumns = pgUtil.parseColumns(body, 2, [id], staticColumns);
+    const text = `update vpuser set (${queryColumns.named}) = (${queryColumns.numbered}) where "id"=$1;`;
     console.log(text, queryColumns.values);
     return await query(text, queryColumns.values);
 }

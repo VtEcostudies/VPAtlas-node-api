@@ -13,6 +13,7 @@ router.get('/columns', getColumns);
 router.get('/count', getCount);
 router.get('/', getAll);
 router.get('/:id', getById);
+router.get('/pool/:poolId', getByPoolId);
 router.post('/upload', upFile.single('vpsurvey.csv'), upload);
 router.post('/', create);
 router.put('/:id', update);
@@ -40,6 +41,12 @@ function getAll(req, res, next) {
 
 function getById(req, res, next) {
     service.getById(req.params.id)
+        .then(item => item ? res.json(item) : res.sendStatus(404))
+        .catch(err => next(err));
+}
+
+function getByPoolId(req, res, next) {
+    service.getById(req.params.poolId)
         .then(item => item ? res.json(item) : res.sendStatus(404))
         .catch(err => next(err));
 }

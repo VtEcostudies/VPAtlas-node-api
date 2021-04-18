@@ -22,21 +22,24 @@ module.exports = {
     (2) Use the object returned from here.
 
  */
-async function getColumns(tableName, columns=[]) {
+async function getColumns(tableName, columns=[], retcols=[]) {
 
     const text = `select * from ${tableName} limit 0;`;
 
-    await query(text)
+    return new Promise(async (resolve, reject) => {
+      await query(text)
         .then(res => {
             res.fields.forEach(fld => {
-                columns.push(String(fld.name));
+                columns.push(String(fld.name)); //cumulative list of all tables
+                retcols.push(String(fld.name)); //just the current table's columns for return
             });
             //console.log(`${tableName} columns:`, columns);
-            return {tableName: columns};
+            resolve({tableName:tableName, tableColumns:retcols}); //return just the current table's columns
         })
         .catch(err => {
-            throw err;
+            reject(err);
         });
+    });
 }
 
 /*

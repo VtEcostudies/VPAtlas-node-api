@@ -20,15 +20,15 @@ OR (r."updatedAt" IS NOT NULL AND v."updatedAt" > r."updatedAt"))
 inner join vpmapped on vpmapped."mappedPoolId"=vpvisit."visitPoolId"
 where "mappedPoolStatus"!='Eliminated' AND "mappedPoolStatus"!='Duplicate'
 ) as visited,
+(select count(distinct("surveyPoolId")) from vpsurvey
+inner join vpmapped on "mappedPoolId"="surveyPoolId"
+where "mappedPoolStatus"!='Eliminated' AND "mappedPoolStatus"!='Duplicate'
+) as monitored
 (select count(distinct("mappedPoolId")) from vpmapped
 left join vpvisit on "mappedPoolId"="visitPoolId"
 where "mappedByUser"=current_setting('body.username')
 OR "visitUserName"=current_setting('body.username')
 ) as mine,
-(select count(distinct("surveyPoolId")) from vpsurvey
-inner join vpmapped on "mappedPoolId"="surveyPoolId"
-where "mappedPoolStatus"!='Eliminated' AND "mappedPoolStatus"!='Duplicate'
-) as monitored
 
 SET body.username = 'sfaccio';
 select * from pool_stats;

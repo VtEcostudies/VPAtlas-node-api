@@ -25,7 +25,9 @@ const tables = [
   "vpvisit",
   "vpreview",
   "vpsurvey",
-  "vpsurvey_observer_species_counts",
+  //"vpsurvey_species",
+  "vpsurvey_amphib",
+  "vpsurvey_macro",
   "vptown"
 ];
 for (i=0; i<tables.length; i++) {

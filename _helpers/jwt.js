@@ -49,8 +49,9 @@ function jwt() {
             { url: /^\/pools\/.*/, methods: ['GET'] },
             { url: /^\/pools\/page\/.*/, methods: ['GET'] },
 
-            '/survey', // /survey performs a getAll()
-            '/survey/upload',
+            //'/survey', // /survey performs a getAll()
+            //'/survey/upload',
+            { url: /^\/survey\/upload/, methods: ['POST'] },
             '/survey/columns',
             { url: /^\/survey\/.*/, methods: ['GET'] },
             { url: /^\/survey\/page\/.*/, methods: ['GET'] }

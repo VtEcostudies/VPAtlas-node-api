@@ -11,6 +11,8 @@ router.post('/reset', reset);
 router.post('/verify', verify); //verify a valid reset token
 router.post('/confirm', confirm);
 router.post('/new_email/:id', new_email);
+router.get('/columns', getColumns);
+router.get('/roles', getRoles);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
 router.get('/:id', getById);
@@ -43,6 +45,22 @@ function check(req, res, next) {
     console.log(`users.pg.routes.check | req.body:`, req.body);
     userService.check(req.body)
         .then(user => res.json(user))
+        .catch(err => next(err));
+}
+
+function getColumns(req, res, next) {
+    console.log(`vpUser.routes.pg.js::getColumns() | req.query`, req.query);
+    if (req.user.role != 'admin') throw('Requesting User is not authorized to GET vpuser columns.');
+    userService.getColumns(req.query)
+        .then(users => res.json(users))
+        .catch(err => next(err));
+}
+
+function getRoles(req, res, next) {
+    console.log(`vpUser.routes.pg.js::getRoles() | req.query`, req.query);
+    if (req.user.role != 'admin') throw('Requesting User is not authorized to GET User Roles.');
+    userService.getRoles(req.query)
+        .then(users => res.json(users))
         .catch(err => next(err));
 }
 

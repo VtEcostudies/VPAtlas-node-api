@@ -4,13 +4,15 @@ const fastCsv = require('fast-csv');
 const db = require('_helpers/db_postgres');
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
-var staticColumns = [];
+var staticColumns = []; //all tables' columns in a single 1D array
+var tableColumns = []; //each table's columns by table name
 
 module.exports = {
     getColumns,
     getCount,
     getAll,
     getById,
+    getByPoolId,
     getGeoJson,
     upload,
     create,
@@ -23,14 +25,20 @@ const tables = [
   "vpsurvey",
   "vpsurvey_equipment_status",
   "vpsurvey_year",
-  "vpsurvey_observer_species_counts",
+  //"vpsurvey_species",
+  "vpsurvey_amphib",
+  "vpsurvey_macro",
   "vpsurvey_photos",
   "vpsurvey_uploads",
   "vptown"
 ];
 for (i=0; i<tables.length; i++) {
   pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {return res;})
+    .then(res => {
+      tableColumns[res.tableName] = res.tableColumns;
+      //console.log(tableColumns);
+      return res;
+    })
     .catch(err => {console.log(`vpSurvey.service.pg.pgUtil.getColumns | table:${tables[i]} | error: `, err.message);});
 }
 
@@ -57,46 +65,49 @@ async function getAll(params={}) {
     }
     const where = pgUtil.whereClause(params, staticColumns);
     const text = `
-        SELECT
-        "townId",
-        "townName",
-        "countyName",
-        vpSurvey.*,
-        vpSurvey."updatedAt" AS "surveyUpdatedAt",
-        vpSurvey."createdAt" AS "surveyCreatedAt",
-        vpmapped.*,
-        vpmapped."updatedAt" AS "mappedUpdatedAt",
-        vpmapped."createdAt" AS "mappedCreatedAt"
-        FROM vpSurvey
-        INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
-        LEFT JOIN vptown ON "mappedTownId"="townId"
-        LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
-        ${where.text} ${orderClause};`;
+    SELECT
+    "townId",
+    "townName",
+    "countyName",
+    vpSurvey.*,
+    vpSurvey."updatedAt" AS "surveyUpdatedAt",
+    vpSurvey."createdAt" AS "surveyCreatedAt",
+    vpmapped.*,
+    vpmapped."updatedAt" AS "mappedUpdatedAt",
+    vpmapped."createdAt" AS "mappedCreatedAt"
+    FROM vpSurvey
+    INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
+    LEFT JOIN vptown ON "mappedTownId"="townId"
+    LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+    ${where.text} ${orderClause};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
 
-async function getById(id) {
+function getById(id) {
+  return getBy({column:'surveyId', value:id});
+}
+function getByPoolId(id) {
+  return getBy({column:'surveyPoolId', value:id});
+}
+async function getBy(getBy={column:'surveyId', value:1}) {
     const text = `
-        SELECT
-        to_json(mappedtown) AS "mappedTown",
-        to_json(visittown) AS "visitTown",
-        vpSurvey.*,
-        vpSurvey."updatedAt" AS "surveyUpdatedAt",
-        vpSurvey."createdAt" AS "surveyCreatedAt",
-        vpvisit.*,
-        vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt",
-        vpmapped.*,
-        vpmapped."updatedAt" AS "mappedUpdatedAt",
-        vpmapped."createdAt" AS "mappedCreatedAt"
-        FROM vpSurvey
-        INNER JOIN vpvisit ON vpvisit."visitId"=vpSurvey."reviewVisitId"
-        INNER JOIN vpmapped ON vpmapped."mappedPoolId"=vpSurvey."surveyPoolId"
-        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
-        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
-        WHERE "surveyId"=$1;`;
-    return await query(text, [id])
+    SELECT
+    "townId",
+    "townName",
+    "countyName",
+    vpSurvey.*,
+    vpSurvey."updatedAt" AS "surveyUpdatedAt",
+    vpSurvey."createdAt" AS "surveyCreatedAt",
+    vpmapped.*,
+    vpmapped."updatedAt" AS "mappedUpdatedAt",
+    vpmapped."createdAt" AS "mappedCreatedAt"
+    FROM vpSurvey
+    INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
+    LEFT JOIN vptown ON "mappedTownId"="townId"
+    LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+    WHERE "${getBy.column}"=$1;`;
+    return await query(text, [getBy.value])
 }
 
 async function getGeoJson(body={}) {
@@ -121,7 +132,10 @@ async function getGeoJson(body={}) {
       				) AS p
       			) AS properties
               FROM vpSurvey
-      		INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
+          		INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
+              INNER JOIN vpsurvey_species ON "surveyId"="surveySpeciesSurveyId"
+              INNER JOIN vpsurvey_year ON "surveyId"="surveyYearSurveyId"
+              ${where.text}
           ) AS f
       ) AS fc; `;
     console.log('vpSurvey.service | getGeoJson |', where.text, where.values);
@@ -129,7 +143,13 @@ async function getGeoJson(body={}) {
 }
 
 /*
-  Upload a csv file to create a survey
+  Upload to multiple tables from single csv file to create vpsurvey, survey_observer_species_counts, survey_year
+
+  Column Names in CSV file MUST conform to specific conventions. See sample spreadsheet for details.
+
+  - leave vpsurvey columns at top-level object
+  - store sub-tables as json objects by table name, to be inserted into jsonb columns in vpsurvey
+  - DB trigger uses jsonb column sub-objects to populate join tables by surveyId AFTER INSERT
 */
 async function upload(req) {
   const fileRows = [];
@@ -152,40 +172,73 @@ async function upload(req) {
         })
         .on("end", async () => {
           fs.unlinkSync(req.file.path); //this does nothing
-          //const values = fileRows.splice(0, 1); //remove 0th index from array
-          //var values = []; for (var i=1; i<fileRows.length; i++) {values.push(fileRows[i]);}
+          const obsDelim = '_'; //delimiter for observer field prefix
+          var colum = null; var split = []; var obsId = 0;
+          var surveyColumns = [];
+          for (i=0;i<fileRows[0].length;i++) {
+            colum = fileRows[0][i];
+            split = colum.split(obsDelim); colum = split[split.length-1]; obsId=(2==split.length?split[0]:0);
+            if (tableColumns['vpsurvey'].includes(colum)) surveyColumns.push(colum);
+          }
+          //surveyColumns.push('surveySpeciesJson');
+          surveyColumns.push('surveyAmphibJson');
+          surveyColumns.push('surveyMacroJson');
+          surveyColumns.push('surveyYearJson');
+          //console.log('vpsurvey header', surveyColumns);
           var valArr = [];
           for (i=1;i<fileRows.length;i++) {
-            var valRow = {};
-            var value = null;
+            //var speciesRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_species
+            var surveyRow = {}; //single object of colum:value pairs for one insert row into vpsurvey
+            var amphibRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_amphib
+            var macroRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_macro
+            var yearRow = {}; //single object of colum:value pairs to insert in jsonb column of vpsurvey_year
+            var colum = null;
+            var split = [];
+            var obsId = 0; //obsId of zero means both obs or joint obs?
+            var value = null; //temporary local var to hold values for scrubbing
             for (j=0;j<fileRows[0].length;j++) {
+              colum = fileRows[0][j];
+              split = colum.split(obsDelim); colum = split[split.length-1];
+              obsId = (2==split.length?split[0]:0); obsId = (obsId?obsId.slice(-1):0);
+              //if (!speciesRow[obsId]) {speciesRow[obsId] = {};} //initialize speciesRow array element
+              if (!amphibRow[obsId]) {amphibRow[obsId] = {};} //initialize amphibRow array element
               value = fileRows[i][j];
-              if (value === '') {value=null;}
-              valRow[fileRows[0][j]]=value;
+              if ('' === value) {value = null;}
+              if (tableColumns['vpsurvey'].includes(colum)) {surveyRow[colum]=value;}
+              if (tableColumns['vpsurvey_year'].includes(colum)) {yearRow[colum]=value;}
+              if (tableColumns['vpsurvey_macro'].includes(colum)) {macroRow[colum]=value;}
+              if (tableColumns['vpsurvey_amphib'].includes(colum)) {amphibRow[obsId][colum]=value;}
+              //if (tableColumns['vpsurvey_species'].includes(colum)) {speciesRow[obsId][colum]=value;}
             }
-            valArr.push(valRow);
+            //surveyRow['surveySpeciesJson'] = speciesRow; //set the jsonb column value for survey_species table
+            surveyRow['surveyAmphibJson'] = amphibRow; //set the jsonb column value for survey_amphib table
+            surveyRow['surveyMacroJson'] = macroRow; //set the jsonb column value for survey_macro table
+            surveyRow['surveyYearJson'] = yearRow; //set the jsonb column value for survey_year table
+            valArr.push(surveyRow);
           }
 
           //https://stackoverflow.com/questions/37300997/multi-row-insert-with-pg-promise
-          const columns = new db.pgp.helpers.ColumnSet(fileRows[0], {table: 'vpsurvey'});
+          const columns = new db.pgp.helpers.ColumnSet(surveyColumns, {table: 'vpsurvey'});
           const query = db.pgp.helpers.insert(valArr, columns);
+          //to-do: add returning clause to query to get info about results on successful insert
           console.log(query);
-          console.log(columns);
-          console.log(valArr);
+          //console.log(columns);
+          //console.log(valArr);
           await db.pgpDb.none(query)
             .then(res => {
               console.log(res);
-              /*
               update_log_upload_attempt(logId, {
                 surveyUploadSuccess:true,
-                surveyUploadSurveyId:res.rows[0].surveyId,
                 surveyUploadRowCount:fileRows.length-1
-              });
-              */
+                });
               resolve(res);
             })
             .catch(err => {
               console.log(err.message);
+              update_log_upload_attempt(logId, {
+                surveyUploadSuccess:false,
+                surveyUploadError:err.message
+                });
               reject(err);
             });
         })

@@ -14,7 +14,9 @@ const tables = [
   "vpsurvey",
   "vpsurvey_equipment_status",
   "vpsurvey_year",
-  "vpsurvey_observer_species_counts",
+  //"vpsurvey_species",
+  "vpsurvey_amphib",
+  "vpsurvey_macro",
   "vpsurvey_photos",
   "vpsurvey_uploads",
   "vptown"

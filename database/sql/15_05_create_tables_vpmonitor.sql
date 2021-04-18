@@ -1,6 +1,9 @@
+DROP VIEW IF EXISTS pool_stats;
 
 DROP TABLE IF EXISTS vpsurvey_uploads; --log table
-DROP TABLE IF EXISTS vpsurvey_observer_species_counts; --join table
+--DROP TABLE IF EXISTS vpsurvey_species; --join table
+DROP TABLE IF EXISTS vpsurvey_amphib; --join table
+DROP TABLE IF EXISTS vpsurvey_macro; --join table
 DROP TABLE IF EXISTS vpsurvey_equipment_status; --join table
 DROP TABLE IF EXISTS vpsurvey_photos; --join table
 DROP TABLE IF EXISTS vpsurvey_year; --join table
@@ -116,7 +119,6 @@ create table vpsurvey (
 	"surveyUserId" INTEGER REFERENCES vpuser(id), --see TRIGGER FUNCTION set_survey_user_id_from_survey_user_email()
 	"surveyDate" DATE NOT NULL,
 	"surveyTime" TIME NOT NULL,
-	--"surveyYear" DATE NOT NULL,
 	--"surveyTownId" INTEGER NOT NULL REFERENCES vptown("townId"),
 	"surveyPoolLatitude" NUMERIC(11,8),
 	"surveyPoolLongitude" NUMERIC(11,8),
@@ -144,9 +146,18 @@ create table vpsurvey (
 	"surveyAmphibMacroNotes" TEXT,
 	"surveyEdgeVisualImpairment" INTEGER,
 	"surveyInteriorVisualImpairment" INTEGER,
+	"surveyPolarizedGlasses" BOOLEAN DEFAULT false,
+	--"surveySpeciesJson" jsonb,
+	"surveyAmphibJson" jsonb,
+	"surveyMacroJson" jsonb,
+	"surveyYearJson" jsonb,
 	"createdAt" TIMESTAMP DEFAULT NOW(),
 	"updatedAt" TIMESTAMP DEFAULT NOW()
 );
+
+ALTER TABLE vpsurvey DROP CONSTRAINT IF EXISTS "vpsurvey_unique_surveyPoolId_surveyTypeId_surveyDate";
+ALTER TABLE vpsurvey ADD CONSTRAINT "vpsurvey_unique_surveyPoolId_surveyTypeId_surveyDate"
+	UNIQUE("surveyPoolId","surveyTypeId","surveyDate");
 
 /*
 	Join table for surveys and survey seasons/years.
@@ -155,7 +166,7 @@ create table vpsurvey (
 	one survey season/year.
 */
 CREATE TABLE vpsurvey_year (
-	"surveyYear" DATE NOT NULL,
+	"surveyYear" INTEGER NOT NULL,
 	"surveyYearSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId")
 );
 
@@ -181,10 +192,11 @@ CREATE TABLE vpsurvey_equipment_status (
 
   NOTE: Users here are Observers, but all Observers need to be in vpuser.
 */
-CREATE TABLE vpsurvey_observer_species_counts (
+/*
+CREATE TABLE vpsurvey_SPECIES (
   "surveySpeciesSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
-	"surveySpeciesObsEmail" TEXT NOT NULL REFERENCES vpuser("email"),
-  "surveySpeciesObsId" INTEGER REFERENCES vpuser(id),
+	"surveySpeciesObsEmail" TEXT NOT NULL, --do not reference vpuser("email") to allow users to change emails
+  "surveySpeciesObsId" INTEGER REFERENCES vpuser(id), --db TRIGGER sets this from email on insert/update
   "surveySpeciesPolarizedGlasses" BOOLEAN DEFAULT false,
   "surveySpeciesEdgeStart" TIMESTAMP NOT NULL,
   "surveySpeciesEdgeStop" TIMESTAMP NOT NULL,
@@ -198,7 +210,7 @@ CREATE TABLE vpsurvey_observer_species_counts (
   "surveySpeciesInteriorSPSA" INTEGER,
   "surveySpeciesInteriorJESA" INTEGER,
   "surveySpeciesInteriorBLSA" INTEGER,
-  "surveySpeciesNorthFASH" INTEGER,
+	"surveySpeciesNorthFASH" INTEGER,
   "surveySpeciesEastFASH" INTEGER,
   "surveySpeciesSouthFASH" INTEGER,
   "surveySpeciesWestFASH" INTEGER,
@@ -208,6 +220,45 @@ CREATE TABLE vpsurvey_observer_species_counts (
   "surveySpeciesSouthCDFY" INTEGER,
   "surveySpeciesWestCDFY" INTEGER,
   "surveySpeciesTotalCDFY" INTEGER,
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+*/
+CREATE TABLE vpsurvey_amphib (
+  "surveyAmphibSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
+	"surveyAmphibObsEmail" TEXT NOT NULL, --do not reference vpuser("email") to allow users to change emails
+  "surveyAmphibObsId" INTEGER REFERENCES vpuser(id), --db TRIGGER sets this from email on insert/update
+  --"surveyAmphibPolarizedGlasses" BOOLEAN DEFAULT false,
+  "surveyAmphibEdgeStart" TIME,
+  "surveyAmphibEdgeStop" TIME,
+  "surveyAmphibEdgeWOFR" INTEGER,
+  "surveyAmphibEdgeSPSA" INTEGER,
+  "surveyAmphibEdgeJESA" INTEGER,
+  "surveyAmphibEdgeBLSA" INTEGER,
+  "surveyAmphibInteriorStart" TIME,
+  "surveyAmphibInteriorStop" TIME,
+  "surveyAmphibInteriorWOFR" INTEGER,
+  "surveyAmphibInteriorSPSA" INTEGER,
+  "surveyAmphibInteriorJESA" INTEGER,
+  "surveyAmphibInteriorBLSA" INTEGER,
+  "createdAt" TIMESTAMP DEFAULT NOW(),
+  "updatedAt" TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE vpsurvey_macro (
+	"surveyMacroSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
+	--"surveyMacroObsEmail" TEXT NOT NULL, --do not reference vpuser("email") to allow users to change emails
+  --"surveyMacroObsId" INTEGER REFERENCES vpuser(id), --db TRIGGER sets this from email on insert/update
+	"surveyMacroNorthFASH" INTEGER,
+  "surveyMacroEastFASH" INTEGER,
+  "surveyMacroSouthFASH" INTEGER,
+  "surveyMacroWestFASH" INTEGER,
+  "surveyMacroTotalFASH" INTEGER,
+  "surveyMacroNorthCDFY" INTEGER,
+  "surveyMacroEastCDFY" INTEGER,
+  "surveyMacroSouthCDFY" INTEGER,
+  "surveyMacroWestCDFY" INTEGER,
+  "surveyMacroTotalCDFY" INTEGER,
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
@@ -240,7 +291,11 @@ CREATE TABLE vpsurvey_photos (
 
 CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey
   FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
-CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey_observer_species_counts
+--CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey_species
+  --FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
+CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey_amphib
+  FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
+CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey_macro
   FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
 CREATE TRIGGER trigger_updated_at BEFORE UPDATE ON vpsurvey_equipment_status
   FOR EACH ROW EXECUTE PROCEDURE set_updated_at();
@@ -252,11 +307,12 @@ CREATE TABLE vpsurvey_uploads (
 	"surveyUpload_path" TEXT NOT NULL,
 	"surveyUpload_size" INTEGER,
 	"surveyUploadSuccess" BOOLEAN,
-	"surveyUploadSurveyId" INTEGER REFERENCES vpsurvey("surveyId"),
+	"surveyUploadError" TEXT,
 	"surveyUploadRowCount" INTEGER
 );
 
---REMOVE constraint on survey email. This allows users' emails to change.
+--REMOVE foreign key constraint on survey email. This allows users' emails to change.
+--To handle this, we use column surveyUserId and a TRIGGER to set is value from matching email in vpuser.
 ALTER TABLE vpsurvey DROP CONSTRAINT IF EXISTS "vpsurvey_surveyUserEmail_fkey";
 
 DROP FUNCTION IF EXISTS set_survey_user_id_from_survey_user_email();
@@ -281,4 +337,107 @@ DROP TRIGGER IF EXISTS trigger_before_update_set_survey_user_id_from_survey_user
 CREATE TRIGGER trigger_before_update_set_survey_user_id_from_survey_user_email BEFORE UPDATE ON vpsurvey
   FOR EACH ROW EXECUTE PROCEDURE set_survey_user_id_from_survey_user_email();
 
-UPDATE vpsurvey SET "surveyUserEmail"="surveyUserEmail";
+UPDATE vpsurvey SET "surveyUserEmail"="surveyUserEmail"; --this bumps the BEFORE UPDATE TRIGGER above
+
+--DROP FUNCTION IF EXISTS insert_vpsurvey_subtables_from_vpsurvey_jsonb();
+CREATE OR REPLACE FUNCTION insert_vpsurvey_subtables_from_vpsurvey_jsonb()
+    RETURNS trigger
+		LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+	--spcsJson jsonb := NEW."surveySpeciesJson";
+	amphibJson jsonb := NEW."surveyAmphibJson";
+	macroJson jsonb := NEW."surveyMacroJson";
+	yearJson jsonb := NEW."surveyYearJson";
+	observer text;
+	phibJson jsonb;
+BEGIN
+	RAISE NOTICE 'insert_vpsurvey_subtables_from_vpsurvey_jsonb() surveyId: %', NEW."surveyId";
+	RAISE NOTICE 'surveyYearJson->>surveyYear: %', yearJson->>'surveyYear';
+	RAISE NOTICE 'surveyMacroJson: %', macroJson;
+	RAISE NOTICE 'surveyAmphibJson.1: %', amphibJson->'1';
+	RAISE NOTICE 'surveyAmphibJson.2: %', amphibJson->'2';
+	IF yearJson->>'surveyYear' IS NOT NULL THEN
+		INSERT INTO vpsurvey_year ("surveyYearSurveyId", "surveyYear")
+			VALUES (NEW."surveyId", (yearJson->>'surveyYear')::INTEGER);
+	END IF;
+	IF macroJson != '{}' THEN
+		INSERT INTO vpsurvey_macro (
+		"surveyMacroSurveyId",
+		"surveyMacroNorthFASH",
+		"surveyMacroEastFASH",
+		"surveyMacroSouthFASH",
+		"surveyMacroWestFASH",
+		"surveyMacroTotalFASH",
+		"surveyMacroNorthCDFY",
+		"surveyMacroEastCDFY",
+		"surveyMacroSouthCDFY",
+		"surveyMacroWestCDFY",
+		"surveyMacroTotalCDFY")
+		VALUES (
+		NEW."surveyId",
+		(macroJson->>'surveyMacroNorthFASH')::INTEGER,
+		(macroJson->>'surveyMacroEastFASH')::INTEGER,
+		(macroJson->>'surveyMacroSouthFASH')::INTEGER,
+		(macroJson->>'surveyMacroWestFASH')::INTEGER,
+		(macroJson->>'surveyMacroTotalFASH')::INTEGER,
+		(macroJson->>'surveyMacroNorthCDFY')::INTEGER,
+		(macroJson->>'surveyMacroEastCDFY')::INTEGER,
+		(macroJson->>'surveyMacroSouthCDFY')::INTEGER,
+		(macroJson->>'surveyMacroWestCDFY')::INTEGER,
+		(macroJson->>'surveyMacroTotalCDFY')::INTEGER
+		);
+	END IF;
+	FOR observer, phibJson IN
+		 SELECT * FROM jsonb_each(amphibJson)
+	LOOP
+		RAISE NOTICE 'observer:%, amphibJson:%', observer, phibJson;
+		IF phibJson != '{}' THEN
+			INSERT INTO vpsurvey_amphib (
+			"surveyAmphibSurveyId",
+			"surveyAmphibObsEmail",
+			"surveyAmphibObsId",
+			"surveyAmphibEdgeStart",
+			"surveyAmphibEdgeStop",
+			"surveyAmphibEdgeWOFR",
+			"surveyAmphibEdgeSPSA",
+			"surveyAmphibEdgeJESA",
+			"surveyAmphibEdgeBLSA",
+			"surveyAmphibInteriorStart",
+			"surveyAmphibInteriorStop",
+			"surveyAmphibInteriorWOFR",
+			"surveyAmphibInteriorSPSA",
+			"surveyAmphibInteriorJESA",
+			"surveyAmphibInteriorBLSA")
+			VALUES (
+			NEW."surveyId",
+			(phibJson->'surveyAmphibObsEmail'),
+			(SELECT "id" FROM "vpuser" where "email"=(phibJson->>'surveyAmphibObsEmail')),
+			(phibJson->>'surveyAmphibEdgeStart')::TIME,
+			(phibJson->>'surveyAmphibEdgeStop')::TIME,
+			(phibJson->>'surveyAmphibEdgeWOFR')::INTEGER,
+			(phibJson->>'surveyAmphibEdgeSPSA')::INTEGER,
+			(phibJson->>'surveyAmphibEdgeJESA')::INTEGER,
+			(phibJson->>'surveyAmphibEdgeBLSA')::INTEGER,
+			(phibJson->>'surveyAmphibInteriorStart')::TIME,
+			(phibJson->>'surveyAmphibInteriorStop')::TIME,
+			(phibJson->>'surveyAmphibInteriorWOFR')::INTEGER,
+			(phibJson->>'surveyAmphibInteriorSPSA')::INTEGER,
+			(phibJson->>'surveyAmphibInteriorJESA')::INTEGER,
+			(phibJson->>'surveyAmphibInteriorBLSA')::INTEGER
+			);
+			END IF;
+		END LOOP;
+	RETURN NEW;
+END;
+$BODY$;
+
+ALTER FUNCTION insert_vpsurvey_subtables_from_vpsurvey_jsonb()
+    OWNER TO vpatlas;
+
+DROP TRIGGER IF EXISTS trigger_after_insert_vpsurvey_subtables_from_vpsurvey_jsonb ON vpsurvey;
+CREATE TRIGGER trigger_after_insert_vpsurvey_subtables_from_vpsurvey_jsonb AFTER INSERT ON vpsurvey
+  FOR EACH ROW EXECUTE PROCEDURE insert_vpsurvey_subtables_from_vpsurvey_jsonb();
+DROP TRIGGER IF EXISTS trigger_before_update_vpsurvey_subtables_from_vpsurvey_jsonb ON vpsurvey;
+CREATE TRIGGER trigger_before_update_vpsurvey_subtables_from_vpsurvey_jsonb AFTER UPDATE ON vpsurvey
+  FOR EACH ROW EXECUTE PROCEDURE insert_vpsurvey_subtables_from_vpsurvey_jsonb();
