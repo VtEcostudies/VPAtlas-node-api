@@ -187,7 +187,7 @@ async function getAll(params={}) {
     const where = pgUtil.whereClause(params, staticColumns);
     const text = `
 SELECT
-(SELECT COUNT(*) FROM vpmapped LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
+--(SELECT COUNT(*) FROM vpmapped LEFT JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
 "townId",
 "townName",
 "countyName",
@@ -204,7 +204,7 @@ vpvisit."updatedAt" AS "visitUpdatedAt",
 vpreview.*,
 vpreview."createdAt" AS "reviewCreatedAt",
 vpreview."updatedAt" AS "reviewUpdatedAt",
-"surveyId",
+vpsurvey.*,
 vpsurvey."createdAt" AS "surveyCreatedAt",
 vpsurvey."updatedAt" AS "surveyUpdatedAt"
 FROM vpmapped
@@ -248,7 +248,7 @@ vpvisit."updatedAt" AS "visitUpdatedAt",
 vpreview.*,
 vpreview."createdAt" AS "reviewCreatedAt",
 vpreview."updatedAt" AS "reviewUpdatedAt",
-"surveyId",
+vpsurvey.*,
 vpsurvey."createdAt" AS "surveyCreatedAt",
 vpsurvey."updatedAt" AS "surveyUpdatedAt"
 FROM vpmapped
@@ -263,58 +263,40 @@ offset ${offset} limit ${pageSize};`;
     return await query(text, where.values);
 }
 
-async function getByVisitId(id) {
-    const text = `
-SELECT
-"townId",
-"townName",
-"countyName",
-"mappedPoolId" AS "poolId",
-"mappedPoolStatus" AS "poolStatus",
-SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-vpmapped.*,
-vpmapped."createdAt" AS "mappedCreatedAt",
-vpmapped."updatedAt" AS "mappedUpdatedAt",
-vpvisit.*,
-vpvisit."createdAt" AS "visitCreatedAt",
-vpvisit."updatedAt" AS "visitUpdatedAt",
-vpreview.*,
-vpreview."createdAt" AS "reviewCreatedAt",
-vpreview."updatedAt" AS "reviewUpdatedAt"
-FROM vpmapped
-LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
-LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
-LEFT JOIN vptown ON "mappedTownId"=vptown."townId"
-LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
-WHERE "visitId"=$1;`;
-    return await query(text, [id])
+function getByVisitId(id) {
+  return getBy({column:'visitId', value:id});
 }
-
-async function getByPoolId(id) {
+function getByPoolId(id) {
+  return getBy({column:'mappedPoolId', value:id});
+}
+async function getBy(getBy={column:'visitId', value:1}) {
     const text = `
-SELECT
-"townId",
-"townName",
-"countyName",
-"mappedPoolId" AS "poolId",
-"mappedPoolStatus" AS "poolStatus",
-SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-vpmapped.*,
-vpmapped."createdAt" AS "mappedCreatedAt",
-vpmapped."updatedAt" AS "mappedUpdatedAt",
-vpvisit.*,
-vpvisit."createdAt" AS "visitCreatedAt",
-vpvisit."updatedAt" AS "visitUpdatedAt",
-vpreview.*,
-vpreview."createdAt" AS "reviewCreatedAt",
-vpreview."updatedAt" AS "reviewUpdatedAt"
-FROM vpmapped
-LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
-LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
-LEFT JOIN vptown ON "mappedTownId"=vptown."townId"
-LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
-WHERE "mappedPoolId"=$1;`;
-    return await query(text, [id])
+    SELECT
+    "townId",
+    "townName",
+    "countyName",
+    "mappedPoolId" AS "poolId",
+    "mappedPoolStatus" AS "poolStatus",
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+    vpmapped.*,
+    vpmapped."createdAt" AS "mappedCreatedAt",
+    vpmapped."updatedAt" AS "mappedUpdatedAt",
+    vpvisit.*,
+    vpvisit."createdAt" AS "visitCreatedAt",
+    vpvisit."updatedAt" AS "visitUpdatedAt",
+    vpreview.*,
+    vpreview."createdAt" AS "reviewCreatedAt",
+    vpreview."updatedAt" AS "reviewUpdatedAt"
+    vpsurvey.*,
+    vpsurvey."createdAt" AS "surveyCreatedAt",
+    vpsurvey."updatedAt" AS "surveyUpdatedAt"
+    FROM vpmapped
+    LEFT JOIN vpvisit ON vpvisit."visitPoolId"="mappedPoolId"
+    LEFT JOIN vpreview ON vpreview."reviewPoolId"="mappedPoolId"
+    LEFT JOIN vpsurvey ON "surveyPoolId"="mappedPoolId"
+    LEFT JOIN vptown ON "mappedTownId"=vptown."townId"
+    LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+    WHERE "${getBy.column}"=$1;`;
+    return await query(text, [getBy.value])
 }

@@ -30,7 +30,7 @@ function jwt() {
             '/users/verify',
             '/users/confirm',
 
-            '/utils/where',
+            { url: /^\/utils\/where/, methods: ['GET'] },
 
             '/vtinfo/towns',
             '/parcel/townId/*',
@@ -45,14 +45,14 @@ function jwt() {
             { url: /^\/pools\/visit\/.*/, methods: ['GET'] },
             { url: /^\/pools\/visit\/page\/.*/, methods: ['GET'] },
 
-            '/pools', // /pools performs a getAll()
+            //'/pools', // /pools performs a getAll()
+            { url: /^\/pools/, methods: ['GET'] },
             { url: /^\/pools\/.*/, methods: ['GET'] },
             { url: /^\/pools\/page\/.*/, methods: ['GET'] },
 
-            //'/survey', // /survey performs a getAll()
-            //'/survey/upload',
             { url: /^\/survey\/upload/, methods: ['POST'] },
-            '/survey/columns',
+            { url: /^\/survey\/columns/, methods: ['GET'] },
+            { url: /^\/survey/, methods: ['GET'] },
             { url: /^\/survey\/.*/, methods: ['GET'] },
             { url: /^\/survey\/page\/.*/, methods: ['GET'] }
         ]

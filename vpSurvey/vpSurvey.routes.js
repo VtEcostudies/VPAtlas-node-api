@@ -69,8 +69,9 @@ function getGeoJson(req, res, next) {
 }
 
 function upload(req, res, next) {
-    console.log(`upload req.file:`);
-    console.dir(req.file);
+    console.log('upload req.file:', req.file);
+    console.log('upload req.body', req.body);
+    console.log('upload req.query', req.query);
     service.upload(req)
         .then((item) => {res.json(item);})
         .catch(err => {

@@ -306,8 +306,11 @@ CREATE TABLE vpsurvey_uploads (
 	"surveyUpload_mimetype" TEXT NOT NULL,
 	"surveyUpload_path" TEXT NOT NULL,
 	"surveyUpload_size" INTEGER,
+	"surveyUploadType" TEXT, --INSERT or UPDATE
 	"surveyUploadSuccess" BOOLEAN,
+	"surveyUploadSurveyId" jsonb[],
 	"surveyUploadError" TEXT,
+	"surveyUploadDetail" TEXT,
 	"surveyUploadRowCount" INTEGER
 );
 

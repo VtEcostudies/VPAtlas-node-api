@@ -154,12 +154,17 @@ async function getGeoJson(body={}) {
 async function upload(req) {
   const fileRows = [];
   var logId = 0;
+  var update = 0;
 
   return new Promise(async (resolve, reject) => {
 
     if (!req.file) {
       reject({message:`Upload file missing.`, error:true});
     }
+
+    if (req.query) {update = req.query.update;}
+
+    console.log('upload | update:', update);
 
     insert_log_upload_attempt(req.file)
       .then(res => {console.log('insert_log_upload_attempt | Success |', res.rows[0]); logId=res.rows[0].surveyUploadId;})
@@ -194,16 +199,17 @@ async function upload(req) {
             var yearRow = {}; //single object of colum:value pairs to insert in jsonb column of vpsurvey_year
             var colum = null;
             var split = [];
-            var obsId = 0; //obsId of zero means both obs or joint obs?
+            var obsId = 1; //obsId is 1-based for actual observers
             var value = null; //temporary local var to hold values for scrubbing
             for (j=0;j<fileRows[0].length;j++) {
               colum = fileRows[0][j];
               split = colum.split(obsDelim); colum = split[split.length-1];
               obsId = (2==split.length?split[0]:0); obsId = (obsId?obsId.slice(-1):0);
               //if (!speciesRow[obsId]) {speciesRow[obsId] = {};} //initialize speciesRow array element
-              if (!amphibRow[obsId]) {amphibRow[obsId] = {};} //initialize amphibRow array element
+              if (obsId && !amphibRow[obsId]) {amphibRow[obsId] = {};} //initialize valid amphibRow array element
               value = fileRows[i][j];
-              if ('' === value) {value = null;}
+              if ('' === value) {value = null;} //convert empty strings to null
+              if (`${Number(value)}` == value) {value = Number(value);} //convert string number to numbers
               if (tableColumns['vpsurvey'].includes(colum)) {surveyRow[colum]=value;}
               if (tableColumns['vpsurvey_year'].includes(colum)) {yearRow[colum]=value;}
               if (tableColumns['vpsurvey_macro'].includes(colum)) {macroRow[colum]=value;}
@@ -219,17 +225,23 @@ async function upload(req) {
 
           //https://stackoverflow.com/questions/37300997/multi-row-insert-with-pg-promise
           const columns = new db.pgp.helpers.ColumnSet(surveyColumns, {table: 'vpsurvey'});
-          const query = db.pgp.helpers.insert(valArr, columns);
-          //to-do: add returning clause to query to get info about results on successful insert
-          console.log(query);
+          var query = db.pgp.helpers.insert(valArr, columns);
+          if (update) {
+            query += `
+            ON CONFLICT ON CONSTRAINT "vpsurvey_unique_surveyPoolId_surveyTypeId_surveyDate"
+            DO UPDATE SET ("${surveyColumns.join('","')}")=(EXCLUDED."${surveyColumns.join('",EXCLUDED."')}")`;
+          }
+          query += ' RETURNING "surveyId", "createdAt"!="updatedAt" AS updated ';
+          console.log(query); //verbatim query with values for testing
           //console.log(columns);
           //console.log(valArr);
-          await db.pgpDb.none(query)
+          await db.pgpDb.many(query) //'many' for expected return values
             .then(res => {
               console.log(res);
               update_log_upload_attempt(logId, {
                 surveyUploadSuccess:true,
-                surveyUploadRowCount:fileRows.length-1
+                surveyUploadRowCount:res.length,
+                surveyUploadSurveyId:res
                 });
               resolve(res);
             })
@@ -237,7 +249,8 @@ async function upload(req) {
               console.log(err.message);
               update_log_upload_attempt(logId, {
                 surveyUploadSuccess:false,
-                surveyUploadError:err.message
+                surveyUploadError:err.message,
+                surveyUploadDetail:err.detail
                 });
               reject(err);
             });
@@ -279,7 +292,9 @@ async function update_log_upload_attempt(surveyUploadId=0, body={}) {
 }
 
 /*
-  vpSurvey INSERT probably needs a server-side function to handle the different tables.
+  vpSurvey INSERT uses server-side TRIGGER functions to handle the different tables.
+
+  See upload for how that's handled.
 */
 async function create(body) {
     var queryColumns = pgUtil.parseColumns(body, 1, [], staticColumns);
@@ -293,20 +308,12 @@ async function create(body) {
 }
 
 async function update(id, body) {
-    console.log(`vpSurvey.service.update | before pgUtil.parseColumns`, staticColumns);
     var queryColumns = pgUtil.parseColumns(body, 2, [id], staticColumns);
     text = `update vpSurvey set (${queryColumns.named}) = (${queryColumns.numbered}) where "surveyId"=$1 returning "surveyId"`;
     console.log(text, queryColumns.values);
     return new Promise(async (resolve, reject) => {
       await query(text, queryColumns.values)
-        .then(async rev => {
-          var qry = `update vpmapped set "mappedPoolStatus"=$1 where "mappedPoolId"=$2 returning $3::int as "surveyId"`;
-          var val = [body.reviewPoolStatus, body.surveyPoolId, rev.rows[0].surveyId];
-          console.log('vpSurvey.service::update', qry, val);
-          await query(qry, val)
-            .then(res => {resolve(res);})
-            .catch(err => {reject(err);});
-        })
+        .then(res => {resolve(res);})
         .catch(err => {reject(err);});
     })
 }
