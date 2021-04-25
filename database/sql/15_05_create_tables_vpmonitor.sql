@@ -122,9 +122,9 @@ create table vpsurvey (
 	--"surveyTownId" INTEGER NOT NULL REFERENCES vptown("townId"),
 	"surveyPoolLatitude" NUMERIC(11,8),
 	"surveyPoolLongitude" NUMERIC(11,8),
-	"surveyPoolLocationGeo" geometry(Geometry, 4326),
+	--"surveyPoolLocationGeo" geometry(Geometry, 4326), --leave these to vpmapped alone
 	"surveyPoolBorderJson" jsonb,
-	"surveyPoolBorderGeo" geometry(Geometry, 4326),
+	--"surveyPoolBorderGeo" geometry(Geometry, 4326), --leave these to vpmapped alone
 	"surveyAcousticMonitor" TEXT,
 	"surveyHoboLogger" TEXT,
 	"surveyHoboData" TEXT,
@@ -245,6 +245,10 @@ CREATE TABLE vpsurvey_amphib (
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
 
+ALTER TABLE vpsurvey_amphib DROP CONSTRAINT IF EXISTS "vpsurvey_amphib_unique_surveyId_observerEmail";
+ALTER TABLE vpsurvey_amphib ADD CONSTRAINT "vpsurvey_amphib_unique_surveyId_observerEmail"
+	UNIQUE("surveyAmphibSurveyId","surveyAmphibObsEmail");
+
 CREATE TABLE vpsurvey_macro (
 	"surveyMacroSurveyId" INTEGER NOT NULL REFERENCES vpsurvey("surveyId"),
 	--"surveyMacroObsEmail" TEXT NOT NULL, --do not reference vpuser("email") to allow users to change emails
@@ -262,6 +266,10 @@ CREATE TABLE vpsurvey_macro (
   "createdAt" TIMESTAMP DEFAULT NOW(),
   "updatedAt" TIMESTAMP DEFAULT NOW()
 );
+
+ALTER TABLE vpsurvey_macro DROP CONSTRAINT IF EXISTS "vpsurvey_macro_unique_surveyId";
+ALTER TABLE vpsurvey_macro ADD CONSTRAINT "vpsurvey_macro_unique_surveyId"
+	UNIQUE("surveyMacroSurveyId");
 
 /*
   Definition table for photographable vernal pool indicator species.
@@ -441,6 +449,40 @@ ALTER FUNCTION insert_vpsurvey_subtables_from_vpsurvey_jsonb()
 DROP TRIGGER IF EXISTS trigger_after_insert_vpsurvey_subtables_from_vpsurvey_jsonb ON vpsurvey;
 CREATE TRIGGER trigger_after_insert_vpsurvey_subtables_from_vpsurvey_jsonb AFTER INSERT ON vpsurvey
   FOR EACH ROW EXECUTE PROCEDURE insert_vpsurvey_subtables_from_vpsurvey_jsonb();
+
+DROP FUNCTION IF EXISTS update_vpsurvey_subtables_from_vpsurvey_jsonb();
+--DROP FUNCTION IF EXISTS delete_vpsurvey_subtables_from_vpsurvey_jsonb();
+CREATE OR REPLACE FUNCTION delete_vpsurvey_subtables_from_vpsurvey_jsonb()
+    RETURNS trigger
+		LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+--spcsJson jsonb := NEW."surveySpeciesJson";
+amphibJson jsonb := NEW."surveyAmphibJson";
+macroJson jsonb := NEW."surveyMacroJson";
+yearJson jsonb := NEW."surveyYearJson";
+BEGIN
+	RAISE NOTICE 'DELETE_vpsurvey_subtables_from_vpsurvey_jsonb() surveyId:%', NEW."surveyId";
+	RAISE NOTICE 'surveyYearJson->>surveyYear: %', yearJson->>'surveyYear';
+	RAISE NOTICE 'surveyMacroJson: %', macroJson;
+	RAISE NOTICE 'surveyAmphibJson.1: %', amphibJson->'1';
+	RAISE NOTICE 'surveyAmphibJson.2: %', amphibJson->'2';
+	DELETE FROM vpsurvey_year WHERE "surveyYearSurveyId"=NEW."surveyId";
+	DELETE FROM vpsurvey_amphib WHERE "surveyAmphibSurveyId"=NEW."surveyId";
+	DELETE FROM vpsurvey_macro WHERE "surveyMacroSurveyId"=NEW."surveyId";
+	RETURN NEW;
+END;
+$BODY$;
+
+ALTER FUNCTION delete_vpsurvey_subtables_from_vpsurvey_jsonb()
+    OWNER TO vpatlas;
+
+--For a wholesale update from a complete vpsurvey record, we delete subtables BEFORE UPDATE
 DROP TRIGGER IF EXISTS trigger_before_update_vpsurvey_subtables_from_vpsurvey_jsonb ON vpsurvey;
-CREATE TRIGGER trigger_before_update_vpsurvey_subtables_from_vpsurvey_jsonb AFTER UPDATE ON vpsurvey
-  FOR EACH ROW EXECUTE PROCEDURE insert_vpsurvey_subtables_from_vpsurvey_jsonb();
+CREATE TRIGGER trigger_before_update_vpsurvey_subtables_from_vpsurvey_jsonb BEFORE UPDATE ON vpsurvey
+	FOR EACH ROW EXECUTE PROCEDURE delete_vpsurvey_subtables_from_vpsurvey_jsonb();
+
+--For a wholesale update from a complete vpsurvey record, we insert subtables AFTER UPDATE
+DROP TRIGGER IF EXISTS trigger_after_update_vpsurvey_subtables_from_vpsurvey_jsonb ON vpsurvey;
+CREATE TRIGGER trigger_after_update_vpsurvey_subtables_from_vpsurvey_jsonb AFTER UPDATE ON vpsurvey
+	FOR EACH ROW EXECUTE PROCEDURE insert_vpsurvey_subtables_from_vpsurvey_jsonb();

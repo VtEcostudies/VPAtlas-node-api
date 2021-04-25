@@ -3,7 +3,6 @@ const router = express.Router();
 const service = require('./vpSurvey.service');
 
 const multer = require('multer');
-const csv = require('fast-csv');
 const upFile = multer({ dest: 'vpsurvey/uploads/' });
 
 // routes NOTE: routes with names for same method (ie. GET) must be above routes
@@ -14,7 +13,7 @@ router.get('/count', getCount);
 router.get('/', getAll);
 router.get('/:id', getById);
 router.get('/pool/:poolId', getByPoolId);
-router.post('/upload', upFile.single('vpsurvey.csv'), upload);
+router.post('/upload', upFile.single('surveyUploadFile'), upload);
 router.post('/', create);
 router.put('/:id', update);
 router.delete('/:id', _delete);
@@ -46,7 +45,7 @@ function getById(req, res, next) {
 }
 
 function getByPoolId(req, res, next) {
-    service.getById(req.params.poolId)
+    service.getByPoolId(req.params.poolId)
         .then(item => item ? res.json(item) : res.sendStatus(404))
         .catch(err => next(err));
 }
@@ -69,13 +68,13 @@ function getGeoJson(req, res, next) {
 }
 
 function upload(req, res, next) {
-    console.log('upload req.file:', req.file);
-    console.log('upload req.body', req.body);
-    console.log('upload req.query', req.query);
+    console.log('vpSurvey.routes::upload() | req.file:', req.file);
+    console.log('vpSurvey.routes::upload() | req.body', req.body);
+    console.log('vpSurvey.routes::upload() | req.query', req.query);
     service.upload(req)
         .then((item) => {res.json(item);})
         .catch(err => {
-            console.log('vpSurvey.routes.upload | error: ' , err.message, err.code);
+            console.log('vpSurvey.routes::upload() | error: ' , err.message, err.code);
             next(err);
         });
 }

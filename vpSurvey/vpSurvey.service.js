@@ -72,11 +72,15 @@ async function getAll(params={}) {
     vpSurvey.*,
     vpSurvey."updatedAt" AS "surveyUpdatedAt",
     vpSurvey."createdAt" AS "surveyCreatedAt",
+    vpsurvey_amphib.*,
+    vpsurvey_macro.*,
     vpmapped.*,
     vpmapped."updatedAt" AS "mappedUpdatedAt",
     vpmapped."createdAt" AS "mappedCreatedAt"
     FROM vpSurvey
     INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
+    INNER JOIN vpsurvey_amphib ON "surveyId"="surveyAmphibSurveyId"
+    INNER JOIN vpsurvey_macro ON "surveyId"="surveyMacroSurveyId"
     LEFT JOIN vptown ON "mappedTownId"="townId"
     LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
     ${where.text} ${orderClause};`;
@@ -85,29 +89,10 @@ async function getAll(params={}) {
 }
 
 function getById(id) {
-  return getBy({column:'surveyId', value:id});
+  return getAll({surveyId:id});
 }
 function getByPoolId(id) {
-  return getBy({column:'surveyPoolId', value:id});
-}
-async function getBy(getBy={column:'surveyId', value:1}) {
-    const text = `
-    SELECT
-    "townId",
-    "townName",
-    "countyName",
-    vpSurvey.*,
-    vpSurvey."updatedAt" AS "surveyUpdatedAt",
-    vpSurvey."createdAt" AS "surveyCreatedAt",
-    vpmapped.*,
-    vpmapped."updatedAt" AS "mappedUpdatedAt",
-    vpmapped."createdAt" AS "mappedCreatedAt"
-    FROM vpSurvey
-    INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
-    LEFT JOIN vptown ON "mappedTownId"="townId"
-    LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
-    WHERE "${getBy.column}"=$1;`;
-    return await query(text, [getBy.value])
+  return getAll({surveyPoolId:id});
 }
 
 async function getGeoJson(body={}) {
@@ -133,7 +118,7 @@ async function getGeoJson(body={}) {
       			) AS properties
               FROM vpSurvey
           		INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
-              INNER JOIN vpsurvey_species ON "surveyId"="surveySpeciesSurveyId"
+              INNER JOIN vpsurvey_amphib ON "surveyId"="surveyAmphibSurveyId"
               INNER JOIN vpsurvey_year ON "surveyId"="surveyYearSurveyId"
               ${where.text}
           ) AS f
@@ -162,7 +147,7 @@ async function upload(req) {
       reject({message:`Upload file missing.`, error:true});
     }
 
-    if (req.query) {update = req.query.update;}
+    if (req.query) {update = 'true' == req.query.update;}
 
     console.log('upload | update:', update);
 

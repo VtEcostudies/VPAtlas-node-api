@@ -38,6 +38,7 @@ https://stackoverflow.com/questions/7042340/error-cant-set-headers-after-they-ar
       };
       console.log(`error-handler::errorHandler()`);
       console.dir(ret);
+      //console.dir(err);
       // default to 500 server error
       //NOTE: this does not throw error. we assume that this is the same http error code as already set elsewhere.
       next(res.status(500).json(ret));

@@ -287,7 +287,7 @@ async function getBy(getBy={column:'visitId', value:1}) {
     vpvisit."updatedAt" AS "visitUpdatedAt",
     vpreview.*,
     vpreview."createdAt" AS "reviewCreatedAt",
-    vpreview."updatedAt" AS "reviewUpdatedAt"
+    vpreview."updatedAt" AS "reviewUpdatedAt",
     vpsurvey.*,
     vpsurvey."createdAt" AS "surveyCreatedAt",
     vpsurvey."updatedAt" AS "surveyUpdatedAt"
