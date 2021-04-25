@@ -216,7 +216,7 @@ async function upload(req) {
             ON CONFLICT ON CONSTRAINT "vpsurvey_unique_surveyPoolId_surveyTypeId_surveyDate"
             DO UPDATE SET ("${surveyColumns.join('","')}")=(EXCLUDED."${surveyColumns.join('",EXCLUDED."')}")`;
           }
-          query += ' RETURNING "surveyId", "createdAt"!="updatedAt" AS updated ';
+          query += ' RETURNING "surveyId", "surveyPoolId", "createdAt"!="updatedAt" AS updated ';
           console.log(query); //verbatim query with values for testing
           //console.log(columns);
           //console.log(valArr);
