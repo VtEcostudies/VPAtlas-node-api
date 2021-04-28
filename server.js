@@ -36,6 +36,10 @@ for (var i=0; i<process.argv.length; i++) {
     case "port":
         argPort = arg;
         break;
+    case "dev-remote":
+        tls=1;
+        argPort=4322;
+        break;
     case "prod":
         tls=1;
         argPort=4322;
