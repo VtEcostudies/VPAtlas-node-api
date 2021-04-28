@@ -45,7 +45,7 @@ for (var i=0; i<process.argv.length; i++) {
 //set this API's port - dev-local:4000, prod-http:4321, prod-https:4322
 var srvPort = 4000;
 if (argPort) srvPort = argPort;
-debug = 4000 == srvPort;
+//debug = 4000 == srvPort;
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());

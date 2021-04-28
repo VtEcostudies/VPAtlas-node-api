@@ -45,18 +45,20 @@ DROP TRIGGER IF EXISTS trigger_after_update_set_vpuser_alias_rows_from_vpuser_ar
 CREATE TRIGGER trigger_before_update_set_vpuser_alias_rows_from_vpuser_array AFTER UPDATE ON vpuser
   FOR EACH ROW EXECUTE PROCEDURE set_vpuser_alias_rows_from_vpuser_array();
 
---
-DROP FUNCTION IF EXISTS set_mapped_user_id_from_mapped_by_user();
+--DROP FUNCTION IF EXISTS set_mapped_user_id_from_mapped_by_user();
 CREATE OR REPLACE FUNCTION set_mapped_user_id_from_mapped_by_user()
     RETURNS trigger
 		LANGUAGE 'plpgsql'
 AS $BODY$
 BEGIN
+	--SELECT DISTINCT below to limit results to a single value
+	--It's critical that both username and alias are unique so we don't have
+	--mis-matches here.
 	NEW."mappedUserId" = (
-		SELECT "id" FROM vpuser
-		INNER JOIN vpuser_alias ON "aliasUserId"="id"
-		WHERE "username"=NEW."mappedByUser"
-		OR "alias"=NEW."mappedByUser"
+		SELECT DISTINCT(vpuser."id") FROM vpuser
+		LEFT JOIN vpuser_alias ON "aliasUserId"="id"
+		WHERE vpuser."username"=NEW."mappedByUser"
+		OR vpuser_alias."alias"=NEW."mappedByUser"
 	);
 	RAISE NOTICE 'set_mapped_user_id_from_mapped_by_user() userName:% | userId:%', NEW."mappedByUser", NEW."mappedUserId";
 	RETURN NEW;

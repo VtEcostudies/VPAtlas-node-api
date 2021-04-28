@@ -264,10 +264,12 @@ offset ${offset} limit ${pageSize};`;
 }
 
 function getByVisitId(id) {
-  return getBy({column:'visitId', value:id});
+  return getAll({visitId:id});
+  //return getBy({column:'visitId', value:id});
 }
 function getByPoolId(id) {
-  return getBy({column:'mappedPoolId', value:id});
+  return getAll({mappedPoolId:id});
+  //return getBy({column:'mappedPoolId', value:id});
 }
 async function getBy(getBy={column:'visitId', value:1}) {
     const text = `
@@ -287,7 +289,7 @@ async function getBy(getBy={column:'visitId', value:1}) {
     vpvisit."updatedAt" AS "visitUpdatedAt",
     vpreview.*,
     vpreview."createdAt" AS "reviewCreatedAt",
-    vpreview."updatedAt" AS "reviewUpdatedAt",
+    vpreview."updatedAt" AS "reviewUpdatedAt"
     vpsurvey.*,
     vpsurvey."createdAt" AS "surveyCreatedAt",
     vpsurvey."updatedAt" AS "surveyUpdatedAt"

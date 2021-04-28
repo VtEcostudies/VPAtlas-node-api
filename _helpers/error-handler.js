@@ -27,14 +27,20 @@ https://stackoverflow.com/questions/7042340/error-cant-set-headers-after-they-ar
 
     else {
       ret = {
-        name:err.name,
-        message:err.message,
-        hint:err.hint,
-        detail:err.detail,
-        code:err.code,
-        table:err.table,
-        constraint:err.constraint,
-        column:err.column
+        name: err.name,
+        code: err.code,
+        severity: err.severity,
+        message: err.message,
+        hint: err.hint,
+        detail: err.detail,
+        table: err.table,
+        constraint: err.constraint,
+        column: err.column,
+        dataType: err.dataType,
+        where: err.where,
+        file: err.file,
+        line: err.line,
+        routine: err.routine
       };
       console.log(`error-handler::errorHandler()`);
       console.dir(ret);

@@ -14,22 +14,18 @@ module.exports = {
     delete: _delete
 };
 
-//file scope list of vpreview table columns retrieved on app startup (see 'getColumns()' below)
-pgUtil.getColumns("vpreview", staticColumns) //run it once on init: to create the array here. also diplays on console.
+//file scope list of vpSurvey tables' columns retrieved at app startup (see 'getColumns()' below)
+const tables = [
+  "vpreview",
+  "vptown"
+];
+for (i=0; i<tables.length; i++) {
+  pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
-        return res;
+      return res;
     })
-    .catch(err => {
-        console.log(`vpReview.service.pg.pgUtil.getColumns | error: `, err.message);
-    });
-
-pgUtil.getColumns("vptown", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpReview.service.pg.pgUtil.getColumns | table:vptown | error: `, err.message);
-    });
+    .catch(err => {console.log(`vpReview.service.pg.pgUtil.getColumns | table:${tables[i]} | error: `, err.message);});
+}
 
 function getColumns() {
     return new Promise((resolve, reject) => {
