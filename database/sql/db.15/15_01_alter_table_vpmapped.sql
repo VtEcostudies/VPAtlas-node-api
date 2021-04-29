@@ -8,19 +8,6 @@ UPDATE vpmapped SET
 FROM vpknown
 WHERE "poolId"="mappedPoolId";
 
-DROP TABLE IF EXISTS vpknown CASCADE;
-
-DROP TRIGGER trigger_insert_vpknown_after_insert_vpmapped ON vpmapped;
-DROP FUNCTION IF EXISTS insert_vpknown_after_insert_vpmapped();
-DROP TRIGGER trigger_delete_vpknown_before_delete_vpmapped ON vpmapped;
-DROP FUNCTION IF EXISTS delete_vpknown_before_delete_vpmapped();
-DROP TRIGGER trigger_update_vpknown_after_update_vpmapped ON vpmapped;
-DROP FUNCTION IF EXISTS update_vpknown_after_update_vpmapped();
-
-DELETE FROM vpmapped where "mappedPoolId"='None';
-DELETE FROM vpvisit where "visitId"=0;
-DELETE FROM vpsurvey where "surveyId"=0;
-
 ALTER TABLE vpmapped ALTER COLUMN "mappedPoolLocation" TYPE GEOMETRY(Geometry, 4326);
 ALTER TABLE vpmapped ALTER COLUMN "mappedPoolBorder" TYPE GEOMETRY(Geometry, 4326);
 

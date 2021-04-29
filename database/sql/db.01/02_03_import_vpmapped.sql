@@ -16,6 +16,6 @@ COPY vpmapped(
 	"createdAt",
 	"updatedAt"        
 )
---FROM 'vpMapped.20190520.csv' DELIMITER ',' CSV HEADER;
+--FROM '02_03_vpmapped_20190520.csv' DELIMITER ',' CSV HEADER;
 --FROM 'C:\Users\jloomis\Documents\VCE\VPAtlas\vpAtlas-node-api\vpMapped\db.01\vpMapped.20190520.csv' DELIMITER ',' CSV HEADER;
 --FROM '/home/ubuntu/VPAtlas-node-api/vpMapped/vpMapped/db.01/.20190520.csv' DELIMITER ',' CSV HEADER;
