@@ -54,3 +54,6 @@ create table geo_biophysical (
 	CONSTRAINT fk_geo_biophysical_id FOREIGN KEY ("geoId") REFERENCES vpbiophysical ("biophysicalId")
 )
 --TRUNCATE TABLE geo_biophysical;
+
+SELECT 'NOW YOU NEED TO LOAD GEO-DATA USING THE API. SEE C:\Users\jloomis\Documents\VCE\VPAtlas\vpAtlas-node-api\vcgiMapData\vcgi_load.js'
+AS "IMPORTANT_NOTICE_YOU_NEED_TO_LOAD_DATA_NEXT";

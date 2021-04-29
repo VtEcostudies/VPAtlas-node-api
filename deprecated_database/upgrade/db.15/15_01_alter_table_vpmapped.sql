@@ -1,6 +1,6 @@
 
 --ALTER TABLE vpmapped ADD COLUMN "mappedPoolStatus" POOLSTATUS DEFAULT 'Potential';
---ALTER TABLE vpmapped ALTER COLUMN "mappedPoolStatus" SET DEFAULT 'Potential';
+ALTER TABLE vpmapped ALTER COLUMN "mappedPoolStatus" SET DEFAULT 'Potential';
 
 --populate vpmapped geometry with currently-known mapped pool data
 UPDATE vpmapped SET

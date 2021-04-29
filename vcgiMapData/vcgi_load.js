@@ -63,7 +63,7 @@ for (var i=2; i<process.argv.length; i++) {
       idColum = 'stateId'; //id
 			break;
     default:
-      console.log('Invalid command-line argument. Use eg. town=name. Or, just state.')
+      console.log('Invalid command-line argument. To load all for a type, use node vcgi_load.js town | county | biophysical | state. Or, use eg. town=name.')
       break;
     }
 }
