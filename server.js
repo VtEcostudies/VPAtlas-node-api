@@ -7,6 +7,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const jwt = require('_helpers/jwt');
 const errorHandler = require('_helpers/error-handler');
+var serverName = 'localhost'; //use serverName to find eg. SSL certs
 var debug = false;
 
 /* Command-Line Arguments Processing
@@ -39,10 +40,12 @@ for (var i=0; i<process.argv.length; i++) {
     case "dev-remote":
         tls=1;
         argPort=4322;
+        serverName='dev.vpatlas.org';
         break;
     case "prod":
         tls=1;
         argPort=4322;
+        serverName='vpatlas.org';
         break;
 	}
 }
@@ -98,8 +101,8 @@ app.use(errorHandler);
 var server = null;
 if (tls > 0) {
   server = https.createServer({
-      key: fs.readFileSync('/etc/letsencrypt/live/vpatlas.org/privkey.pem'),
-      cert: fs.readFileSync('/etc/letsencrypt/live/vpatlas.org/fullchain.pem')
+      key: fs.readFileSync(`/etc/letsencrypt/live/${serverName}/privkey.pem`),
+      cert: fs.readFileSync(`/etc/letsencrypt/live/${serverName}/fullchain.pem`)
   }, app).listen(srvPort, () => {console.log(`https server listening on ${srvPort}`);});
 } else {
   server = app.listen(srvPort, () => {console.log(`http server listening on ${srvPort}`);});
