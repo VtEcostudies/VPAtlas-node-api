@@ -17,6 +17,8 @@ const fs = require('fs');
 var geoFile = null;
 var geoTabl = null;
 var nameTbl = null;
+var nameCol = null;
+var idColum = null;
 var propFld = null;
 const update = 1; //flag whether to update parcel data in the db
 
@@ -68,7 +70,8 @@ for (var i=2; i<process.argv.length; i++) {
     }
 }
 
-loadItem(geoFile, geoTabl, propFld, nameTbl, nameCol, idColum);
+if (geoFile) {loadItem(geoFile, geoTabl, propFld, nameTbl, nameCol, idColum);}
+else {console.log(`No item specified. Please request one of: town, county, biophysical, or state.`);}
 
 function loadItem(geoFile, geoTabl, propFld, nameTbl, nameCol, idColum) {
   console.log(`Reading file ${geoFile} into ${geoTabl} using geoJSON property '${propFld}' in ${nameTbl}`);

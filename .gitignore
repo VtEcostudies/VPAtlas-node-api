@@ -13,6 +13,7 @@ logs
 *.log
 npm-debug.log*
 *.out
+*.txt
 
 # Runtime data
 pids
