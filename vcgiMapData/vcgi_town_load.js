@@ -51,7 +51,7 @@ loadTowns(town);
 
 function loadTowns() {
   // read towns geoJSON file
-  fs.readFile('./other  _geoJSON/vcgi_town_polygons.geojson', 'utf-8', async (err, data) => {
+  fs.readFile('./other_geoJSON/vcgi_town_polygons.geojson', 'utf-8', async (err, data) => {
       if (err) {
           throw err;
       }
