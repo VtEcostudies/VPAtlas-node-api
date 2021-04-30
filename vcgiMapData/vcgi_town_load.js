@@ -81,7 +81,6 @@ function loadTowns() {
                       console.log('ERROR | fs.writeFile |', err);
                     });
                   })
-                }
             })
             .catch(err => {
               console.log(`ERROR | getTown | rowCount:${err.rows.length}`);
