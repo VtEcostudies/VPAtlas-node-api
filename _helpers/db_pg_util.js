@@ -86,6 +86,7 @@ function whereClause(params={}, staticColumns=[], clause='WHERE') {
     var where = '';
     var values = [];
     var idx = 1;
+    //console.log('dg_pg_util::whereClause | params', params);
     if (Object.keys(params).length) {
         for (var key in params) {
             console.log('key', key, 'params[key]', params[key]);

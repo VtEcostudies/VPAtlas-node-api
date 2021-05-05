@@ -10,6 +10,7 @@ const upFile = multer({ dest: 'vpsurvey/uploads/' });
 router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
 router.get('/count', getCount);
+router.get('/pools', getPools); //get surveyed pool ids
 router.get('/', getAll);
 router.get('/:id', getById);
 router.get('/pool/:poolId', getByPoolId);
@@ -28,6 +29,12 @@ function getColumns(req, res, next) {
 
 function getCount(req, res, next) {
     service.getCount(req.query)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getPools(req, res, next) {
+    service.getPools(req.query)
         .then(items => res.json(items))
         .catch(err => next(err));
 }
@@ -74,7 +81,7 @@ function upload(req, res, next) {
     service.upload(req)
         .then((item) => {res.json(item);})
         .catch(err => {
-            console.log('vpSurvey.routes::upload() | error: ' , err.message, err.code);
+            console.log('vpSurvey.routes::upload() | error: ', err.code, '|', err.message, '|', err.detail);
             next(err);
         });
 }

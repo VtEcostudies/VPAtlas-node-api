@@ -10,6 +10,7 @@ var tableColumns = []; //each table's columns by table name
 module.exports = {
     getColumns,
     getCount,
+    getPools,
     getAll,
     getById,
     getByPoolId,
@@ -56,6 +57,17 @@ async function getCount(query={}) {
     return await query(text, where.values);
 }
 
+async function getPools(params={}) {
+  const where = pgUtil.whereClause(params, staticColumns);
+  const text = `
+  SELECT DISTINCT("surveyPoolId")
+  FROM vpsurvey
+  ${where.text}
+  `;
+  console.log(text, where.values);
+  return await query(text, where.values);
+}
+
 async function getAll(params={}) {
     var orderClause = 'order by "surveyId" desc';
     if (params.orderBy) {
@@ -63,17 +75,26 @@ async function getAll(params={}) {
         var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';
         orderClause = `order by "${col}" ${dir}`;
     }
-    const where = pgUtil.whereClause(params, staticColumns);
+    //custom handling of date-range fields, for now, because 'whereClause' can't handle it
+    var range = '';
+    if (params.surveyDateBeg && params.surveyDateEnd) {
+      range = `WHERE "surveyDate" BETWEEN '${params.surveyDateBeg}' AND '${params.surveyDateEnd}' `;
+      delete params.surveyDateBeg; delete params.surveyDateEnd;
+    }
+    where = pgUtil.whereClause(params, staticColumns, range!=''?'AND':'WHERE');
     const text = `
     SELECT
     "townId",
     "townName",
     "countyName",
+    surveyuser.username, surveyuser.id, surveyuser.email,
     vpSurvey.*,
     vpSurvey."updatedAt" AS "surveyUpdatedAt",
     vpSurvey."createdAt" AS "surveyCreatedAt",
     vpsurvey_amphib.*,
+    to_json(vpsurvey_amphib) AS "surveyAmphib",
     vpsurvey_macro.*,
+    to_json(vpsurvey_macro) AS "surveyMacros",
     vpmapped.*,
     vpmapped."updatedAt" AS "mappedUpdatedAt",
     vpmapped."createdAt" AS "mappedCreatedAt"
@@ -81,9 +102,10 @@ async function getAll(params={}) {
     INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
     INNER JOIN vpsurvey_amphib ON "surveyId"="surveyAmphibSurveyId"
     INNER JOIN vpsurvey_macro ON "surveyId"="surveyMacroSurveyId"
+    LEFT JOIN vpuser AS surveyuser ON "surveyUserId"="id"
     LEFT JOIN vptown ON "mappedTownId"="townId"
     LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
-    ${where.text} ${orderClause};`;
+    ${range + where.text} ${orderClause};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
