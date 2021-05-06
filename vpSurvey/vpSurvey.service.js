@@ -11,6 +11,7 @@ module.exports = {
     getColumns,
     getCount,
     getPools,
+    getObservers,
     getAll,
     getById,
     getByPoolId,
@@ -62,6 +63,25 @@ async function getPools(params={}) {
   const text = `
   SELECT DISTINCT("surveyPoolId")
   FROM vpsurvey
+  ${where.text}
+  `;
+  console.log(text, where.values);
+  return await query(text, where.values);
+}
+
+async function getObservers(params={}) {
+  const where = pgUtil.whereClause(params, staticColumns);
+  const text = `
+  SELECT DISTINCT("surveyAmphibObsEmail") AS "surveyObserver"
+  FROM vpsurvey_amphib
+  UNION
+  SELECT DISTINCT("email") AS "surveyObserver"
+  FROM vpuser
+  --INNER JOIN vpusers_roles ON id="userId" AND role LIKE '%bserver'
+  UNION
+  SELECT DISTINCT("username") AS "surveyObserver"
+  FROM vpuser
+  --INNER JOIN vpusers_roles ON id="userId" AND role LIKE '%bserver'
   ${where.text}
   `;
   console.log(text, where.values);

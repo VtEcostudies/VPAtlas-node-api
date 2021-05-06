@@ -11,6 +11,7 @@ router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
 router.get('/count', getCount);
 router.get('/pools', getPools); //get surveyed pool ids
+router.get('/observers', getObservers); //get pool-survey observers
 router.get('/', getAll);
 router.get('/:id', getById);
 router.get('/pool/:poolId', getByPoolId);
@@ -35,6 +36,12 @@ function getCount(req, res, next) {
 
 function getPools(req, res, next) {
     service.getPools(req.query)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getObservers(req, res, next) {
+    service.getObservers(req.query)
         .then(items => res.json(items))
         .catch(err => next(err));
 }
