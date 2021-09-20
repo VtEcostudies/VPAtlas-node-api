@@ -61,9 +61,11 @@ async function getCount(body={}) {
   traffic and speed the UX.
 */
 async function getOverview(params={timestamp:'1970-02-28'}) {
-  var orderClause = 'order by "poolId"';
+  if (0 === Object.keys(params).length) {params={timestamp:'1970-01-31'};}
   var timestamp = params.timestamp;
   delete params.timestamp;
+  console.log('vpPools.service::getOverview | timestamp', timestamp);
+  var orderClause = 'order by "poolId"';
   const where = pgUtil.whereClause(params, staticColumns, 'AND');
   var text = `
 SELECT
