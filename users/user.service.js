@@ -18,7 +18,9 @@ async function authenticate({ username, password }) {
     console.log(`user.service.authenticate - user: `, user);
     if (user && bcrypt.compareSync(password, user.hash)) {
         const { hash, ...userWithoutHash } = user.toObject();
-        const token = jwt.sign({ sub: user.id }, config.secret);
+        //BUGFIX 2021-04-25 NEXT 2 LINES
+        //const token = jwt.sign({ sub: user.id }, config.secret);
+        const token = jwt.sign({ sub: user.id }, config.secret, { algorithm: 'HS256'}); //see https://www.npmjs.com/package/jsonwebtoken#algorithms-supported
         return {
             ...userWithoutHash,
             token

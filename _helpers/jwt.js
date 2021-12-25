@@ -16,7 +16,7 @@ Example: Key: Authorization, Value: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.
  */
 function jwt() {
     const secret = config.secret;
-    const algorithms = ['RS256'];
+    const algorithms = ['HS256'];
     return expressJwt({ secret, algorithms, isRevoked }).unless({
     //var ret = expressJwt({ secret, isRevoked }).unless({
         path: [
