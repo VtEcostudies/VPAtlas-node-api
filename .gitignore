@@ -2,6 +2,8 @@
 vpatlas-node-api.komodoproject
 config.json
 
+package-lock.json
+
 #geoJSON downloads
 vcgiMapData/town_geoJSON
 
