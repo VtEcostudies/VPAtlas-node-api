@@ -29,9 +29,9 @@ pgUtil.getColumns("vpvisit", staticColumns) //run it once on init: to create the
 
 function getColumns() {
     console.log(`vpVisit.service.pg.getColumns | staticColumns:`, staticColumns);
-    return new Promise((resolve, reject) => ({
+    return new Promise((resolve, reject) => {
       resolve(staticColumns);
-    })
+    });
 }
 
 async function getCount(body={}) {
