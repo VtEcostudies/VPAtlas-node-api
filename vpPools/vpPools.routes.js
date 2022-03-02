@@ -11,7 +11,6 @@ const service = require('./vpPools.service');
 router.get('/columns', getColumns);
 router.get('/count', getCount);
 router.get('/overview', getOverview); //minimal dataset to support faster mapping views
-router.get('/summary', getSummary);
 router.get('/', getAll);
 router.get('/review', getPoolsNeedReview);
 router.get('/page/:page', getPage);

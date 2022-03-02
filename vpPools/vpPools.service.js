@@ -6,13 +6,13 @@
 const db = require('_helpers/db_postgres');
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
+const Moment = require('moment');
 var staticColumns = [];
 
 module.exports = {
     getColumns,
     getCount,
     getOverview,
-    getSummary,
     getPoolsNeedReview,
     getAll,
     getPage,
@@ -50,11 +50,6 @@ async function getCount(body={}) {
     return await query(text, where.values);
 }
 
-async function getSummary(params) {
-  console.log('not implemented yet!');
-  //return Promise.reject({error:'not implemented yet!'});
-}
-
 /*
   The NEW primary map/table overview query.
 
@@ -88,14 +83,11 @@ mappeduser.username AS "mappedUserName",
 --"mappedObserverUserId",
 vpmapped."updatedAt" AS "mappedUpdatedAt",
 "visitId",
---"visitPoolId",
 "visitUserName",
 "visitObserverUserName", --use this for now as a verbatim field
 --visitobserver.username AS "visitObserverUserName", --use this when we improve database to use a userId for visitObserver
 "visitDate",
 "visitVernalPool",
---"visitLatitude",
---"visitLongitude",
 vpvisit."updatedAt" AS "visitUpdatedAt",
 "reviewId",
 "reviewQACode",
@@ -122,7 +114,8 @@ OR vpvisit."updatedAt">'${timestamp}'::timestamp
 OR vpreview."updatedAt">'${timestamp}'::timestamp
 OR vpsurvey."updatedAt">'${timestamp}'::timestamp)
 ${where.text} ${orderClause}`;
-  console.log(text);
+  console.log('vpPools.service::getOverview | query', text);
+  console.log('vpPools.service::getOverview | timestamp NOW:', Moment.utc().format());
   return await query(text, where.values);
 }
 

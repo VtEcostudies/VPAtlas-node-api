@@ -1,11 +1,11 @@
 {
-    "name": "vpatlas-node-postgres-api",
+    "name": "vpatlas-node-postgis-api",
     "version": "2.0.0",
     "description": "NodeJS + Postgres + PostGIS API for VPAtlas",
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/vtecostudies/vpatlas/node-postgres-api.git"
+        "url": "https://github.com/VtEcostudies/VPAtlas-node-api.git"
     },
     "scripts": {
         "start": "node ./server.js",
