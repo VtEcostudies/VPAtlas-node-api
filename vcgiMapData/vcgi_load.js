@@ -5,9 +5,25 @@
 
   Notes:
 
+  A node command-line utiility to put geoJSON layer files into PostGIS db tables.
+
+  New for VPAtlas with VPMon, like parcelmap layers, load geoJSON boundaries for
+  state, county, town, and biophysical regions, into postGIS and serve via API
+  to UI.
+
   Specifics:
 
+  Download geoJSON file for eg. towns with:
+
+    https://opendata.arcgis.com/datasets/0e4a5d2d58ac40bf87cd8aa950138ae8_39.geojson
+
+  Insert geoJSON data into PostGIS for eg. towns with:
+
+    'node vcgi_load town'
+
   To-Do:
+
+  - Consider adding geoJSON download to this processing.
 
 */
 const db = require('../_helpers/db_postgres');
@@ -25,7 +41,7 @@ const update = 1; //flag whether to update parcel data in the db
 /*
   Command-Line Arguments Processing
   - Space-delimited args of the form action=value
-  - example: 'node vcgi_parcelmap_load town=strafford dest=fs'
+  - example: 'node vcgi_load town'
 */
 for (var i=2; i<process.argv.length; i++) {
   var all = process.argv[i].split('='); //the ith command-line argument
@@ -65,7 +81,7 @@ for (var i=2; i<process.argv.length; i++) {
       idColum = 'stateId'; //id
 			break;
     default:
-      console.log('Invalid command-line argument. To load all for a type, use node vcgi_load.js town | county | biophysical | state. Or, use eg. town=name.')
+      console.log('Invalid command-line argument. To load all for a type, use node vcgi_load.js town | county | biophysical | state.')
       break;
     }
 }

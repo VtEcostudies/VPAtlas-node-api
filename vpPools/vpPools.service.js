@@ -12,6 +12,7 @@ module.exports = {
     getColumns,
     getCount,
     getOverview,
+    getSummary,
     getPoolsNeedReview,
     getAll,
     getPage,
@@ -25,7 +26,6 @@ const tables = [
   "vpvisit",
   "vpreview",
   "vpsurvey",
-  //"vpsurvey_species",
   "vpsurvey_amphib",
   "vpsurvey_macro",
   "vptown"
@@ -50,18 +50,22 @@ async function getCount(body={}) {
     return await query(text, where.values);
 }
 
+async function getSummary(params) {
+  console.log('not implemented yet!');
+  //return Promise.reject({error:'not implemented yet!'});
+}
+
 /*
   The NEW primary map/table overview query.
 
   A new, minimized dataset for the primary map/table overview query.
-  This uses a database VIEW, "poolsGetOverview", which complicates the
-  whereClause logic...
 
   This still supports filtering results by "updatedAt" to reduce network
   traffic and speed the UX.
 */
 async function getOverview(params={timestamp:'1970-02-28'}) {
   if (0 === Object.keys(params).length) {params={timestamp:'1970-01-31'};}
+  if (!params.timestamp) {params.timestamp = '1970-01-31'};
   var timestamp = params.timestamp;
   delete params.timestamp;
   console.log('vpPools.service::getOverview | timestamp', timestamp);
@@ -77,33 +81,41 @@ SELECT
 SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
 SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
 "mappedByUser",
+mappeduser.username AS "mappedUserName",
 "mappedMethod",
 "mappedConfidence",
 "mappedLocationUncertainty",
 --"mappedObserverUserId",
 vpmapped."updatedAt" AS "mappedUpdatedAt",
 "visitId",
-"visitPoolId",
+--"visitPoolId",
 "visitUserName",
+"visitObserverUserName", --use this for now as a verbatim field
+--visitobserver.username AS "visitObserverUserName", --use this when we improve database to use a userId for visitObserver
 "visitDate",
 "visitVernalPool",
-"visitLatitude",
-"visitLongitude",
+--"visitLatitude",
+--"visitLongitude",
 vpvisit."updatedAt" AS "visitUpdatedAt",
 "reviewId",
 "reviewQACode",
 "reviewPoolStatus",
 vpreview."updatedAt" AS "reviewUpdatedAt",
 "surveyId",
-surveyuser.username,
+surveyuser.username AS "surveyUserName",
+--surveyamphibuser.username AS "surveyAmphibObsUser", --remove this, it adds too many rows to results
 vpsurvey."updatedAt" AS "surveyUpdatedAt"
 FROM vpmapped
 LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
 LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
 LEFT JOIN vpsurvey ON "surveyPoolId"="mappedPoolId"
+--INNER JOIN vpsurvey_amphib ON "surveyAmphibSurveyId"=vpsurvey."surveyId" --remove this, it adds too many rows to results
 LEFT JOIN vptown ON "mappedTownId"="townId"
 LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
-LEFT JOIN vpuser AS surveyuser ON "surveyUserId"="id"
+LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser."id"
+--LEFT JOIN vpuser AS visitobserver ON "visitObserverUserId"=visitobserver."id"
+LEFT JOIN vpuser AS surveyuser ON "surveyUserId"=surveyuser."id"
+--LEFT JOIN vpuser AS surveyamphibuser ON "surveyAmphibObsId"=surveyamphibuser."id" --remove this, it adds too many rows to results
 WHERE
 (vpmapped."updatedAt">'${timestamp}'::timestamp
 OR vpvisit."updatedAt">'${timestamp}'::timestamp

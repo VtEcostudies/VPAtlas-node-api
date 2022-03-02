@@ -5,7 +5,8 @@ config.json
 package-lock.json
 
 #geoJSON downloads
-vcgiMapData/town_parcel_geoJSON
+vcgiMapData/parcel_geoJSON
+vcgiMapData/parcel_KML
 
 #database exports
 database/export

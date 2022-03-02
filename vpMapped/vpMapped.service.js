@@ -57,7 +57,7 @@ select
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Confirmed') as confirmed,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Duplicate') as duplicate,
 (select count("mappedPoolId") from vpmapped where "mappedPoolStatus"='Eliminated') as eliminated,
-(select count("mappedPoolId") from vpmapped m
+(select count(distinct "mappedPoolId") from vpmapped m
 left join vpvisit v on v."visitPoolId"=m."mappedPoolId"
 left join vpreview r on r."reviewVisitId"=v."visitId"
 where

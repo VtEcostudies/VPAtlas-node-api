@@ -3,7 +3,7 @@
 
   Project: VPAtlas
 
-  File: vcgi_parcelmap_get.js
+  File: vcgi_parcelmap_load.js
 
   Notes:
     We can download the entire parcelmap from VCGI, but KML is 1.4G. Mapbox's tool
@@ -13,16 +13,25 @@
     the Angular 9x compiler.
 
   Specifics:
-  - GET geoJSON map data from VCGI API by town and store in postgres table by town
-  as jsonb.
-  - This is complicated because their API limits 'records' (more like features) to
-  about 1000 items. To get a complete geoJSON file for a town, we often have to append
-  features from multiple requests. getTownParcel uses recursion to do this, but it's
-  tricky to use recursion with asynchronous nodeJs. I didn't have time to work all that
-  out, so I left a harmless hack that uses async await.
+    - GET geoJSON map data from VCGI API by town and store in postgres table by town
+    as jsonb, or put in local filesystem with file names like 'Townname.geoJSON'.
 
-  To-Do:
-  - Add the ability to *Update* parcel maps as new data are available on vcgi.
+    - Example call to get geoJSON for a town and insert/update the database:
+
+      node vcgi_parcelmap_load town=strafford dest=db
+
+    - Example call to get geoJSON for a town and create local file:
+
+      node vcgi_parcelmap_load town=randolph dest=fs
+
+    - This is complicated because their API limits 'records' (more like features) to
+    about 1000 items. To get a complete geoJSON file for a town, we often have to append
+    features from multiple requests. getTownParcel uses recursion to do this, but it's
+    tricky to use recursion with asynchronous nodeJs. I didn't have time to work all that
+    out, so I left a harmless hack that uses async await.
+
+    - To *Update* parcel maps as new data are available on vcgi, simply re-run the load.
+    This service checks for SQL INSERT error type 23505, and switches to an SQL UPDATE.
 
 */
 const db = require('../_helpers/db_postgres');

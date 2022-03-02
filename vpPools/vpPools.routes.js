@@ -11,6 +11,7 @@ const service = require('./vpPools.service');
 router.get('/columns', getColumns);
 router.get('/count', getCount);
 router.get('/overview', getOverview); //minimal dataset to support faster mapping views
+router.get('/summary', getSummary);
 router.get('/', getAll);
 router.get('/review', getPoolsNeedReview);
 router.get('/page/:page', getPage);
@@ -36,6 +37,16 @@ function getOverview(req, res, next) {
     service.getOverview(req.query)
         .then(items => {
           console.log('vpPools.routes::getOverview | rows:', items.rowCount);
+          res.json({"rowCount":items.rowCount, "rows":items.rows});
+        })
+        .catch(err => next(err));
+}
+
+function getSummary(req, res, next) {
+    console.log('vpPools.routes.getSummary req.query', req.query);
+    service.getSummary(req.query)
+        .then(items => {
+          console.log('vpPools.routes::getSummary | rows:', items.rowCount);
           res.json({"rowCount":items.rowCount, "rows":items.rows});
         })
         .catch(err => next(err));
