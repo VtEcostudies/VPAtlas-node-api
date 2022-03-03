@@ -99,7 +99,7 @@ surveyuser.username AS "surveyUserName",
 vpsurvey."updatedAt" AS "surveyUpdatedAt"
 FROM vpmapped
 LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
-LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
+LEFT JOIN vpreview ON "reviewVisitId"="visitId" -- Must be reviews by visitId, not by poolId
 LEFT JOIN vpsurvey ON "surveyPoolId"="mappedPoolId"
 --INNER JOIN vpsurvey_amphib ON "surveyAmphibSurveyId"=vpsurvey."surveyId" --remove this, it adds too many rows to results
 LEFT JOIN vptown ON "mappedTownId"="townId"
