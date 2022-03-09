@@ -145,7 +145,7 @@ async function getGeoJson(body={}) {
       FROM (
           SELECT
       		'FeatureCollection' AS type,
-      		'Vermont Vernal Pool Atlas - Pool Reviews' AS name,
+      		'Vermont Vernal Pool Atlas - Pool Surveys' AS name,
               array_to_json(array_agg(f)) AS features
           FROM (
               SELECT
@@ -170,20 +170,27 @@ async function getGeoJson(body={}) {
 }
 
 /*
-  Upload to multiple tables from single csv file to create vpsurvey, survey_observer_species_counts, survey_year
+  Upload a single csv file having one to many rows and insert/update these tables:
+
+    - vpsurvey
+    - vpsurvey_amphib
+    - vpsurvey_macro
+    - vpsurvey_year
 
   Column Names in CSV file MUST conform to specific conventions. See sample spreadsheet for details.
+
+  Here's how it works under the hood:
 
   - leave vpsurvey columns at top-level object
   - store sub-tables as json objects by table name, to be inserted into jsonb columns in vpsurvey
   - DB trigger uses jsonb column sub-objects to populate join tables by surveyId AFTER INSERT
 */
-async function upload(req) {
+function upload(req) {
   const fileRows = [];
   var logId = 0;
   var update = 0;
 
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
 
     if (!req.file) {
       reject({message:`Upload file missing.`, error:true});
@@ -193,16 +200,21 @@ async function upload(req) {
 
     console.log('upload | update:', update);
 
-    insert_log_upload_attempt(req.file)
+    insert_log_upload_attempt(req.file, update)
       .then(res => {console.log('insert_log_upload_attempt | Success |', res.rows[0]); logId=res.rows[0].surveyUploadId;})
       .catch(err => {console.log('insert_log_upload_attempt | Error |', err.message);});
 
-    try {
       fastCsv.parseFile(req.file.path)
+        .on("error", (err) => {
+            console.log('vpsurvey.upload | fastCsv.parsefile ERROR', err.message);
+            err.where = 'fast-csv.parseFile'; err.hint = 'File must be vpsurvey CSV format with header columns.';
+            reject(err);
+        })
         .on("data", (data) => {
           fileRows.push(data); // push each row
         })
-        .on("end", async () => {
+        .on("end", () => {
+try { //try-catch with promise doesn't work wrapped around fastCsv call. Put inside .on("end")
           fs.unlinkSync(req.file.path); //this does nothing
           const obsDelim = '_'; //delimiter for observer field prefix
           var colum = null; var split = []; var obsId = 0;
@@ -212,14 +224,12 @@ async function upload(req) {
             split = colum.split(obsDelim); colum = split[split.length-1]; obsId=(2==split.length?split[0]:0);
             if (tableColumns['vpsurvey'].includes(colum)) surveyColumns.push(colum);
           }
-          //surveyColumns.push('surveySpeciesJson');
           surveyColumns.push('surveyAmphibJson');
           surveyColumns.push('surveyMacroJson');
           surveyColumns.push('surveyYearJson');
-          //console.log('vpsurvey header', surveyColumns);
+          console.log('vpsurvey.upload | header', surveyColumns);
           var valArr = [];
-          for (i=1;i<fileRows.length;i++) {
-            //var speciesRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_species
+          for (i=1; i<fileRows.length; i++) {
             var surveyRow = {}; //single object of colum:value pairs for one insert row into vpsurvey
             var amphibRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_amphib
             var macroRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_macro
@@ -232,7 +242,6 @@ async function upload(req) {
               colum = fileRows[0][j];
               split = colum.split(obsDelim); colum = split[split.length-1];
               obsId = (2==split.length?split[0]:0); obsId = (obsId?obsId.slice(-1):0);
-              //if (!speciesRow[obsId]) {speciesRow[obsId] = {};} //initialize speciesRow array element
               if (obsId && !amphibRow[obsId]) {amphibRow[obsId] = {};} //initialize valid amphibRow array element
               value = fileRows[i][j];
               if ('' === value) {value = null;} //convert empty strings to null
@@ -241,28 +250,33 @@ async function upload(req) {
               if (tableColumns['vpsurvey_year'].includes(colum)) {yearRow[colum]=value;}
               if (tableColumns['vpsurvey_macro'].includes(colum)) {macroRow[colum]=value;}
               if (tableColumns['vpsurvey_amphib'].includes(colum)) {amphibRow[obsId][colum]=value;}
-              //if (tableColumns['vpsurvey_species'].includes(colum)) {speciesRow[obsId][colum]=value;}
             }
-            //surveyRow['surveySpeciesJson'] = speciesRow; //set the jsonb column value for survey_species table
-            surveyRow['surveyAmphibJson'] = amphibRow; //set the jsonb column value for survey_amphib table
-            surveyRow['surveyMacroJson'] = macroRow; //set the jsonb column value for survey_macro table
-            surveyRow['surveyYearJson'] = yearRow; //set the jsonb column value for survey_year table
+            surveyRow['surveyAmphibJson'] = amphibRow; //set the vpsurvey jsonb column value for survey_amphib table
+            surveyRow['surveyMacroJson'] = macroRow; //set the vpsurvey jsonb column value for survey_macro table
+            surveyRow['surveyYearJson'] = yearRow; //set the vpsurvey jsonb column value for survey_year table
             valArr.push(surveyRow);
           }
-
+          var columns = [];
+          var query = null;
           //https://stackoverflow.com/questions/37300997/multi-row-insert-with-pg-promise
-          const columns = new db.pgp.helpers.ColumnSet(surveyColumns, {table: 'vpsurvey'});
-          var query = db.pgp.helpers.insert(valArr, columns);
+          columns = new db.pgp.helpers.ColumnSet(surveyColumns, {table: 'vpsurvey'});
+          query = db.pgp.helpers.insert(valArr, columns);
           if (update) {
             query += `
             ON CONFLICT ON CONSTRAINT "vpsurvey_unique_surveyPoolId_surveyTypeId_surveyDate"
             DO UPDATE SET ("${surveyColumns.join('","')}")=(EXCLUDED."${surveyColumns.join('",EXCLUDED."')}")`;
           }
           query += ' RETURNING "surveyId", "surveyPoolId", "createdAt"!="updatedAt" AS updated ';
-          console.log(query); //verbatim query with values for testing
-          //console.log(columns);
-          //console.log(valArr);
-          await db.pgpDb.many(query) //'many' for expected return values
+          console.log('vpsurvey.upload | query', query); //verbatim query with values for testing
+          console.log('vpsurvey.upload | columns', columns);
+          console.log('vpsurvey.upload | values', valArr);
+
+} catch (err) {
+  console.log('vpsurvey.upload | try-catch ERROR', err.message);
+  reject(err);
+}
+
+          db.pgpDb.many(query) //'many' for expected return values
             .then(res => {
               console.log(res);
               update_log_upload_attempt(logId, {
@@ -280,14 +294,11 @@ async function upload(req) {
                 surveyUploadDetail:err.detail
                 });
               reject(err);
-            });
-        })
-    } catch(err) {
-      reject(err);
-    }
-
-    });
+            }); //end pgpDb
+        }); //end fastCSV.parsefile
+    }); //end Promise
 }
+
 /*
 upload req.file:
 {
@@ -301,11 +312,11 @@ upload req.file:
   size: 1971
 }
 */
-async function insert_log_upload_attempt(body={}) {
+async function insert_log_upload_attempt(body={}, update=false) {
   var columns = {};
-  columns.named = [`"surveyUpload_fieldname"`,`"surveyUpload_mimetype"`,`"surveyUpload_path"`,`"surveyUpload_size"`];
-  columns.numbered = ['$1','$2','$3','$4'];
-  columns.values = [body.fieldname,body.mimetype,body.path,body.size];
+  columns.named = [`"surveyUpload_fieldname"`,`"surveyUpload_mimetype"`,`"surveyUpload_path"`,`"surveyUpload_size"`,`"surveyUploadType"`];
+  columns.numbered = ['$1','$2','$3','$4','$5'];
+  columns.values = [body.fieldname,body.mimetype,body.path,body.size,update?'update':'insert'];
   text = `insert into vpsurvey_uploads (${columns.named}) values (${columns.numbered}) returning "surveyUploadId"`;
   console.log('vpSurvey.service::log_upload_attempt', text, columns.values);
   return await query(text, columns.values);
