@@ -17,6 +17,7 @@ module.exports = {
     getByPoolId,
     getGeoJson,
     upload,
+    history,
     create,
     update,
     delete: _delete
@@ -27,7 +28,6 @@ const tables = [
   "vpsurvey",
   "vpsurvey_equipment_status",
   "vpsurvey_year",
-  //"vpsurvey_species",
   "vpsurvey_amphib",
   "vpsurvey_macro",
   "vpsurvey_photos",
@@ -176,6 +176,7 @@ async function getGeoJson(body={}) {
     - vpsurvey_amphib
     - vpsurvey_macro
     - vpsurvey_year
+    - vpsurvey_photos
 
   Column Names in CSV file MUST conform to specific conventions. See sample spreadsheet for details.
 
@@ -227,6 +228,7 @@ try { //try-catch with promise doesn't work wrapped around fastCsv call. Put ins
           surveyColumns.push('surveyAmphibJson');
           surveyColumns.push('surveyMacroJson');
           surveyColumns.push('surveyYearJson');
+          surveyColumns.push('surveyPhotoJson');
           console.log('vpsurvey.upload | header', surveyColumns);
           var valArr = [];
           for (i=1; i<fileRows.length; i++) {
@@ -234,11 +236,12 @@ try { //try-catch with promise doesn't work wrapped around fastCsv call. Put ins
             var amphibRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_amphib
             var macroRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_macro
             var yearRow = {}; //single object of colum:value pairs to insert in jsonb column of vpsurvey_year
+            var photoRow = {}; //single object of colum:value pairs to insert in jsonb column of vpsurvey_photos
             var colum = null;
             var split = [];
             var obsId = 1; //obsId is 1-based for actual observers
             var value = null; //temporary local var to hold values for scrubbing
-            for (j=0;j<fileRows[0].length;j++) {
+            for (j=0;j<fileRows[0].length;j++) { //iterate over keys in first row (column names)
               colum = fileRows[0][j];
               split = colum.split(obsDelim); colum = split[split.length-1];
               obsId = (2==split.length?split[0]:0); obsId = (obsId?obsId.slice(-1):0);
@@ -247,13 +250,16 @@ try { //try-catch with promise doesn't work wrapped around fastCsv call. Put ins
               if ('' === value) {value = null;} //convert empty strings to null
               if (`${Number(value)}` == value) {value = Number(value);} //convert string number to numbers
               if (tableColumns['vpsurvey'].includes(colum)) {surveyRow[colum]=value;}
+              if (tableColumns['vpsurvey_photos'].includes(colum)) {photoRow[colum]=value;}
               if (tableColumns['vpsurvey_year'].includes(colum)) {yearRow[colum]=value;}
               if (tableColumns['vpsurvey_macro'].includes(colum)) {macroRow[colum]=value;}
               if (tableColumns['vpsurvey_amphib'].includes(colum)) {amphibRow[obsId][colum]=value;}
+              if ('surveyUserEmail'==colum && value===null) surveyRow[colum]=req.query.surveyUserEmail;
             }
             surveyRow['surveyAmphibJson'] = amphibRow; //set the vpsurvey jsonb column value for survey_amphib table
             surveyRow['surveyMacroJson'] = macroRow; //set the vpsurvey jsonb column value for survey_macro table
             surveyRow['surveyYearJson'] = yearRow; //set the vpsurvey jsonb column value for survey_year table
+            surveyRow['surveyPhotoJson'] = photoRow; //set the vpsurvey jsonb column value for survey_photos table
             valArr.push(surveyRow);
           }
           var columns = [];
@@ -267,9 +273,9 @@ try { //try-catch with promise doesn't work wrapped around fastCsv call. Put ins
             DO UPDATE SET ("${surveyColumns.join('","')}")=(EXCLUDED."${surveyColumns.join('",EXCLUDED."')}")`;
           }
           query += ' RETURNING "surveyId", "surveyPoolId", "createdAt"!="updatedAt" AS updated ';
-          console.log('vpsurvey.upload | query', query); //verbatim query with values for testing
-          console.log('vpsurvey.upload | columns', columns);
-          console.log('vpsurvey.upload | values', valArr);
+          //console.log('vpsurvey.upload | query', query); //verbatim query with values for testing
+          //console.log('vpsurvey.upload | columns', columns);
+          //console.log('vpsurvey.upload | values', valArr);
 
 } catch (err) {
   console.log('vpsurvey.upload | try-catch ERROR', err.message);
@@ -358,4 +364,15 @@ async function update(id, body) {
 
 async function _delete(id) {
     return await query(`delete from vpsurvey where "surveyId"=$1 CASCADE;`, [id]);
+}
+
+async function history(params={}) {
+  const where = pgUtil.whereClause(params, staticColumns);
+  const text = `
+  SELECT *
+  FROM vpsurvey_uploads
+  ${where.text}
+  `;
+  console.log(text, where.values);
+  return await query(text, where.values);
 }
