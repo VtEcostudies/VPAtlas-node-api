@@ -15,6 +15,7 @@ router.get('/observers', getObservers); //get pool-survey observers
 router.get('/', getAll);
 router.get('/:id', getById);
 router.get('/pool/:poolId', getByPoolId);
+router.get('/upload/history', getUploadHistory);
 router.post('/upload', upFile.single('surveyUploadFile'), upload);
 router.post('/', create);
 router.put('/:id', update);
@@ -81,18 +82,6 @@ function getGeoJson(req, res, next) {
         .catch(err => next(err));
 }
 
-function upload(req, res, next) {
-    console.log('vpSurvey.routes::upload() | req.file:', req.file);
-    console.log('vpSurvey.routes::upload() | req.body', req.body);
-    console.log('vpSurvey.routes::upload() | req.query', req.query);
-    service.upload(req)
-        .then((item) => {res.json(item);})
-        .catch(err => {
-            console.log('vpSurvey.routes::upload() | error: ', err.code, '|', err.message, '|', err.detail);
-            next(err);
-        });
-}
-
 function create(req, res, next) {
     console.log(`create req.body:`);
     console.dir(req.body);
@@ -121,5 +110,23 @@ function update(req, res, next) {
 function _delete(req, res, next) {
     service.delete(req.params.id)
         .then(() => res.json({}))
+        .catch(err => next(err));
+}
+
+function upload(req, res, next) {
+    console.log('vpSurvey.routes::upload() | req.file:', req.file);
+    console.log('vpSurvey.routes::upload() | req.body', req.body);
+    console.log('vpSurvey.routes::upload() | req.query', req.query);
+    service.upload(req)
+        .then((item) => {res.json(item);})
+        .catch(err => {
+            console.log('vpSurvey.routes::upload() | error: ', err.code, '|', err.message, '|', err.detail);
+            next(err);
+        });
+}
+
+function getUploadHistory(req, res, next) {
+    uploads.history(req.query)
+        .then(items => res.json(items))
         .catch(err => next(err));
 }

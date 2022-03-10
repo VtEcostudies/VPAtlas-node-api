@@ -8,6 +8,8 @@ package-lock.json
 vcgiMapData/parcel_geoJSON
 vcgiMapData/parcel_KML
 
+vpsurvey/uploads
+
 #database exports
 database/export
 

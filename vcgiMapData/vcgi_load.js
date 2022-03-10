@@ -48,7 +48,7 @@ for (var i=2; i<process.argv.length; i++) {
   var act = all[0]; //action, left of action=argument
   var arg = all[1]; //argument, right of action=argument
   console.log(`command-line argument ${i}`, all);
-	switch(act) {
+	switch (act) {
 		case "town":
       geoFile = 'vcgi_town_polygons.geojson'; //'Polygon_VT_Town.geojson';
       geoTabl = 'geo_town';

@@ -50,7 +50,7 @@ function jwt() {
             { url: /^\/pools\/.*/, methods: ['GET'] },
             { url: /^\/pools\/page\/.*/, methods: ['GET'] },
 
-            { url: /^\/survey\/upload/, methods: ['POST'] },
+            //{ url: /^\/survey\/upload/, methods: ['POST'] },
             { url: /^\/survey\/columns/, methods: ['GET'] },
             { url: /^\/survey/, methods: ['GET'] },
             { url: /^\/survey\/.*/, methods: ['GET'] },
@@ -77,13 +77,14 @@ function jwt() {
 */
 async function isRevoked(req, payload, done) {
 
-    console.log(`jwt.js::isRevoked()
+    console.log(`jwt::isRevoked()
                 req.body:[${Object.keys(req.body)}] [${Object.values(req.body)}]
                 payload:[${Object.keys(payload)}] [${Object.values(payload)}]`
                 );
 
     if (payload.sub) {
       req.user = await userService.getById(payload.sub);
+      //console.log('jwt::isRevoked | req.user |', req.user);
     }
 
     // revoke token if user no longer exists or not found

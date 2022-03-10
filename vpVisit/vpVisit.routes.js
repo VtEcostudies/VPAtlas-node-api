@@ -1,6 +1,10 @@
 ﻿const express = require('express');
 const router = express.Router();
 const service = require('./vpVisit.service');
+const uploads = require('./vpVisit.upload.service');
+
+const multer = require('multer');
+const upFile = multer({ dest: 'vpvisit/uploads/' });
 
 // routes NOTE: routes with names for same method (ie. GET) must be above routes
 // for things like /:id, or they are missed/skipped.
@@ -11,7 +15,9 @@ router.get('/overview', getOverview);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
 router.get('/:id', getById);
+router.get('/upload/history', getUploadHistory);
 router.post('/', create);
+router.post('/upload', upFile.single('visitUploadFile'), upload);
 router.put('/:id', update);
 router.delete('/:id', _delete);
 
@@ -112,5 +118,23 @@ function update(req, res, next) {
 function _delete(req, res, next) {
     service.delete(req.params.id)
         .then(() => res.json({}))
+        .catch(err => next(err));
+}
+
+function upload(req, res, next) {
+    console.log('vpVisit.routes::upload() | req.file:', req.file);
+    console.log('vpVisit.routes::upload() | req.body', req.body);
+    console.log('vpVisit.routes::upload() | req.query', req.query);
+    uploads.upload(req)
+        .then((item) => {res.json(item);})
+        .catch(err => {
+            console.log('vpVisit.routes::upload() | error: ', err.code, '|', err.message, '|', err.detail);
+            next(err);
+        });
+}
+
+function getUploadHistory(req, res, next) {
+    uploads.history(req.query)
+        .then(items => res.json(items))
         .catch(err => next(err));
 }
