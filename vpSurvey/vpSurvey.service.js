@@ -114,7 +114,9 @@ async function getAll(params={}) {
     vpsurvey_amphib.*,
     to_json(vpsurvey_amphib) AS "surveyAmphib",
     vpsurvey_macro.*,
-    to_json(vpsurvey_macro) AS "surveyMacros",
+    --to_json(vpsurvey_macro) AS "surveyMacros",
+    vpsurvey_year.*,
+    vpsurvey_photos.*,
     vpmapped.*,
     vpmapped."updatedAt" AS "mappedUpdatedAt",
     vpmapped."createdAt" AS "mappedCreatedAt"
@@ -122,6 +124,8 @@ async function getAll(params={}) {
     INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
     INNER JOIN vpsurvey_amphib ON "surveyId"="surveyAmphibSurveyId"
     INNER JOIN vpsurvey_macro ON "surveyId"="surveyMacroSurveyId"
+    LEFT JOIN vpsurvey_year ON "surveyId"="surveyYearSurveyId"
+    LEFT JOIN vpsurvey_photos ON "surveyId"="surveyPhotoSurveyId"
     LEFT JOIN vpuser AS surveyuser ON "surveyUserId"="id"
     LEFT JOIN vptown ON "mappedTownId"="townId"
     LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
@@ -273,7 +277,7 @@ try { //try-catch with promise doesn't work wrapped around fastCsv call. Put ins
             DO UPDATE SET ("${surveyColumns.join('","')}")=(EXCLUDED."${surveyColumns.join('",EXCLUDED."')}")`;
           }
           query += ' RETURNING "surveyId", "surveyPoolId", "createdAt"!="updatedAt" AS updated ';
-          //console.log('vpsurvey.upload | query', query); //verbatim query with values for testing
+          console.log('vpsurvey.upload | query', query); //verbatim query with values for testing
           //console.log('vpsurvey.upload | columns', columns);
           //console.log('vpsurvey.upload | values', valArr);
 
