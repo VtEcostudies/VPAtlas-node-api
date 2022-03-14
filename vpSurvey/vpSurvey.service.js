@@ -10,8 +10,10 @@ var tableColumns = []; //each table's columns by table name
 module.exports = {
     getColumns,
     getCount,
-    getPools,
+    getPoolIds,
+    getTypes,
     getObservers,
+    getYears,
     getAll,
     getById,
     getByPoolId,
@@ -58,7 +60,7 @@ async function getCount(query={}) {
     return await query(text, where.values);
 }
 
-async function getPools(params={}) {
+function getPoolIds(params={}) {
   const where = pgUtil.whereClause(params, staticColumns);
   const text = `
   SELECT DISTINCT("surveyPoolId")
@@ -66,7 +68,27 @@ async function getPools(params={}) {
   ${where.text}
   `;
   console.log(text, where.values);
-  return await query(text, where.values);
+  return query(text, where.values);
+}
+
+function getTypes() {
+  const text = `
+  SELECT * --"surveyTypeId", "surveyTypeName"
+  FROM def_survey_type
+  `;
+  return query(text);
+}
+
+function getYears(params={}) {
+  const where = pgUtil.whereClause(params, staticColumns);
+  const text = `
+  SELECT DISTINCT("surveyYear")
+  FROM vpsurvey_year
+  INNER JOIN vpsurvey ON "surveyId"="surveyYearSurveyId"
+  ${where.text}
+  `;
+  console.log(text, where.values);
+  return query(text, where.values);
 }
 
 async function getObservers(params={}) {
@@ -112,8 +134,16 @@ async function getAll(params={}) {
     vpSurvey.*,
     vpSurvey."updatedAt" AS "surveyUpdatedAt",
     vpSurvey."createdAt" AS "surveyCreatedAt",
+    (SELECT array_agg(
+      "surveyAmphibEdgeWOFR"+"surveyAmphibEdgeSPSA"+"surveyAmphibEdgeJESA"+"surveyAmphibEdgeBLSA"+
+      "surveyAmphibInteriorWOFR"+"surveyAmphibInteriorSPSA"+"surveyAmphibInteriorJESA"+"surveyAmphibInteriorBLSA")
+      AS "sumAmphib" FROM vpsurvey_amphib WHERE vpsurvey_amphib."surveyAmphibSurveyId"=vpsurvey."surveyId"),
     --vpsurvey_amphib.*,
     --to_json(vpsurvey_amphib) AS "surveyAmphib",
+    (SELECT
+      "surveyMacroNorthFASH"+"surveyMacroEastFASH"+"surveyMacroSouthFASH"+"surveyMacroWestFASH"+"surveyMacroTotalFASH"+
+      "surveyMacroNorthCDFY"+"surveyMacroEastCDFY"+"surveyMacroSouthCDFY"+"surveyMacroWestCDFY"+"surveyMacroTotalCDFY"
+      AS "sumMacros" FROM vpsurvey_macro WHERE vpsurvey_macro."surveyMacroSurveyId"=vpsurvey."surveyId"),
     --vpsurvey_macro.*,
     --to_json(vpsurvey_macro) AS "surveyMacros",
     --vpsurvey_year.*,
@@ -131,7 +161,7 @@ async function getAll(params={}) {
     --INNER JOIN def_survey_type ON vpsurvey."surveyTypeId"=def_survey_type."surveyTypeId"
     --INNER JOIN vpsurvey_amphib ON "surveyId"="surveyAmphibSurveyId"
     --INNER JOIN vpsurvey_macro ON "surveyId"="surveyMacroSurveyId"
-    --LEFT JOIN vpsurvey_year ON "surveyId"="surveyYearSurveyId"
+    LEFT JOIN vpsurvey_year ON "surveyId"="surveyYearSurveyId"
     --LEFT JOIN vpsurvey_photos ON "surveyId"="surveyPhotoSurveyId"
     LEFT JOIN vpuser AS surveyuser ON "surveyUserId"=surveyuser."id"
     LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser."id"
@@ -148,13 +178,14 @@ function getById(surveyId) {
   "townId",
   "townName",
   "countyName",
-  surveyuser.username AS "surveyUserName",
+  surveyuser.username AS "surveyUserLogin",
+  CONCAT(surveyuser.firstname, ' ', surveyuser.lastname) AS "surveyUserName",
   surveyuser.id AS "surveyUserId",
   vpSurvey.*,
   vpSurvey."updatedAt" AS "surveyUpdatedAt",
   vpSurvey."createdAt" AS "surveyCreatedAt",
   def_survey_type.*,
-  (SELECT array_agg(username) AS "surveyAmphibObs"
+  (SELECT array_agg(CONCAT(firstname, ' ', lastname)) AS "surveyAmphibObs"
     FROM vpsurvey_amphib
     INNER JOIN vpuser ON "surveyAmphibObsId"=id
     WHERE "surveyAmphibSurveyId"=$1),
@@ -164,6 +195,10 @@ function getById(surveyId) {
     AS "sumAmphib"
     FROM vpsurvey_amphib
     WHERE "surveyAmphibSurveyId"=$1),
+  (SELECT
+    "surveyMacroNorthFASH"+"surveyMacroEastFASH"+"surveyMacroSouthFASH"+"surveyMacroWestFASH"+"surveyMacroTotalFASH"+
+    "surveyMacroNorthCDFY"+"surveyMacroEastCDFY"+"surveyMacroSouthCDFY"+"surveyMacroWestCDFY"+"surveyMacroTotalCDFY"
+    AS "sumMacros" FROM vpsurvey_macro WHERE "surveyMacroSurveyId"=$1),
   "mappedPoolId" AS "poolId",
   "mappedPoolStatus" AS "poolStatus",
   SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
