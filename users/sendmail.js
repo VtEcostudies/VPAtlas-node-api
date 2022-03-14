@@ -1,7 +1,8 @@
 const nodemailer = require('nodemailer');
 ﻿const config = require('config.json');
 const os = require("os");
-const env = os.hostname()=='vpatlas.org'?'prod':'dev';
+const host = os.hostname();
+const env = os.hostname()=='vpatlas.org'?'prod':('dev.vpatlas.org'?'dev-remote':'dev-local');
 
 module.exports = {
     register: (userMail, token) => reset(userMail, token, 'registration'),
