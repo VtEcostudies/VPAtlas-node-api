@@ -10,8 +10,10 @@ const upFile = multer({ dest: 'vpsurvey/uploads/' });
 router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
 router.get('/count', getCount);
-router.get('/pools', getPools); //get surveyed pool ids
+router.get('/poolids', getPoolIds); //get surveyed pool ids
+router.get('/types', getTypes); //get pool-survey types
 router.get('/observers', getObservers); //get pool-survey observers
+router.get('/years', getYears); //get pool-survey years
 router.get('/', getAll);
 router.get('/:id', getById);
 router.get('/pool/:poolId', getByPoolId);
@@ -35,14 +37,26 @@ function getCount(req, res, next) {
         .catch(err => next(err));
 }
 
-function getPools(req, res, next) {
-    service.getPools(req.query)
+function getPoolIds(req, res, next) {
+    service.getPoolIds(req.query)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getTypes(req, res, next) {
+    service.getTypes(req.query)
         .then(items => res.json(items))
         .catch(err => next(err));
 }
 
 function getObservers(req, res, next) {
     service.getObservers(req.query)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getYears(req, res, next) {
+    service.getYears(req.query)
         .then(items => res.json(items))
         .catch(err => next(err));
 }
@@ -55,13 +69,13 @@ function getAll(req, res, next) {
 
 function getById(req, res, next) {
     service.getById(req.params.id)
-        .then(item => item ? res.json(item) : res.sendStatus(404))
+        .then(item => item ? res.json(item.rows) : res.sendStatus(404))
         .catch(err => next(err));
 }
 
 function getByPoolId(req, res, next) {
     service.getByPoolId(req.params.poolId)
-        .then(item => item ? res.json(item) : res.sendStatus(404))
+        .then(item => item ? res.json(item.rows) : res.sendStatus(404))
         .catch(err => next(err));
 }
 
