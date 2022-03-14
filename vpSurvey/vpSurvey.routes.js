@@ -55,13 +55,13 @@ function getAll(req, res, next) {
 
 function getById(req, res, next) {
     service.getById(req.params.id)
-        .then(item => item ? res.json(item) : res.sendStatus(404))
+        .then(item => item ? res.json(item.rows) : res.sendStatus(404))
         .catch(err => next(err));
 }
 
 function getByPoolId(req, res, next) {
     service.getByPoolId(req.params.poolId)
-        .then(item => item ? res.json(item) : res.sendStatus(404))
+        .then(item => item ? res.json(item.rows) : res.sendStatus(404))
         .catch(err => next(err));
 }
 

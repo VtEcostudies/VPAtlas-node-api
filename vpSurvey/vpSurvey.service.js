@@ -107,26 +107,34 @@ async function getAll(params={}) {
     "townId",
     "townName",
     "countyName",
-    surveyuser.username, surveyuser.id, surveyuser.email,
+    surveyuser.username AS "surveyUserName",
+    surveyuser.id AS "surveyUserId",
     vpSurvey.*,
     vpSurvey."updatedAt" AS "surveyUpdatedAt",
     vpSurvey."createdAt" AS "surveyCreatedAt",
-    vpsurvey_amphib.*,
-    to_json(vpsurvey_amphib) AS "surveyAmphib",
-    vpsurvey_macro.*,
+    --vpsurvey_amphib.*,
+    --to_json(vpsurvey_amphib) AS "surveyAmphib",
+    --vpsurvey_macro.*,
     --to_json(vpsurvey_macro) AS "surveyMacros",
-    vpsurvey_year.*,
-    vpsurvey_photos.*,
-    vpmapped.*,
+    --vpsurvey_year.*,
+    --vpsurvey_photos.*,
+    (SELECT "surveyTypeName" FROM def_survey_type WHERE def_survey_type."surveyTypeId"=vpsurvey."surveyTypeId"),
+    "mappedPoolId" AS "poolId",
+    "mappedPoolStatus" AS "poolStatus",
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+    mappeduser.username AS "mappedUserName",
     vpmapped."updatedAt" AS "mappedUpdatedAt",
     vpmapped."createdAt" AS "mappedCreatedAt"
     FROM vpSurvey
     INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
-    INNER JOIN vpsurvey_amphib ON "surveyId"="surveyAmphibSurveyId"
-    INNER JOIN vpsurvey_macro ON "surveyId"="surveyMacroSurveyId"
-    LEFT JOIN vpsurvey_year ON "surveyId"="surveyYearSurveyId"
-    LEFT JOIN vpsurvey_photos ON "surveyId"="surveyPhotoSurveyId"
-    LEFT JOIN vpuser AS surveyuser ON "surveyUserId"="id"
+    --INNER JOIN def_survey_type ON vpsurvey."surveyTypeId"=def_survey_type."surveyTypeId"
+    --INNER JOIN vpsurvey_amphib ON "surveyId"="surveyAmphibSurveyId"
+    --INNER JOIN vpsurvey_macro ON "surveyId"="surveyMacroSurveyId"
+    --LEFT JOIN vpsurvey_year ON "surveyId"="surveyYearSurveyId"
+    --LEFT JOIN vpsurvey_photos ON "surveyId"="surveyPhotoSurveyId"
+    LEFT JOIN vpuser AS surveyuser ON "surveyUserId"=surveyuser."id"
+    LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser."id"
     LEFT JOIN vptown ON "mappedTownId"="townId"
     LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
     ${range + where.text} ${orderClause};`;
@@ -134,11 +142,70 @@ async function getAll(params={}) {
     return await query(text, where.values);
 }
 
-function getById(id) {
-  return getAll({surveyId:id});
+function getById(surveyId) {
+  const text = `
+  SELECT
+  "townId",
+  "townName",
+  "countyName",
+  surveyuser.username AS "surveyUserName",
+  surveyuser.id AS "surveyUserId",
+  vpSurvey.*,
+  vpSurvey."updatedAt" AS "surveyUpdatedAt",
+  vpSurvey."createdAt" AS "surveyCreatedAt",
+  def_survey_type.*,
+  (SELECT array_agg(username) AS "surveyAmphibObs"
+    FROM vpsurvey_amphib
+    INNER JOIN vpuser ON "surveyAmphibObsId"=id
+    WHERE "surveyAmphibSurveyId"=$1),
+  (SELECT array_agg
+    ("surveyAmphibEdgeWOFR"+"surveyAmphibEdgeSPSA"+"surveyAmphibEdgeJESA"+"surveyAmphibEdgeBLSA"+
+    "surveyAmphibInteriorWOFR"+"surveyAmphibInteriorSPSA"+"surveyAmphibInteriorJESA"+"surveyAmphibInteriorBLSA")
+    AS "sumAmphib"
+    FROM vpsurvey_amphib
+    WHERE "surveyAmphibSurveyId"=$1),
+  "mappedPoolId" AS "poolId",
+  "mappedPoolStatus" AS "poolStatus",
+  SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+  SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+  mappeduser.username AS "mappedUserName",
+  vpmapped."updatedAt" AS "mappedUpdatedAt",
+  vpmapped."createdAt" AS "mappedCreatedAt"
+  FROM vpSurvey
+  INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
+  INNER JOIN def_survey_type ON vpsurvey."surveyTypeId"=def_survey_type."surveyTypeId"
+  LEFT JOIN vpuser AS surveyuser ON "surveyUserId"=surveyuser."id"
+  LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser."id"
+  LEFT JOIN vptown ON "mappedTownId"="townId"
+  LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+  WHERE "surveyId"=$1`
+
+  return query(text, [surveyId]);
 }
-function getByPoolId(id) {
-  return getAll({surveyPoolId:id});
+
+function getByPoolId(poolId) {
+  const text = `
+  SELECT
+  "townId",
+  "townName",
+  "countyName",
+  surveyuser.username AS surveyUserName,
+  surveyuser.id AS surveyUserId,
+  surveyuser.email AS surveyUserEmail,
+  vpSurvey.*,
+  vpSurvey."updatedAt" AS "surveyUpdatedAt",
+  vpSurvey."createdAt" AS "surveyCreatedAt",
+  vpmapped.*,
+  vpmapped."updatedAt" AS "mappedUpdatedAt",
+  vpmapped."createdAt" AS "mappedCreatedAt"
+  FROM vpSurvey
+  INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
+  LEFT JOIN vpuser AS surveyuser ON "surveyUserId"="id"
+  LEFT JOIN vptown ON "mappedTownId"="townId"
+  LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+  WHERE "surveyPoolId"=$1`
+
+  return query(text, [poolId]);
 }
 
 async function getGeoJson(body={}) {
