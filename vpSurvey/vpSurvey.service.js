@@ -141,8 +141,7 @@ async function getAll(params={}) {
     --vpsurvey_amphib.*,
     --to_json(vpsurvey_amphib) AS "surveyAmphib",
     (SELECT
-      "surveyMacroNorthFASH"+"surveyMacroEastFASH"+"surveyMacroSouthFASH"+"surveyMacroWestFASH"+"surveyMacroTotalFASH"+
-      "surveyMacroNorthCDFY"+"surveyMacroEastCDFY"+"surveyMacroSouthCDFY"+"surveyMacroWestCDFY"+"surveyMacroTotalCDFY"
+      "surveyMacroTotalFASH"+"surveyMacroTotalCDFY"
       AS "sumMacros" FROM vpsurvey_macro WHERE vpsurvey_macro."surveyMacroSurveyId"=vpsurvey."surveyId"),
     --vpsurvey_macro.*,
     --to_json(vpsurvey_macro) AS "surveyMacros",
@@ -196,8 +195,7 @@ function getById(surveyId) {
     FROM vpsurvey_amphib
     WHERE "surveyAmphibSurveyId"=$1),
   (SELECT
-    "surveyMacroNorthFASH"+"surveyMacroEastFASH"+"surveyMacroSouthFASH"+"surveyMacroWestFASH"+"surveyMacroTotalFASH"+
-    "surveyMacroNorthCDFY"+"surveyMacroEastCDFY"+"surveyMacroSouthCDFY"+"surveyMacroWestCDFY"+"surveyMacroTotalCDFY"
+    "surveyMacroTotalFASH"+"surveyMacroTotalCDFY"
     AS "sumMacros" FROM vpsurvey_macro WHERE "surveyMacroSurveyId"=$1),
   "mappedPoolId" AS "poolId",
   "mappedPoolStatus" AS "poolStatus",
