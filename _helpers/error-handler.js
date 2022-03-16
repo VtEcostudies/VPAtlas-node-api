@@ -4,7 +4,7 @@ function errorHandler(err, req, res, next) {
     var ret;
 
     //This doesn't work. Need to find a way to determine when res.header has been set...
-    console.log('error-handler | http status:', res.status, err.name, err.message);
+    console.log('error-handler | http status:', res.code, err.name, err.message);
 
 /*
 NOTE: setting res.status here causes error - can't set headers already sent to client.
@@ -42,8 +42,8 @@ https://stackoverflow.com/questions/7042340/error-cant-set-headers-after-they-ar
         line: err.line,
         routine: err.routine
       };
-      console.log(`error-handler::errorHandler()`);
-      console.dir(ret);
+      //console.log(`error-handler::errorHandler()`);
+      //console.dir(ret);
       //console.dir(err);
       // default to 500 server error
       //NOTE: this does not throw error. we assume that this is the same http error code as already set elsewhere.

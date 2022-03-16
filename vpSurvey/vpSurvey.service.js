@@ -347,8 +347,9 @@ try { //try-catch with promise doesn't work wrapped around fastCsv call. Put ins
             var value = null; //temporary local var to hold values for scrubbing
             for (j=0;j<fileRows[0].length;j++) { //iterate over keys in first row (column names)
               colum = fileRows[0][j];
-              split = colum.split(obsDelim); colum = split[split.length-1];
-              obsId = (2==split.length?split[0]:0); obsId = (obsId?obsId.slice(-1):0);
+              split = colum.split(obsDelim); colum = split[split.length-1]; //observer column_name is the last piece
+              obsId = (2==split.length?split[0]:0); //did we get two array-elements split by '_'? If yes, flag it.
+              obsId = (obsId?obsId.slice(-1):0); //if flagged above, obsId is the trailing number of 'obs2...'
               if (obsId && !amphibRow[obsId]) {amphibRow[obsId] = {};} //initialize valid amphibRow array element
               value = fileRows[i][j];
               if ('' === value) {value = null;} //convert empty strings to null
