@@ -2,6 +2,7 @@
 const router = express.Router();
 const service = require('./vpVisit.service');
 const uploads = require('./vpVisit.upload.service');
+const s123svc = require('./vpVisit.s123.service');
 
 const multer = require('multer');
 const upFile = multer({ dest: 'vpvisit/uploads/' });
@@ -14,8 +15,10 @@ router.get('/count', getCount);
 router.get('/overview', getOverview);
 router.get('/', getAll);
 router.get('/page/:page', getPage);
+router.get('/s123', getS123);
 router.get('/:id', getById);
 router.get('/upload/history', getUploadHistory);
+router.post('/s123', postS123);
 router.post('/', create);
 router.post('/upload', upFile.single('visitUploadFile'), upload);
 router.put('/:id', update);
@@ -26,6 +29,18 @@ module.exports = router;
 function getColumns(req, res, next) {
     service.getColumns()
         .then(columns => res.json(columns))
+        .catch(err => next(err));
+}
+
+function getS123(req, res, next) {
+    s123svc.getS123Data(req)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function postS123(req, res, next) {
+    s123svc.getUpsertS123Data(req)
+        .then(items => res.json(items))
         .catch(err => next(err));
 }
 

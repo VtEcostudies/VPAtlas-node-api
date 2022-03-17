@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const service = require('./vpSurvey.service');
-const s123service = require('./vpSurvey.s123.service');
+const s123svc = require('./vpSurvey.s123.service');
 
 const multer = require('multer');
 const upFile = multer({ dest: 'vpsurvey/uploads/' });
 
 // routes NOTE: routes with names for same method (ie. GET) must be above routes
 // for things like /:id, or they are missed/skipped.
-router.get('/s123', getS123);
 router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
 router.get('/count', getCount);
@@ -17,9 +16,11 @@ router.get('/types', getTypes); //get pool-survey types
 router.get('/observers', getObservers); //get pool-survey observers
 router.get('/years', getYears); //get pool-survey years
 router.get('/', getAll);
+router.get('/s123', getS123);
 router.get('/:id', getById);
 router.get('/pool/:poolId', getByPoolId);
 router.get('/upload/history', getUploadHistory);
+router.post('/s123', postS123);
 router.post('/upload', upFile.single('surveyUploadFile'), upload);
 router.post('/', create);
 router.put('/:id', update);
@@ -34,7 +35,13 @@ function getColumns(req, res, next) {
 }
 
 function getS123(req, res, next) {
-    s123service.getUpsertS123Data(req)
+    s123svc.getS123Data(req)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function postS123(req, res, next) {
+    s123svc.getUpsertS123Data(req)
         .then(items => res.json(items))
         .catch(err => next(err));
 }

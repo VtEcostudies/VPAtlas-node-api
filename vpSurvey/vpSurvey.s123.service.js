@@ -6,7 +6,7 @@ var staticColumns = []; //all tables' columns in a single 1D array
 var tableColumns = []; //each table's columns by table name
 
 module.exports = {
-    //getS123Data,
+    getS123Data,
     getUpsertS123Data
   };
 
@@ -25,7 +25,6 @@ for (i=0; i<tables.length; i++) {
   pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
     .then(res => {
       tableColumns[res.tableName] = res.tableColumns;
-      //console.log(tableColumns);
       return res;
     })
     .catch(err => {console.log(`vpSurvey.service.pg.pgUtil.getColumns | table:${tables[i]} | error: `, err.message);});
@@ -33,17 +32,23 @@ for (i=0; i<tables.length; i++) {
 
 /*
 https://services1.arcgis.com/d3OaJoSAh2eh6OA9/ArcGIS/rest/services/
-service_fae86d23c46e403aa0dae67596be6073/FeatureServer/0/306/?f=pjson
+service_fae86d23c46e403aa0dae67596be6073
+/FeatureServer/
+0/1
+?f=pjson
 */
-function getUpsertS123Data(req) {
+function getS123Data(req) {
+  const apiUrl = 'https://services1.arcgis.com/d3OaJoSAh2eh6OA9/ArcGIS/rest/services';
+  const srvId = 'service_fae86d23c46e403aa0dae67596be6073';
   var appId = 0;
   var objId = 1;
+  var args = 'f=pjson';
   if (req.query) {
     appId = req.query.appId?req.query.appId:0;
     objId = req.query.objectId?req.query.objectId:1;
   }
   return new Promise((resolve, reject) => {
-    const url = `https://services1.arcgis.com/d3OaJoSAh2eh6OA9/ArcGIS/rest/services/service_fae86d23c46e403aa0dae67596be6073/FeatureServer/${appId}/${objId}/?f=pjson`;
+    const url = `${apiUrl}/${srvId}/FeatureServer/${appId}/${objId}?${args}`;
     fetch(url)
       .then(res => res.json()) //this step is necessary when using fetch. without it, result is garbage.
       .then(json => {
@@ -53,10 +58,8 @@ function getUpsertS123Data(req) {
           console.log('vpSurvey.s123.service::getData | ERROR', json);
           reject(json.error);
         } else {
-          console.log('vpSurvey.s123.service::getData | SUCCESS', json);
-          upsert(req, json.feature.attributes)
-            .then(res => {resolve(res);})
-            .catch(err => {reject(err);})
+          console.log('vpSurvey.s123.service::getData | SUCCESS', json.feature.attributes);
+          resolve(json.feature.attributes);
         }
       })
       .catch(err => {
@@ -66,12 +69,26 @@ function getUpsertS123Data(req) {
   });
 }
 
-function upsert(req, jsonData) {
+function getUpsertS123Data(req) {
+  return new Promise((resolve, reject) => {
+    getS123Data(req)
+      .then(jsonData => {
+        upsert(req, [jsonData]) //put a single json Data object into array for future multi-object upsert
+          .then(res => {resolve(res);})
+          .catch(err => {reject(err);})
+      })
+      .catch(err => {
+        console.log('vpSurvey.s123.service::getUpsertS123Data | ERROR', err.message);
+        reject(err);
+      });
+    });
+}
+
+function upsert(req, jsonArr) {
   var update = 0;
   return new Promise((resolve, reject) => {
     try {
-      if (req.query) {update = 'true' == req.query.update;}
-      const jsonArr = [jsonData]; //put a single json Data object into array for future multi-object upsert
+      if (req.query) {update = !!req.query.update;}
       const obsDelim = '_'; //delimiter for observer field prefix
       var colum = null; var split = []; var obsId = 0;
       var surveyColumns = [];
@@ -85,7 +102,7 @@ function upsert(req, jsonData) {
       surveyColumns.push('surveyPhotoJson');
       console.log('vpsurvey.s123.upsert | header', surveyColumns);
       var valArr = [];
-      for (i=0; i<jsonArr.length; i++) {
+      for (i=0; i<jsonArr.length; i++) { //iterate over jsonData objects in jsonArray
         var surveyRow = {}; //single object of colum:value pairs for one insert row into vpsurvey
         var amphibRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_amphib
         var macroRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_macro
@@ -95,14 +112,14 @@ function upsert(req, jsonData) {
         var split = [];
         var obsId = 1; //obsId is 1-based for actual observers
         var value = null; //temporary local var to hold values for scrubbing
-        Object.keys(jsonArr[i]).forEach(colum => { //iterate over keys in object (column names)
+        Object.keys(jsonArr[i]).forEach(colum => { //iterate over keys in jsonData object (column names)
           split = colum.split(obsDelim); colum = split[split.length-1]; //observer column_name is the last piece
           obsId = (2==split.length?split[0]:0); //did we get two array-elements split by '_'? If yes, flag it.
           obsId = (obsId?obsId.slice(-1):0); //if flagged above, obsId is the trailing number of 'obs2...'
           if (obsId && !amphibRow[obsId]) {amphibRow[obsId] = {};} //initialize valid amphibRow array element
           value = jsonArr[i][colum];
           if ('' === value) {value = null;} //convert empty strings to null
-          if (`${Number(value)}` == value) {value = Number(value);} //convert string number to numbers
+          if (`${Number(value)}` === value) {value = Number(value);} //convert string number to numbers (MUST USE '===' or it converts bool to int!!!)
           if (tableColumns['vpsurvey'].includes(colum)) {surveyRow[colum]=value;}
           if (tableColumns['vpsurvey_photos'].includes(colum)) {photoRow[colum]=value;}
           if (tableColumns['vpsurvey_year'].includes(colum)) {yearRow[colum]=value;}
