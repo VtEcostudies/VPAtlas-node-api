@@ -101,7 +101,7 @@ try { //try-catch with promise doesn't work wrapped around fastCsv call. Put ins
               colum = fileRows[0][j];
               value = fileRows[i][j];
               if ('' === value) {value = null;} //convert empty strings to null
-              if (`${Number(value)}` == value) {value = Number(value);} //convert string number to numbers
+              if (`${Number(value)}` === value) {value = Number(value);} //convert string number to numbers (MUST USE '===' or it converts bool to int!!!)
               if (tableColumns['vpvisit'].includes(colum)) {visitRow[colum]=value;}
             }
             valArr.push(visitRow);

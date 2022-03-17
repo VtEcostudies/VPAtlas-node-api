@@ -353,7 +353,7 @@ try { //try-catch with promise doesn't work wrapped around fastCsv call. Put ins
               if (obsId && !amphibRow[obsId]) {amphibRow[obsId] = {};} //initialize valid amphibRow array element
               value = fileRows[i][j];
               if ('' === value) {value = null;} //convert empty strings to null
-              if (`${Number(value)}` == value) {value = Number(value);} //convert string number to numbers
+              if (`${Number(value)}` === value) {value = Number(value);} //convert string number to numbers (MUST USE '===' or it converts bool to int!!!)
               if (tableColumns['vpsurvey'].includes(colum)) {surveyRow[colum]=value;}
               if (tableColumns['vpsurvey_photos'].includes(colum)) {photoRow[colum]=value;}
               if (tableColumns['vpsurvey_year'].includes(colum)) {yearRow[colum]=value;}

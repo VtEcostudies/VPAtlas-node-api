@@ -85,6 +85,7 @@ app.use('/users', require('./users/vpUser.routes.pg')); //postgres user db
 app.use('/vtinfo', require('./vtInfo/vtInfo.routes')); //postgres vermont data - counties, towns, etc.
 app.use('/pools/mapped', require('./vpMapped/vpMapped.routes')); //postgres mapped pools db
 app.use('/pools/visit', require('./vpVisit/vpVisit.routes')); //postgres pool visits db
+app.use('/visit', require('./vpVisit/vpVisit.routes')); //postgres visits db for survey123 data handling
 app.use('/pools', require('./vpPools/vpPools.routes')); //postgres 'Mapped Pools' and 'Pool Visits' GETS-only combined
 app.use('/review', require('./vpReview/vpReview.routes')); //postgres reviews db
 app.use('/survey', require('./vpSurvey/vpSurvey.routes')); //postgres survey db

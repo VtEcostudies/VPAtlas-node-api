@@ -45,6 +45,8 @@ function jwt() {
             { url: /^\/pools\/visit\/.*/, methods: ['GET'] },
             { url: /^\/pools\/visit\/page\/.*/, methods: ['GET'] },
 
+            { url: /^\/visit\/.*/, methods: ['GET'] },
+
             //'/pools', // /pools performs a getAll()
             { url: /^\/pools/, methods: ['GET'] },
             { url: /^\/pools\/.*/, methods: ['GET'] },
@@ -54,7 +56,12 @@ function jwt() {
             { url: /^\/survey\/columns/, methods: ['GET'] },
             { url: /^\/survey/, methods: ['GET'] },
             { url: /^\/survey\/.*/, methods: ['GET'] },
-            { url: /^\/survey\/page\/.*/, methods: ['GET'] }
+            { url: /^\/survey\/page\/.*/, methods: ['GET'] },
+
+            //for testing. remove these
+            { url: /^\/survey\/.*/, methods: ['POST'] },
+            { url: /^\/visit\/.*/, methods: ['POST'] }
+
         ]
     });
 
