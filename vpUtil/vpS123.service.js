@@ -17,7 +17,7 @@ function getData(qry) {
   console.log('vpS123.service::getData | query', qry);
   var srvId = qry.serviceId?qry.serviceId:''; //test: 'service_fae86d23c46e403aa0dae67596be6073'; //VPMonDataSheet1
   var appId = qry.appId?qry.appId:0;
-  var objId = qry.objectId?qry.objectId:1;
+  var objId = qry.objectId?qry.objectId:0;
   var args = 'f=pjson';
 
   return new Promise((resolve, reject) => {

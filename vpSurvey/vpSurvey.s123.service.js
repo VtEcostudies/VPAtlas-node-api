@@ -10,7 +10,8 @@ module.exports = {
     getData,
     getUpsertData,
     getAttachments,
-    getUpsertAttachments
+    getUpsertAttachments,
+    getUpsertAll
 };
 
 //file scope list of vpSurvey tables' columns retrieved at app startup (see 'getColumns()' below)
@@ -46,6 +47,25 @@ function getData(req) {
         reject(err);
       });
     });
+}
+
+function getUpsertAll(req) {
+  return new Promise((resolve, reject) => {
+    var first = req.query.first?req.query.first:1;
+    var last = req.query.last?req.query.last:10;
+    for (i=first; i<last; i++) {
+      req.query.objectId = i;
+      getUpsertData(req)
+        .then(res => {
+          console.log('getupsertAll | SUCCESS', res);
+          resolve(res);
+        })
+        .catch(err => {
+          console.log('getupsertAll | ERROR', err);
+          reject(err);
+        });
+    }
+  });
 }
 
 function getUpsertData(req) {
