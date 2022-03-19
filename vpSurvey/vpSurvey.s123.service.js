@@ -6,6 +6,11 @@ const vpS123Util = require('vpUtil/vpS123.service');
 var staticColumns = []; //all tables' columns in a single 1D array
 var tableColumns = []; //each table's columns by table name
 
+const defaultServiceId = 'service_e4f2a9746905471a9bb0d7a2d3d2c2a1';
+//former service having direct attachments: service_fae86d23c46e403aa0dae67596be6073
+const defaultFeatureId = 0;
+const attachFeatureIds = [1,2,3,4,5,6,7];
+
 module.exports = {
     getData,
     getUpsertData,
@@ -36,7 +41,7 @@ for (i=0; i<tables.length; i++) {
 
 function getData(req) {
   return new Promise((resolve, reject) => {
-    if (!req.query.serviceId) {req.query.serviceId = 'service_fae86d23c46e403aa0dae67596be6073';}
+    if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
     vpS123Util.getData(req.query)
       .then(jsonData => {
         console.log('vpSurvey.s123.service::getData | SUCCESS', jsonData);
@@ -70,7 +75,7 @@ function getUpsertAll(req) {
 
 function getUpsertData(req) {
   return new Promise((resolve, reject) => {
-    if (!req.query.serviceId) {req.query.serviceId = 'service_fae86d23c46e403aa0dae67596be6073';}
+    if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
     vpS123Util.getData(req.query)
       .then(jsonData => {
         upsert(req, [jsonData]) //put a single json Data object into array for future multi-object upsert
@@ -180,7 +185,7 @@ function upsert(req, jsonArr) {
 
 function getAttachments(req) {
   return new Promise((resolve, reject) => {
-    if (!req.query.serviceId) {req.query.serviceId = 'service_fae86d23c46e403aa0dae67596be6073';}
+    if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
     vpS123Util.getAttachments(req.query)
       .then(jsonArr => {
         console.log('vpSurvey.s123.service::getAttachments | SUCCESS', jsonArr);
@@ -201,7 +206,7 @@ function getUpsertAttachments(req) {
     getSurveyIdFromGlobalId(req.query)
       .then(surveyId => {
         req.query.surveyId = surveyId;
-        if (!req.query.serviceId) {req.query.serviceId = 'service_fae86d23c46e403aa0dae67596be6073';}
+        if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
         vpS123Util.getAttachments(req.query)
           .then(jsonParents => {
             console.log('vpSurvey.s123.service::getUpsertAttachments | SUCCESS', jsonParents);
