@@ -8,8 +8,12 @@
         "url": "https://github.com/VtEcostudies/VPAtlas-node-api.git"
     },
     "scripts": {
-        "start": "node ./server.js",
-        "start-dev": "nodemon ./server.js"
+        "start": "pm2 start --env prod",
+        "start-prod": "pm2 start --env prod",
+        "start-production": "pm2 start --env prod",
+        "start-dev": "pm2 start --env dev_local",
+        "start-dev-local": "pm2 start --env dev_local",
+        "start-dev-remote": "pm2 start --env dev_remote"
     },
     "dependencies": {
         "bcryptjs": "^2.4.3",
@@ -25,6 +29,7 @@
         "nodemailer": "^6.5.0",
         "pg": "^8.5.1",
         "pg-promise": "^10.10.1",
+        "pm2": "^5.2.0",
         "request": "^2.88.2",
         "rootpath": "^0.1.2"
     },

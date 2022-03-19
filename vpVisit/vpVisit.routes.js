@@ -21,6 +21,7 @@ router.get('/:id', getById);
 router.get('/upload/history', getUploadHistory);
 router.post('/s123', postS123);
 router.post('/s123/attachments', postS123Attachments);
+router.post('/s123/all', postS123All);
 router.post('/', create);
 router.post('/upload', upFile.single('visitUploadFile'), upload);
 router.put('/:id', update);
@@ -42,6 +43,12 @@ function getS123(req, res, next) {
 
 function postS123(req, res, next) {
     s123svc.getUpsertData(req)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function postS123All(req, res, next) {
+    s123svc.getUpsertAll(req)
         .then(items => res.json(items))
         .catch(err => next(err));
 }

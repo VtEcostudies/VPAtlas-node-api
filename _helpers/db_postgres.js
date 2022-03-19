@@ -2,23 +2,33 @@
   https://node-postgres.com/
 */
 const os = require("os");
-const env = os.hostname()=='vpatlas.org'?'prod':('dev.vpatlas.org'?'dev-remote':'dev-local');
+const os_env = os.hostname()=='vpatlas.org'?'prod':(os.hostname()=='dev.vpatlas.org'?'dev-remote':'dev-local');
+const process = require('process');
+const env = process.env;
+const api_env = env.NODE_ENV?env.NODE_ENV:'dev-local';
 const config = require('../config.json');
-const { Pool } = require('pg'); //a Postgres Connection Pool, not to be confused with a Vernal Pool
-const connPool = new Pool(config.pg[env]);
-const types = require('pg').types;
+
+if (!config.pg[api_env]) {
+  console.log('db_postgres startup ERROR |', api_env, 'is NOT a valid config key.');
+  console.log('valid keys:'); Object.keys(config.pg).forEach(key => console.log(key));
+  throw (`db_postgres startup ERROR | '${api_env}' is NOT a valid config key.`)
+}
+
 const moment = require('moment');
+const types = require('pg').types;
+const { Pool } = require('pg'); //a Postgres Connection Pool, not to be confused with a Vernal Pool
+const connPool = new Pool(config.pg[api_env]);
 
 //https://stackoverflow.com/questions/37300997/multi-row-insert-with-pg-promise
 const pgp = require('pg-promise')({
     capSQL: true // capitalize all generated SQL
 });
-const pgpDb = pgp(config.pg[env]);
+const pgpDb = pgp(config.pg[api_env]);
 
-console.log(`hostname: ${os.hostname}`);
-console.log(`environment: ${env}`);
-console.log(`postgres config:`);
-console.dir(config.pg[env]);
+console.log(`os_hostname |`, os.hostname());
+console.log(`os_env |`, os_env);
+console.log(`api_env |`, api_env);
+console.log(`postgres config.${api_env} |`, config.pg[api_env]);
 
 /*
  * Fix date display error.

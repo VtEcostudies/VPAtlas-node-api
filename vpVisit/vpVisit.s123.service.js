@@ -7,11 +7,14 @@ const moment = require('moment');
 var staticColumns = []; //all tables' columns in a single 1D array
 var tableColumns = []; //each table's columns by table name
 
+const defaultServiceId = 'service_71386df693ec4db8868d7a7c64c50761'; //default VPVisit serviceId
+
 module.exports = {
     getData,
     getUpsertData,
     getAttachments,
-    getUpsertAttachments
+    getUpsertAttachments,
+    getUpsertAll
 };
 
 //file scope list of vpvisit table columns retrieved on app startup (see 'getColumns()' below)
@@ -30,7 +33,7 @@ for (i=0; i<tables.length; i++) {
 
 function getData(req) {
   return new Promise((resolve, reject) => {
-    if (!req.query.serviceId) {req.query.serviceId = 'service_71386df693ec4db8868d7a7c64c50761';}
+    if (!req.query.serviceId) {req.query.serviceId = 'defaultServiceId';}
     vpS123Util.getData(req.query)
       .then(jsonData => {
         console.log('vpVisit.s123.service::getData | SUCCESS', jsonData);
@@ -43,9 +46,29 @@ function getData(req) {
     });
 }
 
+
+function getUpsertAll(req) {
+  return new Promise((resolve, reject) => {
+    var first = req.query.first?req.query.first:1;
+    var last = req.query.last?req.query.last:10;
+    for (i=first; i<last; i++) {
+      req.query.objectId = i;
+      getUpsertData(req)
+        .then(res => {
+          console.log('vpVisit.s123.service::getupsertAll | SUCCESS', res);
+          resolve(res);
+        })
+        .catch(err => {
+          console.log('vpVisit.s123.service::getupsertAll | ERROR', err);
+          reject(err);
+        });
+    }
+  });
+}
+
 function getUpsertData(req) {
   return new Promise((resolve, reject) => {
-    if (!req.query.serviceId) {req.query.serviceId = 'service_71386df693ec4db8868d7a7c64c50761';}
+    if (!req.query.serviceId) {req.query.serviceId = 'defaultServiceId';}
     vpS123Util.getData(req.query)
       .then(jsonData => {
         upsert(req, [jsonData]) //put a single json Data object into array for future multi-object upsert
@@ -204,7 +227,7 @@ function fixJsonColumnsData(jsonArr) {
 
 function getAttachments(req) {
   return new Promise((resolve, reject) => {
-    if (!req.query.serviceId) {req.query.serviceId = 'service_71386df693ec4db8868d7a7c64c50761';}
+    if (!req.query.serviceId) {req.query.serviceId = 'defaultServiceId';}
     vpS123Util.getAttachments(req.query)
       .then(jsonArr => {
         console.log('vpVisit.s123.service::getAttachments | SUCCESS', jsonArr);
@@ -225,7 +248,7 @@ function getUpsertAttachments(req) {
     getVisitIdFromGlobalId(req.query)
       .then(visitId => {
         req.query.visitId = visitId;
-        if (!req.query.serviceId) {req.query.serviceId = 'service_71386df693ec4db8868d7a7c64c50761';}
+        if (!req.query.serviceId) {req.query.serviceId = 'defaultServiceId';}
         vpS123Util.getAttachments(req.query)
           .then(jsonParents => {
             console.log('vpVisit.s123.service::getUpsertAttachments | SUCCESS', jsonParents);
