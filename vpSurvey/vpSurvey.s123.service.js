@@ -107,6 +107,7 @@ function upsert(req, jsonArr) {
           if (tableColumns['vpsurvey_year'].includes(colum)) {yearRow[colum]=value;}
           if (tableColumns['vpsurvey_macro'].includes(colum)) {macroRow[colum]=value;}
           if (tableColumns['vpsurvey_amphib'].includes(colum)) {amphibRow[obsId][colum]=value;}
+          if ('surveyTypeId'==colum && value===5) surveyRow[colum]=9; //map their 5 to our 9
           if ('surveyUserEmail'==colum && value===null) surveyRow[colum]=req.query.surveyUserEmail;
         });
         surveyRow['surveyAmphibJson'] = amphibRow; //set the vpsurvey jsonb column value for survey_amphib table
