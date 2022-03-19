@@ -17,10 +17,12 @@ router.get('/observers', getObservers); //get pool-survey observers
 router.get('/years', getYears); //get pool-survey years
 router.get('/', getAll);
 router.get('/s123', getS123);
+router.get('/s123/attachments', getS123attachments);
 router.get('/:id', getById);
 router.get('/pool/:poolId', getByPoolId);
 router.get('/upload/history', getUploadHistory);
 router.post('/s123', postS123);
+router.post('/s123/attachments', postS123Attachments);
 router.post('/upload', upFile.single('surveyUploadFile'), upload);
 router.post('/', create);
 router.put('/:id', update);
@@ -35,13 +37,25 @@ function getColumns(req, res, next) {
 }
 
 function getS123(req, res, next) {
-    s123svc.getS123Data(req)
+    s123svc.getData(req)
         .then(items => res.json(items))
         .catch(err => next(err));
 }
 
 function postS123(req, res, next) {
-    s123svc.getUpsertS123Data(req)
+    s123svc.getUpsertData(req)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getS123attachments(req, res, next) {
+    s123svc.getAttachments(req)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function postS123Attachments(req, res, next) {
+    s123svc.getUpsertAttachments(req)
         .then(items => res.json(items))
         .catch(err => next(err));
 }
