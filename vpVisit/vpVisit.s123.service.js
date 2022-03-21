@@ -8,6 +8,9 @@ var staticColumns = []; //all tables' columns in a single 1D array
 var tableColumns = []; //each table's columns by table name
 
 const defaultServiceId = 'service_71386df693ec4db8868d7a7c64c50761'; //default VPVisit serviceId
+//service_71386df693ec4db8868d7a7c64c50761
+const defaultFeatureId = 0;
+const attachFeatureIds = [1,2,3,4,5,6,7,8];
 
 module.exports = {
     getData,
@@ -225,9 +228,25 @@ function fixJsonColumnsData(jsonArr) {
     return jsonArr;
 }
 
+/*
+https://services1.arcgis.com/d3OaJoSAh2eh6OA9/ArcGIS/rest/services/service_71386df693ec4db8868d7a7c64c50761/
+FeatureServer/[1,2,3,4,5,6,7,8]/
+queryAttachments
+?objectIds=1&globalIds=&returnUrl=true&f=pjson
+
+To get attachments for a VPVisit
+- get the globalId from the parent Visit
+- call this function with these values:
+  - featureId == 1-N [1, 2, 3, ...7] for VPSurvey, [1, 2, 3, ...8] for VPVisit
+  - globalId == parentGlobalId
+
+You must call this function N times, once for each separate featureId, to query
+0-i attachments for each featureId.
+*/
 function getAttachments(req) {
   return new Promise((resolve, reject) => {
-    if (!req.query.serviceId) {req.query.serviceId = 'defaultServiceId';}
+    if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
+    if (!req.query.featureId) {req.query.featureId = defaultFeatureId;}
     vpS123Util.getAttachments(req.query)
       .then(jsonArr => {
         console.log('vpVisit.s123.service::getAttachments | SUCCESS', jsonArr);
