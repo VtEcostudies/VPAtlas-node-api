@@ -7,9 +7,11 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const jwt = require('_helpers/jwt');
 const errorHandler = require('_helpers/error-handler');
+const os = require("os");
+const os_env = os.hostname()=='vpatlas.org'?'prod':(os.hostname()=='dev.vpatlas.org'?'dev-remote':'dev-local');
 const process = require('process');
 const env = process.env;
-const api_env = env.NODE_ENV?env.NODE_ENV:'dev-local';
+var api_env = env.NODE_ENV?env.NODE_ENV:'dev-local';
 var serverConfig = {
   tls: 0,
   port: 4000,
@@ -17,8 +19,16 @@ var serverConfig = {
 }
 var debug = false;
 
+console.log(`os_hostname |`, os.hostname());
+console.log('os_env |', os_env);
 console.log('NODE_ENV |', env.NODE_ENV);
 console.log('api_env |', api_env);
+
+//if no explicit NODE_ENV, attempt to interpret the server context from OS hostname and set api environment from that
+if (!env.NODE_ENV) {
+  console.log('AMBIGUOUS SERVER CONTEXT... setting api_env = os_env...')
+  api_env = os_env;
+}
 
 switch(api_env) {
   default:

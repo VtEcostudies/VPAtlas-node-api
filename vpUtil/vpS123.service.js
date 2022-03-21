@@ -46,7 +46,7 @@ function getData(qry) {
 /*
 https://services1.arcgis.com/d3OaJoSAh2eh6OA9/ArcGIS/rest/services/
 service_fae86d23c46e403aa0dae67596be6073/
-FeatureServer/[1,2,3,4,5,6,7]/
+FeatureServer/[1,2,3,4,5,6,7,{8}]/
 queryAttachments
 ?globalIds=8686c8e5-546d-486c-a85f-836554992a64
 &returnUrl=true
@@ -79,7 +79,7 @@ function getAttachments (qry={}) {
     fetch(url)
       .then(res => res.json()) //this step is necessary when using fetch. without it, result is garbage.
       .then(json => {
-        if (json.error) {
+        if (json.error) { //successful http query, incorrect query structure (eg. req attach from featureLayer==0 for service having none)
           json.error.hint = url;
           json.error.detail = json.error.details;
           console.log('vpS123.service::getAttachments | ERROR', json);

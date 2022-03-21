@@ -8,6 +8,7 @@ var tableColumns = []; //each table's columns by table name
 
 const defaultServiceId = 'service_e4f2a9746905471a9bb0d7a2d3d2c2a1';
 //former service having direct attachments: service_fae86d23c46e403aa0dae67596be6073
+//another service having direct attachments: service_71386df693ec4db8868d7a7c64c50761
 const defaultFeatureId = 0;
 const attachFeatureIds = [1,2,3,4,5,6,7];
 
@@ -186,6 +187,7 @@ function upsert(req, jsonArr) {
 function getAttachments(req) {
   return new Promise((resolve, reject) => {
     if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
+    if (!req.query.featureId) {req.query.featureId = defaultFeatureId;}
     vpS123Util.getAttachments(req.query)
       .then(jsonArr => {
         console.log('vpSurvey.s123.service::getAttachments | SUCCESS', jsonArr);
