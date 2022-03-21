@@ -61,11 +61,18 @@ async function getCount(query={}) {
 }
 
 function getPoolIds(params={}) {
+  var order = ' ORDER BY "surveyPoolId"';
+  if (params.orderBy) {
+      var col = params.orderBy.split("|")[0];
+      var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';
+      order = ` ORDER BY "${col}" ${dir}`;
+  }
   const where = pgUtil.whereClause(params, staticColumns);
   const text = `
   SELECT DISTINCT("surveyPoolId")
   FROM vpsurvey
   ${where.text}
+  ${order}
   `;
   console.log(text, where.values);
   return query(text, where.values);
@@ -73,7 +80,7 @@ function getPoolIds(params={}) {
 
 function getTypes() {
   const text = `
-  SELECT * --"surveyTypeId", "surveyTypeName"
+  SELECT *
   FROM def_survey_type
   `;
   return query(text);
@@ -86,6 +93,7 @@ function getYears(params={}) {
   FROM vpsurvey_year
   INNER JOIN vpsurvey ON "surveyId"="surveyYearSurveyId"
   ${where.text}
+  ORDER BY "surveyYear" DESC
   `;
   console.log(text, where.values);
   return query(text, where.values);
@@ -94,17 +102,15 @@ function getYears(params={}) {
 async function getObservers(params={}) {
   const where = pgUtil.whereClause(params, staticColumns);
   const text = `
-  SELECT DISTINCT("surveyAmphibObsEmail") AS "surveyObserver"
-  FROM vpsurvey_amphib
-  UNION
-  SELECT DISTINCT("email") AS "surveyObserver"
+  SELECT DISTINCT("username") AS "surveyObserver"
   FROM vpuser
-  --INNER JOIN vpusers_roles ON id="userId" AND role LIKE '%bserver'
+  INNER JOIN vpsurvey ON id="surveyUserId"
   UNION
   SELECT DISTINCT("username") AS "surveyObserver"
   FROM vpuser
-  --INNER JOIN vpusers_roles ON id="userId" AND role LIKE '%bserver'
+  INNER JOIN vpsurvey_amphib ON id="surveyAmphibObsId"
   ${where.text}
+  ORDER BY "surveyObserver"
   `;
   console.log(text, where.values);
   return await query(text, where.values);

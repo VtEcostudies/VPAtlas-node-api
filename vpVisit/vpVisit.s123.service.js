@@ -236,7 +236,7 @@ queryAttachments
 
 To get attachments for a VPVisit
 - get the globalId from the parent Visit
-- call this function with these values:
+- call this function with these query values:
   - featureId == 1-N [1, 2, 3, ...7] for VPSurvey, [1, 2, 3, ...8] for VPVisit
   - globalId == parentGlobalId
 
