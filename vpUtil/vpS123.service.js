@@ -47,6 +47,8 @@ function getData(qry) {
   });
 }
 /*
+Get attachments made directly to a survey feature's object.
+
 https://services1.arcgis.com/d3OaJoSAh2eh6OA9/ArcGIS/rest/services/
 service_fae86d23c46e403aa0dae67596be6073/
 FeatureServer/[1,2,3,4,5,6,7,{8}]/
@@ -58,7 +60,7 @@ queryAttachments
 Finding attachments to repeatTables using globalIds DOES NOT WORK.
 
 When an attachment is to a feature itself, use this function. You can use
-globalId or objectId to locate attachments.
+globalId or objectId to query attachments.
 */
 function getDirectAttachment (qry={}) {
   var srvId = qry.serviceId?qry.serviceId:''; //test: "service_e4f2a9746905471a9bb0d7a2d3d2c2a1"; //VPMonDataSheet
@@ -135,7 +137,7 @@ function getRepeatAttachments (qry={}) {
     console.log('vpS123.service::getRepeatAttachments | URL', url);
     fetch(url)
       .then(res => res.json()) //this step is necessary when using fetch. without it, result is garbage.
-      .then(json => {
+      .then(async json => {
         if (json.error) { //successful http query, incorrect query structure (eg. req attach from featureLayer==0 for service having none)
           json.error.hint = url;
           json.error.detail = json.error.details;
@@ -150,12 +152,13 @@ function getRepeatAttachments (qry={}) {
               arrIds.push(relRec[i].attributes.objectid);
             }
             console.log(`vpS123.service::getRepeatAttachments | SUCCESS | parentObjectId:${pObjId} | featureId:${fetId} | objectIds:`, arrIds);
-            for (i=0; i<arrIds.length; i++) {
-              getFeatureAttachmentInfo(srvId, fetId, arrIds[i])
-                .then(info => {resolve(info);})
-                .catch(err => {reject(err);})
-            }
-            //resolve({parentObjectId:pObjId,featureId:fetId,objectIds:arrIds});
+            var arrInfo = [];
+            for (let i=0; i<arrIds.length; i++) { //with await, here, the for entire for loop blocks until it's done
+              await getFeatureAttachmentInfo(srvId, fetId, arrIds[i])
+                .then(info => {arrInfo.push(info);})
+                .catch(err => {console.log(err);})
+            } //...which allows the resolve, below, to return an array of attachmentInfos
+            resolve({parentObjectId:pObjId,featureId:fetId,objectIds:arrIds,attachmentInfos:arrInfo});
           } else {
             console.log('vpS123.service::getRepeatAttachments | NOT FOUND', json.relatedRecordGroups);
             reject({message:`No related records found for parentObjectId:${objId} | featureId:${fetId}`, hint:url});
