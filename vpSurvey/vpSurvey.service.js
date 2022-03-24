@@ -154,6 +154,8 @@ async function getAll(params={}) {
     --vpsurvey_year.*,
     --vpsurvey_photos.*,
     (SELECT "surveyTypeName" FROM def_survey_type WHERE def_survey_type."surveyTypeId"=vpsurvey."surveyTypeId"),
+    (SELECT array_agg("surveyPhotoUrl") as "surveyPhotoUrls" FROM vpsurvey_photos WHERE
+    vpsurvey."surveyId"=vpsurvey_photos."surveyPhotoSurveyId"),
     "mappedPoolId" AS "poolId",
     "mappedPoolStatus" AS "poolStatus",
     SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
@@ -184,13 +186,13 @@ function getById(surveyId) {
   "townName",
   "countyName",
   surveyuser.username AS "surveyUserLogin",
-  CONCAT(surveyuser.firstname, ' ', surveyuser.lastname) AS "surveyUserName",
-  surveyuser.id AS "surveyUserId",
+  --CONCAT(surveyuser.firstname, ' ', surveyuser.lastname) AS "surveyUserFullName",
+  --surveyuser.id AS "surveyUserId",
   vpSurvey.*,
   vpSurvey."updatedAt" AS "surveyUpdatedAt",
   vpSurvey."createdAt" AS "surveyCreatedAt",
   def_survey_type.*,
-  (SELECT array_agg(CONCAT(firstname, ' ', lastname)) AS "surveyAmphibObs"
+  (SELECT array_agg(username) AS "surveyAmphibObs"
     FROM vpsurvey_amphib
     INNER JOIN vpuser ON "surveyAmphibObsId"=id
     WHERE "surveyAmphibSurveyId"=$1),
@@ -203,6 +205,9 @@ function getById(surveyId) {
   (SELECT
     "surveyMacroTotalFASH"+"surveyMacroTotalCDFY"
     AS "sumMacros" FROM vpsurvey_macro WHERE "surveyMacroSurveyId"=$1),
+  (SELECT
+    array_agg("surveyPhotoUrl") AS "surveyPhotoUrls" FROM vpsurvey_photos
+  	WHERE "surveyPhotoSurveyId"=$1),
   "mappedPoolId" AS "poolId",
   "mappedPoolStatus" AS "poolStatus",
   SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
@@ -213,6 +218,7 @@ function getById(surveyId) {
   FROM vpSurvey
   INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
   INNER JOIN def_survey_type ON vpsurvey."surveyTypeId"=def_survey_type."surveyTypeId"
+  --LEFT JOIN VPsurvey_photos ON "surveyPhotoSurveyId"="surveyId"
   LEFT JOIN vpuser AS surveyuser ON "surveyUserId"=surveyuser."id"
   LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser."id"
   LEFT JOIN vptown ON "mappedTownId"="townId"
