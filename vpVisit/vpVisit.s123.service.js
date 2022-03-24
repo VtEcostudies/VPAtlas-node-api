@@ -8,9 +8,10 @@ var staticColumns = []; //all tables' columns in a single 1D array
 var tableColumns = []; //each table's columns by table name
 
 const defaultServiceId = 'service_71386df693ec4db8868d7a7c64c50761'; //default VPVisit serviceId
-//service_71386df693ec4db8868d7a7c64c50761
+//original VPVisit DataSheet serviceId: service_71386df693ec4db8868d7a7c64c50761
 const defaultFeatureId = 0;
-const attachFeatureIds = [1,2,3,4,5,6,7,8];
+const maximumFeatureId = 8;
+const attachFeatureIds = {1:'WOFR',2:'SPSA',3:'JESA',4:'BSSA',5:'FASH',6:'FNC',7:'OTHER',8:'POOL'};
 
 module.exports = {
     getData,
@@ -23,6 +24,7 @@ module.exports = {
 //file scope list of vpvisit table columns retrieved on app startup (see 'getColumns()' below)
 const tables = [
   "vpvisit",
+  "vpvisit_photos",
   "vptown"
 ];
 for (i=0; i<tables.length; i++) {
@@ -36,7 +38,7 @@ for (i=0; i<tables.length; i++) {
 
 function getData(req) {
   return new Promise((resolve, reject) => {
-    if (!req.query.serviceId) {req.query.serviceId = 'defaultServiceId';}
+    if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
     vpS123Util.getData(req.query)
       .then(jsonData => {
         console.log('vpVisit.s123.service::getData | SUCCESS', jsonData);
@@ -49,32 +51,35 @@ function getData(req) {
     });
 }
 
-
 function getUpsertAll(req) {
-  return new Promise((resolve, reject) => {
-    var first = req.query.first?req.query.first:1;
-    var last = req.query.last?req.query.last:10;
-    for (i=first; i<last; i++) {
-      req.query.objectId = i;
-      getUpsertData(req)
+  return new Promise(async (resolve, reject) => {
+    var offset = req.query.offset?parseInt(req.query.offset):1;
+    var limit = req.query.limit?parseInt(req.query.limit):1;
+    var stop = offset + limit;
+    var sucs = [], errs = [];
+    for (z=offset; z<stop; z++) {
+      req.query.featureId = 0;
+      req.query.objectId = z;
+      await getUpsertData(req)
         .then(res => {
-          console.log('vpVisit.s123.service::getupsertAll | SUCCESS', res);
-          resolve(res);
+          console.log('vpVisit.s123.service::getupsertAll | RESULTS', res);
+          sucs.push(res);
         })
         .catch(err => {
           console.log('vpVisit.s123.service::getupsertAll | ERROR', err);
-          reject(err);
+          errs.push(err)
         });
     }
+    resolve({results:sucs, errors:errs})
   });
 }
 
 function getUpsertData(req) {
   return new Promise((resolve, reject) => {
-    if (!req.query.serviceId) {req.query.serviceId = 'defaultServiceId';}
+    if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
     vpS123Util.getData(req.query)
       .then(jsonData => {
-        upsert(req, [jsonData]) //put a single json Data object into array for future multi-object upsert
+        upsertVisit(req, [jsonData]) //put a single json Data object into array for future multi-object upsertVisit
           .then(res => {resolve(res);})
           .catch(err => {reject(err);})
       })
@@ -85,7 +90,10 @@ function getUpsertData(req) {
     });
 }
 
-function upsert(req, jsonArr) {
+/*
+ INSERT or UPDATE VPVisit data from S123 VPVisit Data Sheet
+*/
+function upsertVisit(req, jsonArr) {
   var update = 0;
   return new Promise((resolve, reject) => {
     try {
@@ -101,6 +109,7 @@ function upsert(req, jsonArr) {
       for (i=0; i<jsonArr.length; i++) { //iterate over jsonData objects in jsonArray
         var visitRow = {}; //single object of colum:value pairs for one insert row into vpVisit
         var value = null; //temporary local var to hold values for scrubbing
+        if (!jsonArr[i].visitPoolId && !jsonArr[i].visitPoolMapped) {jsonArr[i].visitPoolId='NEW*';}
         Object.keys(jsonArr[i]).forEach(colum => { //iterate over keys in jsonData object (column names)
           value = jsonArr[i][colum];
           if ('' === value) {value = null;} //convert empty strings to null
@@ -119,34 +128,32 @@ function upsert(req, jsonArr) {
         ON CONFLICT ON CONSTRAINT "vpVisit_unique_visitPoolId_visitDate_visitUserName"
         DO UPDATE SET ("${visitColumns.join('","')}")=(EXCLUDED."${visitColumns.join('",EXCLUDED."')}")`;
       }
-      query += ' RETURNING "visitId", "visitPoolId", "visitGlobalId", "createdAt"!="updatedAt" AS updated ';
-      //console.log('vpVisit.s123.service::upsert | query', query); //verbatim query with values for testing
-      //console.log('vpVisit.s123.service::upsert | columns', columns);
-      //console.log('vpVisit.s123.service::upsert | values', valArr);
+      query += ' RETURNING "visitId","visitPoolId","visitGlobalId","visitObjectId","createdAt"!="updatedAt" AS updated ';
+      //console.log('vpVisit.s123.service::upsertVisit | query', query); //verbatim query with values for testing
+      //console.log('vpVisit.s123.service::upsertVisit | columns', columns);
+      //console.log('vpVisit.s123.service::upsertVisit | values', valArr);
     } catch (err) {
-      console.log('vpVisit.s123.service::upsert | try-catch ERROR', err.message);
+      console.log('vpVisit.s123.service::upsertVisit | try-catch ERROR', err.message);
       reject(err);
     }
     db.pgpDb.many(query) //'many' for expected return values
       .then(res_data => {
-//        console.log('vpVisit.s123.service::upsert | pgpDb SUCCESS', res);
-//        resolve(res);
         //to-do: create a for loop to handle multiple visit inserts
         req.query.visitId = res_data[0].visitId;
-        req.query.globalId = res_data[0].visitGlobalId;
-        delete req.query.objectId; //This was the objectId of the parent. Remove it so it uses globalId to find attachments.
+        req.query.globalId = res_data[0].visitGlobalId; //This is not needed to find repeatTable attachments.
+        req.query.objectId = res_data[0].visitObjectId; //This is the objectId of the parent visit. Use it to find repeatTable attachments.
         getUpsertAttachments(req)
           .then(res_atch => {
-            console.log('getUpdateAttachments AFTER getUpsertData | DOUBLE SUCCESS:', [res_data[0], res_atch]);
-            resolve([res_data[0], res_atch]);
+            console.log('getUpsertAttachments AFTER getUpsertData | DOUBLE SUCCESS:', {data:res_data[0],attachments:res_atch});
+            resolve({data:res_data[0],attachments:res_atch});
           })
           .catch(err_atch => {
-            console.log('getUpdateAttachments AFTER getUpsertData | MIXED RESULTS:', [res_data[0], err_atch]);
-            resolve([res_data[0], err_atch]);
+            console.log('getUpsertAttachments AFTER getUpsertData | MIXED RESULTS:', {data:res_data[0],attachments:err_atch});
+            resolve({data:res_data[0],attachments:err_atch});
           })
       })
       .catch(err => {
-        console.log('vpVisit.s123.service::upsert | pgpDb ERROR', err.message);
+        console.log('vpVisit.s123.service::upsertVisit | pgpDb ERROR', err.message);
         reject(err);
       }); //end pgpDb
   }); //end Promise
@@ -155,19 +162,20 @@ function upsert(req, jsonArr) {
 function fixJsonColumnsData(jsonArr) {
   for (i=0; i<jsonArr.length; i++) { //iterate over jsonData objects in jsonArray
       jsonArr[i]["visitGlobalId"]=jsonArr[i]["globalid"];
+      jsonArr[i]["visitObjectId"]=jsonArr[i]["objectid"];
       jsonArr[i]["visitPoolId"]=jsonArr[i]["visitPoolId"];
       jsonArr[i]["visitUserName"]=jsonArr[i]["visitUsername"];
-      jsonArr[i]["visitObserverUserName"]=jsonArr[i]["visitUsername"];
+      jsonArr[i]["visitObserverUserName"]=jsonArr[i]["visitObserverUserName"]?jsonArr[i]["visitObserverUserName"]:jsonArr[i]["visitUsername"];
       jsonArr[i]["visitLongitude"]=jsonArr[i]["longitude"];
       jsonArr[i]["visitLatitude"]=jsonArr[i]["latitude"];
       jsonArr[i]["visitDate"]=moment(jsonArr[i]["visitDateFormat"]).format("YYYY-MM-DD");
+      jsonArr[i]["visitPoolMapped"]=jsonArr[i]["visitmapped"].includes('unmapped')?false:true; //custom field not in db to catch NEW* pools
       jsonArr[i]["visitLocatePool"]=jsonArr[i]["visitlocated"];
       jsonArr[i]["visitCertainty"]=jsonArr[i]["visitCertainty"];
       jsonArr[i]["visitNavMethod"]=jsonArr[i]["visitNavMethod"];
       jsonArr[i]["visitNavMethodOther"]=jsonArr[i]["visitNavMethod_other"];
       jsonArr[i]["visitDirections"]=jsonArr[i]["visitdirections"];
       jsonArr[i]["visitLocationComments"]=jsonArr[i]["visitComments"];
-      //jsonArr[i]["visitPoolMapped"]=jsonArr[i]["visitmapped"];
       jsonArr[i]["visitVernalPool"]=jsonArr[i]["visitVernalPool"];
       jsonArr[i]["visitPoolType"]=jsonArr[i]["visitPoolType"];
       jsonArr[i]["visitPoolTypeOther"]=jsonArr[i]["visitPoolType_other"];
@@ -235,43 +243,51 @@ queryAttachments
 ?objectIds=1&globalIds=&returnUrl=true&f=pjson
 
 To get attachments for a VPVisit
-- get the globalId from the parent Visit
-- call this function with these values:
-  - featureId == 1-N [1, 2, 3, ...7] for VPSurvey, [1, 2, 3, ...8] for VPVisit
-  - globalId == parentGlobalId
+- required: objectId from the parent Visit
+- optional: featureId of featureServer to limit results to a single repeatTable
+  - featureId == [1, 2, 3, ...8] for VPVisit
 
-You must call this function N times, once for each separate featureId, to query
-0-i attachments for each featureId.
+Without a featureId, getAttachments loops over all featureIds for VPVisit.
 */
 function getAttachments(req) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
+    var beg=1, end=maximumFeatureId, parentId=0, atchArr=[], atchErr=[];
     if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
-    if (!req.query.featureId) {req.query.featureId = defaultFeatureId;}
-    vpS123Util.getAttachments(req.query)
-      .then(jsonArr => {
-        console.log('vpVisit.s123.service::getAttachments | SUCCESS', jsonArr);
-        resolve(jsonArr);
-      })
-      .catch(err => {
-        console.log('vpVisit.s123.service::getAttachments | ERROR', err.message);
-        reject(err);
-      });
-    });
+    //if (!req.query.featureId) {req.query.featureId = defaultFeatureId;}
+    if (req.query.featureId) {beg=req.query.featureId; end=req.query.featureId;}
+    else {beg=1; end=maximumFeatureId;}
+    for (var i=beg; i<=end; i++) {
+      req.query.featureId=i;
+      await vpS123Util.getRepeatAttachments(req.query)
+        .then(jsonParent => {
+          console.log(i, '| vpVisit.s123.service::getAttachments | SUCCESS', jsonParent);
+          parentId = jsonParent.parentObjectId;
+          atchArr = atchArr.concat(jsonParent.attachmentInfos);
+        })
+        .catch(err => {
+          console.log(i, '| vpVisit.s123.service::getAttachments | ERROR', err.message);
+          atchErr.push(err.message);
+        }); //end getRepeatAttachments
+      } //end for-loop
+      console.log('vpVisit.s123.service::getAttachments | ERRORS', atchErr);
+      console.log('vpVisit.s123.service::getAttachments | RESULTS', atchArr);
+      resolve({parentObjectId:parentId, attachmentInfos:atchArr});
+    }); //end promise
 }
 
 function getUpsertAttachments(req) {
   return new Promise((resolve, reject) => {
-    if (!req.query.globalId && !req.query.visitId) {
-      reject({message:`visitId and visitGlobalId missing. Cannot upsert attachments without at least one.`});
+    if (!req.query.objectId && !req.query.globalId && !req.query.visitId) {
+      reject({message:`visitId and vistitObjectId and visitGlobalId missing. Cannot upsert attachments without at least one.`});
     };
-    getVisitIdFromGlobalId(req.query)
+    getVisitIdFromS123Id(req.query)
       .then(visitId => {
         req.query.visitId = visitId;
-        if (!req.query.serviceId) {req.query.serviceId = 'defaultServiceId';}
-        vpS123Util.getAttachments(req.query)
-          .then(jsonParents => {
-            console.log('vpVisit.s123.service::getUpsertAttachments | SUCCESS', jsonParents);
-            upsertAttachments(req, jsonParents)
+        if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
+        getAttachments(req)
+          .then(jsonParent => { //this getAttachments now retruns an array of attachmentInfos within a parent object
+            console.log('vpVisit.s123.service::getUpsertAttachments | SUCCESS', jsonParent);
+            upsertAttachments(req, jsonParent)
               .then(res => {resolve(res);})
               .catch(err => {reject(err);})
           })
@@ -281,98 +297,174 @@ function getUpsertAttachments(req) {
           });
       })
       .catch(err => {
-        reject({message:`No parent visit in database. Cannot upsert attachments for parent globalId ${req.query.globalId}`});
+        reject({message:`No parent visit in database. Cannot upsert attachments for parent objectId ${req.query.objectId} or globalId ${req.query.globalId}`});
       })
     }); //end promise
 }
 
-function getVisitIdFromGlobalId(qry) {
+function getVisitIdFromS123Id(qry) {
   return new Promise((resolve, reject) => {
     if (qry.visitId > 0) {
-      console.log('getVisitIdFromGlobalId | INPUT visitId:', qry.visitId);
+      console.log('getVisitIdFromS123Id | INPUT visitId:', qry.visitId);
       resolve(qry.visitId);
-    } else {
-      query(`SELECT "visitId" FROM vpvisit WHERE "visitGlobalId"=$1`, [qry.globalId])
+    } else if (qry.objectId) {
+      query(`SELECT "visitId" FROM vpvisit WHERE "visitObjectId"=$1`, [qry.objectId])
         .then(res => {
           const id = res.rowCount?res.rows[0].visitId:0;
-          console.log('getVisitIdFromGlobalId | INPUT globalId:', qry.globalId, ' | RESULT:', res.rowCount?res.rows[0].visitId:0);
+          console.log('getVisitIdFromS123Id | INPUT objectId:', qry.objectId, ' | RESULT:', res.rowCount?res.rows[0].visitId:0);
           if (id) {resolve(id);}
           else {reject(0);}
         })
         .catch(err => {
-          console.log('getVisitIdFromGlobalId | ERROR:', err.message);
+          console.log('getVisitIdFromS123Id | ERROR:', err.message);
           resolve(0);
        });
-     } //end else
+    } else if (qry.globalId) {
+      query(`SELECT "visitId" FROM vpvisit WHERE "visitGlobalId"=$1`, [qry.globalId])
+        .then(res => {
+          const id = res.rowCount?res.rows[0].visitId:0;
+          console.log('getVisitIdFromS123Id | INPUT globalId:', qry.globalId, ' | RESULT:', res.rowCount?res.rows[0].visitId:0);
+          if (id) {resolve(id);}
+          else {reject(0);}
+        })
+        .catch(err => {
+          console.log('getVisitIdFromS123Id | ERROR:', err.message);
+          resolve(0);
+       });
+     } else {
+       console.log('getVisitIdFromS123Id | ERROR: visitId, objectId, or globalId not found in request object.');
+       reject(0);
+     }//end else
    }); //end promise
 }
 
 /*
-  Inserting photos from S123 API... Hm. For a given parentGlobalId, there may be
-  0 to N attachments, listed like this as attachmentInfos:
-  {
-       "parentObjectId": 307,
-        "parentGlobalId": "f85228e0-900d-40c7-96fd-8884b99c25d2",
-       "attachmentInfos": [
-           {
-               "id": 11,
-               "globalId": "3f601700-70ff-4f4e-8825-0fbe4cdab7c8",
-               "name": "visitPoolPhoto-20220305-151134.jpg",
-               "contentType": "image/jpeg",
-               "size": 170802,
-               "keywords": "visitPoolPhoto",
-               "url": "https://services1.arcgis.com/d3OaJoSAh2eh6OA9/ArcGIS/rest/services/service_fae86d23c46e403aa0dae67596be6073/FeatureServer/0/307/attachments/11",
-               "exifInfo": null
-           }
-       ]
-   }
+  INSERT or UPDATE an array of attachmentInfos for a single visitId into the new
+  table vpvisit_photos.
 */
-function updateAttachments(req, jsonParents) {
+function upsertAttachments(req, jsonParent) {
+  var update = 0;
   return new Promise((resolve, reject) => {
     if (!req.query.visitId) {reject({message:'visitId required to Upsert attachments.'})}
     try {
-      const jsonParent = jsonParents[0]; //kluge for now. to-do: add looping logic to insert many vists' photos
-      const jsonArr = jsonParent.attachmentInfos;
-      const typeArr = ['WOFR','SPSA','JESA','BLSA','FASH','CDFY','CLAM','OTHER','POOL'];
+      if (req.query) {update = !!req.query.update;}
+      const typeArr = ['WOFR','SPSA','JESA','BLSA','BSSA','FASH','CDFY','FNC','OTHER','POOL'];
       var valArr = [];
-      console.log('updateAttachments | jsonArr', jsonArr);
+      var jsonArr = jsonParent.attachmentInfos;
+      console.log('upsertAttachments | jsonArr', jsonArr);
       for (i=0; i<jsonArr.length; i++) { //iterate over jsonData objects in jsonArray
         var photoRow = {}; //single object of colum:value pairs for one insert row into vpvisit_photos
-        photoRow['visitId']=req.query.visitId;
+        photoRow['visitPhotoVisitId']=req.query.visitId;
+        photoRow['visitPhotoUrl']=jsonArr[i].url;
+        photoRow['visitPhotoName']=jsonArr[i].name;
         var type = 'UNKNOWN';
         var keyw = jsonArr[i].keywords.toUpperCase();
         for (j=0; j<typeArr.length; j++) {
           type = keyw.includes(typeArr[j])?typeArr[j]:'UNKNOWN';
         }
+        photoRow['visitPhotoSpecies']=type;
+        valArr.push(photoRow);
+      } //end for loop
+      var columns = [];
+      var query = null;
+      var photoColumns = tableColumns['vpvisit_photos']; //make a copy so it can be altered in case of UPDATE, below.
+      //https://stackoverflow.com/questions/37300997/multi-row-insert-with-pg-promise
+      columns = new db.pgp.helpers.ColumnSet(photoColumns, {table: 'vpvisit_photos'});
+      query = db.pgp.helpers.insert(valArr, columns);
+      if (update) {
+        query += `
+        ON CONFLICT ON CONSTRAINT "vpvisit_photos_unique_visitId_species_url"
+        DO UPDATE SET ("${photoColumns.join('","')}")=(EXCLUDED."${photoColumns.join('",EXCLUDED."')}")`;
+      }
+      query += ' RETURNING *';
+      console.log('vpSurvey.s123.service::upsertAttachments | query', query); //verbatim query with values for testing
+      //console.log('vpSurvey.s123.service::upsertAttachments | columns', columns);
+      //console.log('vpSurvey.s123.service::upsertAttachments | values', valArr);
+      db.pgpDb.many(query) //'many' for expected return values
+        .then(res => {
+          console.log('vpSurvey.s123.service::upsertAttachments | pgpDb SUCCESS', res);
+          resolve(res);
+        })
+        .catch(err => {
+          console.log('vpSurvey.s123.service::upsertAttachments| pgpDb ERROR', err.message);
+          reject(err);
+        }); //end pgpDb
+    } catch (err) {
+      console.log('vpSurvey.s123.service::upsertAttachments | try-catch ERROR', err.message);
+      reject(err);
+    }
+  }); //end Promise
+}
+
+/*
+  Original Visit Photo Attachment Update, to update vpvisit table single-photo columns.
+  This is deprecated and was not designed to use the VPVisit repeatTable S123 services.
+
+  Inserting one photo from S123 feature API like this:
+  https://services1.arcgis.com/d3OaJoSAh2eh6OA9/ArcGIS/rest/services/service_71386df693ec4db8868d7a7c64c50761/FeatureServer/8/5/attachments?f=pjson
+  {
+    "attachmentInfos" : [
+      {
+        "id" : 5,
+        "globalId" : "660111a9-7f53-4e61-8eb7-92e8153df02d",
+        "parentGlobalId" : "ddcb3d24-e116-41a1-8a3e-7978a4508670",
+        "name" : "visitPhotoSpecies.POOL-20220320-130145.jpg",
+        "contentType" : "image/jpeg",
+        "size" : 208128,
+        "keywords" : "visitPhotoSpecies.POOL",
+        "exifInfo" : null
+      }
+    ]
+  }
+  But we don't get an explicit URL. So: vpS123.service constructs a URL from featureId and objectIds of attachments.
+  */
+function updateVisitAttachment(req, jsonArr) {
+  return new Promise((resolve, reject) => {
+    if (!req.query.visitId) {reject({message:'visitId required to Update attachments.'})}
+    try {
+      const typeArr = ['WOFR','SPSA','JESA','BLSA','FASH','CDFY','CLAM','OTHER','POOL'];
+      var valArr = [];
+      console.log('updateAttachment | jsonArr', jsonArr);
+//      for (i=0; i<jsonArr.length; i++) { //iterate over objects in jsonArr
+        var jsonInfo = jsonArr[i];
+        var photoRow = {}; //single object of colum:value pairs for one insert row into vpvisit_photos
+        photoRow['visitId']=req.query.visitId;
+        var type = 'UNKNOWN';
+        var keyw = jsonInfo.keywords.toUpperCase();
+        for (j=0; j<typeArr.length; j++) {
+          type = keyw.includes(typeArr[j])?typeArr[j]:'UNKNOWN';
+        }
         switch(type) {
           case 'POOL':
-            photoRow['visitPoolPhoto']=jsonArr[i].url;
+            photoRow['visitPoolPhoto']=jsonInfo.url;
             break;
           case 'WOFR':
-            photoRow['visitWoodFrogPhoto']=jsonArr[i].url;
+            photoRow['visitWoodFrogPhoto']=jsonInfo.url;
             break;
           case 'SPSA':
-            photoRow['visitSpsPhoto']=jsonArr[i].url;
+            photoRow['visitSpsPhoto']=jsonInfo.url;
             break;
           case 'JESA':
-            photoRow['visitJesaPhoto']=jsonArr[i].url;
+            photoRow['visitJesaPhoto']=jsonInfo.url;
             break;
           case 'BLSA':
-            photoRow['visitBssaPhoto']=jsonArr[i].url;
+            photoRow['visitBssaPhoto']=jsonInfo.url;
             break;
           case 'FASH':
-            photoRow['visitFairyShrimpPhoto']=jsonArr[i].url;
+            photoRow['visitFairyShrimpPhoto']=jsonInfo.url;
             break;
           case 'CLAM':
-            photoRow['visitFingerNailClamsPhoto']=jsonArr[i].url;
+            photoRow['visitFingerNailClamsPhoto']=jsonInfo.url;
             break;
           case 'OTHER':
           case 'UNKNOWN':
-            photoRow['visitSpeciesOtherPhoto']=jsonArr[i].url;
+            photoRow['visitSpeciesOtherPhoto']=jsonInfo.url;
             break;
-        }
+        } //end switch
+/*
         valArr.push(photoRow);
-      }
+      } //end for loop
+*/
       var columns = [];
       var query = null;
       var photoColumns = tableColumns['vpvisit']; //make a copy so it can be altered in case of UPDATE, below.
@@ -380,20 +472,20 @@ function updateAttachments(req, jsonParents) {
       columns = new db.pgp.helpers.ColumnSet(photoColumns, {table: 'vpvisit'});
       query = db.pgp.helpers.update(valArr, columns);
       query += ' RETURNING "visitId", ';
-      console.log('vpVisit.s123.service::updateAttachments | query', query); //verbatim query with values for testing
-      //console.log('vpVisit.s123.service::updateAttachments | columns', columns);
-      //console.log('vpVisit.s123.service::updateAttachments | values', valArr);
+      console.log('vpVisit.s123.service::updateAttachment | query', query); //verbatim query with values for testing
+      //console.log('vpVisit.s123.service::updateAttachment | columns', columns);
+      //console.log('vpVisit.s123.service::updateAttachment | values', valArr);
       db.pgpDb.many(query) //'many' for expected return values
         .then(res => {
-          console.log('vpVisit.s123.service::updateAttachments | pgpDb SUCCESS', res);
+          console.log('vpVisit.s123.service::updateAttachment | pgpDb SUCCESS', res);
           resolve(res);
         })
         .catch(err => {
-          console.log('vpVisit.s123.service::upsert | pgpDb ERROR', err.message);
+          console.log('vpVisit.s123.service::updateAttachment | pgpDb ERROR', err.message);
           reject(err);
         }); //end pgpDb
     } catch (err) {
-      console.log('vpVisit.s123.service::updateAttachments | try-catch ERROR', err.message);
+      console.log('vpVisit.s123.service::updateAttachment | try-catch ERROR', err.message);
       reject(err);
     }
   }); //end Promise
