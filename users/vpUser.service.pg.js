@@ -53,6 +53,7 @@ us from returning an instructive error.
 */
 async function authenticate(body) {
     if (!body.username || !body.password) {throw 'Username and password are required.';}
+    if (config.disableLogins) {throw 'VPAtlas logins are disabled.';}
     return new Promise(async (resolve, reject) => {
         var token = null; //authentiction token. return if successful login.
         var select = `select * from vpuser where username=$1;`;

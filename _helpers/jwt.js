@@ -77,8 +77,8 @@ async function isRevoked(req, payload, done) {
       req.user = await userService.getById(payload.sub);
     }
 
-    // revoke token if user no longer exists or not found
-    if (!req.user) {
+    // revoke token if user no longer exists or not found, or we need to disable logins
+    if (!req.user || config.disableLogins) {
         return done(null, true);
     }
 
