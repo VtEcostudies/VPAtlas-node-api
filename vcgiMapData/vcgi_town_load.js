@@ -65,7 +65,11 @@ function loadTowns() {
           var feat = towns.features[i];
           var name = feat.properties.TOWNNAME;
           /*
-            Important corrections to vcgi town-names vs other source:
+            Important corrections to vcgi town-names vs other source. These were
+            handled in the db-upgrade script below by renaming towns to the vcgi
+            value and adding a column 'alias' for the other name.
+
+            upgrade\db.15\15_03_alter_table_vptown_drop_geometry.sql
 
             vptown name       vcgi name
             -----------       -----------
@@ -75,11 +79,6 @@ function loadTowns() {
             St. George        SAINT GEORGE
             St. Johnsbury     SAINT JOHNSBURY
           */
-          if (name=='RUTLAND TOWN') {name='RUTLAND';}
-          if (name=='SAINT ALBANS TOWN') {name='ST. ALBANS TOWN';}
-          if (name=='SAINT ALBANS CITY') {name='ST. ALBANS CITY';}
-          if (name=='SAINT GEORGE') {name='ST. GEORGE';}
-          if (name=='SAINT JOHNSBURY') {name='ST. JOHNSBURY';}
           await getTown(name) //get Town from vptown table for value from file
             .then(town => {
                 console.log(town);
@@ -88,7 +87,7 @@ function loadTowns() {
                   "type":feat.geometry.type,
                   "coordinates":feat.geometry.coordinates
                 };
-                insertGeoTown(town, townGeo)
+                upsertGeoTown(town, townGeo)
                   .then(res => {
                     //Success. Nothing to say.
                   })
@@ -146,13 +145,15 @@ function getTown(townName='', operator=`=`) {
   town is a vp town Object like
   data is a geoJSON feature
 */
-function insertGeoTown(town, data) {
+function upsertGeoTown(town, data) {
 
   var sql_insert = `
   insert into geo_town ("geoTownId","geoTownPolygon")
-  VALUES ($1, ST_GeomFromGeoJSON($2))`;
+  VALUES ($1, ST_GeomFromGeoJSON($2))
+  ON CONFLICT ON CONSTRAINT "geo_town_pkey"
+  DO UPDATE SET "geoTownPolygon" = ST_GeomFromGeoJSON($2)`;
 
-  console.log('insertGeoTown', town, sql_insert);
+  console.log('upsertGeoTown', town, sql_insert);
 
   return new Promise((resolve, reject) => {
     query(sql_insert, [town.townId, data])
@@ -160,7 +161,7 @@ function insertGeoTown(town, data) {
         resolve(res);
       })
       .catch(err => {
-        console.log('ERROR | insertGeoTown |', err.message);
+        console.log('ERROR | upsertGeoTown |', err.message);
         reject(err);
       })
   });
