@@ -64,7 +64,23 @@ function loadTowns() {
       for (i=0; i<towns.features.length; i++) {
           var feat = towns.features[i];
           var name = feat.properties.TOWNNAME;
-          await getTown(name)
+          /*
+            Important corrections to vcgi town-names vs other source:
+
+            vptown name       vcgi name
+            -----------       -----------
+            Rutland           RUTLAND TOWN
+            St. Albans Town   SAINT ALBANS TOWN
+            St. Albans City   SAINT ALBANS CITY
+            St. George        SAINT GEORGE
+            St. Johnsbury     SAINT JOHNSBURY
+          */
+          if (name=='RUTLAND TOWN') {name='RUTLAND';}
+          if (name=='SAINT ALBANS TOWN') {name='ST. ALBANS TOWN';}
+          if (name=='SAINT ALBANS CITY') {name='ST. ALBANS CITY';}
+          if (name=='SAINT GEORGE') {name='ST. GEORGE';}
+          if (name=='SAINT JOHNSBURY') {name='ST. JOHNSBURY';}
+          await getTown(name) //get Town from vptown table for value from file
             .then(town => {
                 console.log(town);
                 var townGeo = {
