@@ -177,6 +177,22 @@ function getAttachments(req) {
   return getRepeatAttachments(req);
 }
 
+/*
+{
+  "attachmentInfos" : [
+    {
+      "id" : 1,
+      "globalId" : "cca5310b-2155-42e9-8e10-3d871a4b9702",
+      "parentGlobalId" : "17cc4b55-612a-48da-8dc3-7394d5ca165b",
+      "name" : "055DF978-8366-4AD1-9662-DCE74D5BC2CE.jpeg",
+      "contentType" : "image/jpeg",
+      "size" : 855368,
+      "keywords" : "surveyPhotoSpecies.POOL",
+      "exifInfo" : null
+    }
+  ]
+}
+*/
 function getFeatureAttachmentInfo(srvId, fetId, objId) {
   return new Promise((resolve, reject) => {
     const url = `${apiUrl}/${srvId}/FeatureServer/${fetId}/${objId}/attachments?f=pjson`;
@@ -193,7 +209,7 @@ function getFeatureAttachmentInfo(srvId, fetId, objId) {
           if (1 == json.attachmentInfos.length) { //there is ONE attachment info record
             var ret = json.attachmentInfos[0];
             if (!ret.url) {
-              ret.url = `${apiUrl}/${srvId}/FeatureServer/${fetId}/${objId}/attachments/${objId}`;
+              ret.url = `${apiUrl}/${srvId}/FeatureServer/${fetId}/${objId}/attachments/${ret.id}`;
             }
             console.log('vpS123.service::getFeatureAttachmentInfo | SUCCESS', ret);
             resolve(ret);
