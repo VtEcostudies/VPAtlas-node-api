@@ -1,16 +1,18 @@
 const db = require('_helpers/db_postgres');
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
-const fetch = require('node-fetch')
+const fetch = require('node-fetch');
 const vpS123Util = require('vpUtil/vpS123.service');
+const moment = require('moment');
 var staticColumns = []; //all tables' columns in a single 1D array
 var tableColumns = []; //each table's columns by table name
 
 const defaultServiceId = 'service_e4f2a9746905471a9bb0d7a2d3d2c2a1';
-//former service having direct attachments: service_fae86d23c46e403aa0dae67596be6073
-//another service having direct attachments: service_71386df693ec4db8868d7a7c64c50761
+//former services having direct attachments: service_fae86d23c46e403aa0dae67596be6073, service_71386df693ec4db8868d7a7c64c50761
 const defaultFeatureId = 0;
-const attachFeatureIds = [1,2,3,4,5,6,7];
+const maximumFeatureId = 7;
+const attachFeatureIds = {1:'WOFR',2:'SPSA',3:'JESA',4:'BLSA',5:'FASH',7:'POOL'};
+const upsertAtchWiData = 1;
 
 module.exports = {
     getData,
@@ -45,7 +47,7 @@ function getData(req) {
     if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
     vpS123Util.getData(req.query)
       .then(jsonData => {
-        console.log('vpSurvey.s123.service::getData | SUCCESS', jsonData);
+        console.log('vpSurvey.s123.service::getData | RESULTS', jsonData);
         resolve(jsonData);
       })
       .catch(err => {
@@ -56,21 +58,25 @@ function getData(req) {
 }
 
 function getUpsertAll(req) {
-  return new Promise((resolve, reject) => {
-    var first = req.query.first?req.query.first:1;
-    var last = req.query.last?req.query.last:10;
-    for (i=first; i<last; i++) {
-      req.query.objectId = i;
-      getUpsertData(req)
+  return new Promise(async (resolve, reject) => {
+    var offset = req.query.offset?parseInt(req.query.offset):1;
+    var limit = req.query.limit?parseInt(req.query.limit):1;
+    var stop = offset + limit;
+    var sucs = [], errs = [];
+    for (z=offset; z<stop; z++) {
+      req.query.featureId = 0;
+      req.query.objectId = z;
+      await getUpsertData(req)
         .then(res => {
-          console.log('getupsertAll | SUCCESS', res);
-          resolve(res);
+          console.log('vpSurvey.s123.service::getupsertAll | RESULTS', res);
+          sucs.push(res);
         })
         .catch(err => {
-          console.log('getupsertAll | ERROR', err);
-          reject(err);
+          console.log('vpSurvey.s123.service::getupsertAll | ERROR', err);
+          errs.push(err)
         });
     }
+    resolve({results:sucs, errors:errs})
   });
 }
 
@@ -79,7 +85,7 @@ function getUpsertData(req) {
     if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
     vpS123Util.getData(req.query)
       .then(jsonData => {
-        upsert(req, [jsonData]) //put a single json Data object into array for future multi-object upsert
+        upsertSurvey(req, jsonData) //put a single json Data object into array for future multi-object upsert
           .then(res => {resolve(res);})
           .catch(err => {reject(err);})
       })
@@ -90,58 +96,59 @@ function getUpsertData(req) {
     });
 }
 
-function upsert(req, jsonArr) {
+function upsertSurvey(req, jsonData) {
   var update = 0;
   return new Promise((resolve, reject) => {
     try {
       if (req.query) {update = !!req.query.update;}
       const obsDelim = '_'; //delimiter for observer field prefix
       var colum = null; var split = []; var obsId = 0;
-      var surveyColumns = [];
-      Object.keys(jsonArr[0]).forEach(colum => {
+      var surveyColumns = []; //tableColumns['vpsurvey']; //this fails. pgpDb INSERT needs to match values to columns
+      Object.keys(jsonData).forEach(colum => {
         split = colum.split(obsDelim); colum = split[split.length-1]; obsId=(2==split.length?split[0]:0);
         if (tableColumns['vpsurvey'].includes(colum)) surveyColumns.push(colum);
       });
-      surveyColumns.push('surveyGlobalId'); //sent as simply 'globalId'
+      surveyColumns.push('surveyGlobalId'); //optional. sent as 'globalid'
+      surveyColumns.push('surveyObjectId'); //required. sent as 'objectid'
       surveyColumns.push('surveyAmphibJson');
       surveyColumns.push('surveyMacroJson');
       surveyColumns.push('surveyYearJson');
       surveyColumns.push('surveyPhotoJson');
-      console.log('vpsurvey.s123.upsert | header', surveyColumns);
+      //console.log('vpsurvey.s123.upsertSurvey | vpsurvey header', surveyColumns);
       var valArr = [];
-      for (i=0; i<jsonArr.length; i++) { //iterate over jsonData objects in jsonArray
-        var surveyRow = {}; //single object of colum:value pairs for one insert row into vpsurvey
-        var amphibRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_amphib
-        var macroRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_macro
-        var yearRow = {}; //single object of colum:value pairs to insert in jsonb column of vpsurvey_year
-        var photoRow = {}; //single object of colum:value pairs to insert in jsonb column of vpsurvey_photos
-        var colum = null;
-        var split = [];
-        var obsId = 1; //obsId is 1-based for actual observers
-        var value = null; //temporary local var to hold values for scrubbing
-        jsonArr[i]['surveyGlobalId'] = jsonArr[i].globalid; //map this custom value always
-        Object.keys(jsonArr[i]).forEach(colum => { //iterate over keys in jsonData object (column names)
-          split = colum.split(obsDelim); colum = split[split.length-1]; //observer column_name is the last piece
-          obsId = (2==split.length?split[0]:0); //did we get two array-elements split by '_'? If yes, flag it.
-          obsId = (obsId?obsId.slice(-1):0); //if flagged above, obsId is the trailing number of 'obs2...'
-          if (obsId && !amphibRow[obsId]) {amphibRow[obsId] = {};} //initialize valid amphibRow array element
-          value = jsonArr[i][colum];
-          if ('' === value) {value = null;} //convert empty strings to null
-          if (`${Number(value)}` === value) {value = Number(value);} //convert string number to numbers (MUST USE '===' or it converts bool to int!!!)
-          if (tableColumns['vpsurvey'].includes(colum)) {surveyRow[colum]=value;}
-          if (tableColumns['vpsurvey_photos'].includes(colum)) {photoRow[colum]=value;}
-          if (tableColumns['vpsurvey_year'].includes(colum)) {yearRow[colum]=value;}
-          if (tableColumns['vpsurvey_macro'].includes(colum)) {macroRow[colum]=value;}
-          if (tableColumns['vpsurvey_amphib'].includes(colum)) {amphibRow[obsId][colum]=value;}
-          if ('surveyTypeId'==colum && value===5) surveyRow[colum]=9; //map their 5 to our 9
-          if ('surveyUserEmail'==colum && value===null) surveyRow[colum]=req.query.surveyUserEmail;
-        });
-        surveyRow['surveyAmphibJson'] = amphibRow; //set the vpsurvey jsonb column value for survey_amphib table
-        surveyRow['surveyMacroJson'] = macroRow; //set the vpsurvey jsonb column value for survey_macro table
-        surveyRow['surveyYearJson'] = yearRow; //set the vpsurvey jsonb column value for survey_year table
-        surveyRow['surveyPhotoJson'] = photoRow; //set the vpsurvey jsonb column value for survey_photos table
-        valArr.push(surveyRow);
-        }
+      var surveyRow = {}; //single object of colum:value pairs for one insert row into vpsurvey
+      var amphibRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_amphib
+      var macroRow = {}; //array of objects of colum:value pairs to insert in jsonb column of vpsurvey_macro
+      var yearRow = {}; //single object of colum:value pairs to insert in jsonb column of vpsurvey_year
+      var photoRow = {}; //single object of colum:value pairs to insert in jsonb column of vpsurvey_photos
+      var colum = null;
+      var split = [];
+      var obsId = 1; //obsId is 1-based for actual observers
+      var value = null; //temporary local var to hold values for scrubbing
+      jsonData['surveyGlobalId'] = jsonData.globalid; //this is helpful but optional
+      jsonData['surveyObjectId'] = jsonData.objectid; //this is required
+      Object.keys(jsonData).forEach(colum => { //iterate over keys in jsonData object (column names)
+        value = jsonData[colum]; //this MUST be done FIRST, before stripping the leading 'obsN_'
+        split = colum.split(obsDelim); colum = split[split.length-1]; //observer column_name is the last piece
+        obsId = (2==split.length?split[0]:0); //did we get two array-elements split by '_'? If yes, flag it.
+        obsId = (obsId?obsId.slice(-1):0); //if flagged above, obsId is the trailing number of 'obs2...'
+        if (obsId && !amphibRow[obsId]) {amphibRow[obsId] = {};} //initialize valid amphibRow array element
+        if ('' === value) {value = null;} //convert empty strings to null
+        if (`${Number(value)}` === value) {value = Number(value);} //convert string number to numbers (MUST USE '===' or it converts bool to int!!!)
+        if (tableColumns['vpsurvey'].includes(colum)) {surveyRow[colum]=value;}
+        if (tableColumns['vpsurvey_photos'].includes(colum)) {photoRow[colum]=value;}
+        if (tableColumns['vpsurvey_year'].includes(colum)) {yearRow[colum]=value;}
+        if (tableColumns['vpsurvey_macro'].includes(colum)) {macroRow[colum]=value;}
+        if (tableColumns['vpsurvey_amphib'].includes(colum)) {amphibRow[obsId][colum]=value;}
+        if ('surveyTypeId'==colum && value===5) surveyRow[colum]=9; //map their 5 to our 9
+        if ('surveyUserEmail'==colum && value===null) surveyRow[colum]=jsonData['obs1_surveyAmphibObsEmail'];
+        //if ('surveyUserEmail'==colum && value===null) surveyRow[colum]=req.query.surveyUserEmail;
+      });
+      surveyRow['surveyAmphibJson'] = amphibRow; //set the vpsurvey jsonb column value for survey_amphib table
+      surveyRow['surveyMacroJson'] = macroRow; //set the vpsurvey jsonb column value for survey_macro table
+      surveyRow['surveyYearJson'] = yearRow; //set the vpsurvey jsonb column value for survey_year table
+      surveyRow['surveyPhotoJson'] = photoRow; //set the vpsurvey jsonb column value for survey_photos table
+      valArr.push(surveyRow);
       var columns = [];
       var query = null;
       //https://stackoverflow.com/questions/37300997/multi-row-insert-with-pg-promise
@@ -152,67 +159,93 @@ function upsert(req, jsonArr) {
         ON CONFLICT ON CONSTRAINT "vpsurvey_unique_surveyPoolId_surveyTypeId_surveyDate"
         DO UPDATE SET ("${surveyColumns.join('","')}")=(EXCLUDED."${surveyColumns.join('",EXCLUDED."')}")`;
         }
-      query += ' RETURNING "surveyId", "surveyPoolId", "surveyGlobalId", "createdAt"!="updatedAt" AS updated ';
-      console.log('vpsurvey.upload | query', query); //verbatim query with values for testing
-      //console.log('vpsurvey.s123.service::upsert | columns', columns);
-      //console.log('vpsurvey.s123.service::upsert | values', valArr);
+      query += ' RETURNING "surveyId","surveyPoolId","surveyGlobalId","surveyObjectId","createdAt"!="updatedAt" AS updated ';
+      //console.log('vpsurvey.upload | query', query); //verbatim query with values for testing
+      //console.log('vpsurvey.s123.service::upsertSurvey | columns', columns);
+      //console.log('vpsurvey.s123.service::upsertSurvey | values', valArr);
     } catch (err) {
-      console.log('vpsurvey.s123.service::upsert | try-catch ERROR', err.message);
+      console.log('vpsurvey.s123.service::upsertSurvey | try-catch ERROR', err.message);
       reject(err);
     }
     db.pgpDb.many(query) //'many' for expected return values
       .then(res_data => { //pgpDB.many return an array of results
-        console.log('vpsurvey.s123.service::upsert-pgpDb | SUCCESS:', res_data);
+        console.log('vpsurvey.s123.service::upsertSurvey-pgpDb | SUCCESS:', res_data);
         //to-do: create a for loop to handle multiple survey inserts
         req.query.surveyId = res_data[0].surveyId;
         req.query.globalId = res_data[0].surveyGlobalId;
-        delete req.query.objectId; //This was the objectId of the parent. Remove it so it uses globalId to find attachments.
-        getUpsertAttachments(req)
-          .then(res_atch => {
-            console.log('getUpsertAttachments AFTER getUpsertData | DOUBLE SUCCESS:', [res_data[0], res_atch]);
-            resolve([res_data[0], res_atch]);
-          })
-          .catch(err_atch => {
-            console.log('getUpsertAttachments AFTER getUpsertData | MIXED RESULTS:', [res_data[0], err_atch]);
-            resolve([res_data[0], err_atch]);
-          })
+        req.query.objectId = res_data[0].surveyObjectId;
+        if (upsertAtchWiData) {
+          getUpsertAttachments(req)
+            .then(res_atch => {
+              console.log('getUpsertAttachments AFTER getUpsertData | DOUBLE SUCCESS:', [res_data[0], res_atch]);
+              resolve([res_data[0], res_atch]);
+            })
+            .catch(err_atch => {
+              console.log('getUpsertAttachments AFTER getUpsertData | MIXED RESULTS:', [res_data[0], err_atch]);
+              resolve([res_data[0], err_atch]);
+            })
+          } else {
+            resolve(res_data);
+          }
       })
       .catch(err => {
-        console.log('vpsurvey.s123.service::upsert-pgpDb | ERROR', err.message);
+        console.log('vpsurvey.s123.service::upsertSurvey-pgpDb | ERROR', err.message);
         reject(err);
       }); //end pgpDb
   }); //end promise
 }
 
+/*
+https://services1.arcgis.com/d3OaJoSAh2eh6OA9/ArcGIS/rest/services/{defaultServiceId}/
+FeatureServer/[1,2,3,4,5,6,7]/
+queryAttachments
+?objectIds=1&globalIds=&returnUrl=true&f=pjson
+
+To get attachments for a VPSurvey
+- required: objectId from the parent Survey
+- optional: featureId of featureServer to limit results to a single repeatTable
+  - featureId == [1, 2, 3, ...7] for VPSurvey
+
+Without a featureId, getAttachments loops over all featureIds for VPSurvey.
+*/
 function getAttachments(req) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
+    var beg=1, end=maximumFeatureId, parentId=0, atchArr=[], atchErr=[];
     if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
-    if (!req.query.featureId) {req.query.featureId = defaultFeatureId;}
-    vpS123Util.getAttachments(req.query)
-      .then(jsonArr => {
-        console.log('vpSurvey.s123.service::getAttachments | SUCCESS', jsonArr);
-        resolve(jsonArr);
-      })
-      .catch(err => {
-        console.log('vpSurvey.s123.service::getAttachments | ERROR', err.message);
-        reject(err);
-      });
-    });
+    if (req.query.featureId) {beg=req.query.featureId; end=req.query.featureId;}
+    else {beg=1; end=maximumFeatureId;}
+    for (var i=beg; i<=end; i++) {
+      req.query.featureId=i;
+      await vpS123Util.getRepeatAttachments(req.query)
+        .then(jsonParent => {
+          console.log(i, '| vpSurvey.s123.service::getAttachments | RESULTS', jsonParent);
+          parentId = jsonParent.parentObjectId;
+          atchArr = atchArr.concat(jsonParent.attachmentInfos);
+        })
+        .catch(err => {
+          console.log(i, '| vpSurvey.s123.service::getAttachments | ERROR', err.message);
+          atchErr.push(err.message);
+        }); //end getRepeatAttachments
+      } //end for-loop
+      console.log('vpSurvey.s123.service::getAttachments | ERRORS', atchErr);
+      console.log('vpSurvey.s123.service::getAttachments | RESULTS', atchArr);
+      resolve({parentObjectId:parentId, attachmentInfos:atchArr});
+    }); //end promise
 }
 
 function getUpsertAttachments(req) {
   return new Promise((resolve, reject) => {
-    if (!req.query.globalId && !req.query.surveyId) {
-      reject({message:`surveyId and globalId missing. Cannot upsert attachments without at least one.`});
+    if (!req.query.objectId && !req.query.globalId && !req.query.surveyId) {
+      reject({message:`surveyId and surveyObjectId and surveyGlobalId missing. Cannot upsert attachments without at least one.`});
     };
-    getSurveyIdFromGlobalId(req.query)
+    getSurveyIdFromS123Id(req.query)
       .then(surveyId => {
         req.query.surveyId = surveyId;
         if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
-        vpS123Util.getAttachments(req.query)
-          .then(jsonParents => {
-            console.log('vpSurvey.s123.service::getUpsertAttachments | SUCCESS', jsonParents);
-            upsertAttachments(req, jsonParents)
+        getAttachments(req)
+          .then(jsonParent => {
+            console.log('vpSurvey.s123.service::getUpsertAttachments | RESULTS', jsonParent);
+            upsertAttachments(req, jsonParent)
               .then(res => {resolve(res);})
               .catch(err => {reject(err);})
           })
@@ -227,55 +260,53 @@ function getUpsertAttachments(req) {
     }); //end promise
 }
 
-function getSurveyIdFromGlobalId(qry) {
+function getSurveyIdFromS123Id(qry) {
   return new Promise((resolve, reject) => {
     if (qry.surveyId > 0) {
-      console.log('getSurveyIdFromGlobalId | INPUT surveyId:', qry.surveyId);
+      console.log('getSurveyIdFromS123Id | INPUT surveyId:', qry.surveyId);
       resolve(qry.surveyId);
-    } else {
-      query(`SELECT "surveyId" FROM vpsurvey WHERE "surveyGlobalId"=$1`, [qry.globalId])
+    } else if (qry.objectId) {
+      query(`SELECT "surveyId" FROM vpsurvey WHERE "surveyObjectId"=$1`, [qry.objectId])
         .then(res => {
           const id = res.rowCount?res.rows[0].surveyId:0;
-          console.log('getSurveyIdFromGlobalId | INPUT globalId:', qry.globalId, ' | RESULT:', res.rowCount?res.rows[0].surveyId:0);
+          console.log('getSurveyIdFromS123Id | INPUT objectId:', qry.objectId, ' | RESULT:', res.rowCount?res.rows[0].surveyId:0);
           if (id) {resolve(id);}
           else {reject(0);}
         })
         .catch(err => {
-          console.log('getSurveyIdFromGlobalId | ERROR:', err.message);
+          console.log('getSurveyIdFromS123Id | ERROR:', err.message);
           resolve(0);
        });
-     } //end else
+    } else if (qry.globalId) {
+      query(`SELECT "surveyId" FROM vpsurvey WHERE "surveyGlobalId"=$1`, [qry.globalId])
+        .then(res => {
+          const id = res.rowCount?res.rows[0].surveyId:0;
+          console.log('getSurveyIdFromS123Id | INPUT globalId:', qry.globalId, ' | RESULT:', res.rowCount?res.rows[0].surveyId:0);
+          if (id) {resolve(id);}
+          else {reject(0);}
+        })
+        .catch(err => {
+          console.log('getSurveyIdFromS123Id | ERROR:', err.message);
+          resolve(0);
+       });
+     } else {
+       console.log('getSurveyIdFromS123Id | ERROR: surveyId, objectId, or globalId not found in request object.');
+       reject(0);
+     }//end else
    }); //end promise
 }
 
 /*
-  Inserting photos from S123 API... Hm. For a given parentGlobalId, there may be
-  0 to N attachments, listed like this as attachmentInfos:
-  {
-       "parentObjectId": 307,
-       "parentGlobalId": "f85228e0-900d-40c7-96fd-8884b99c25d2",
-       "attachmentInfos": [
-           {
-               "id": 11,
-               "globalId": "3f601700-70ff-4f4e-8825-0fbe4cdab7c8",
-               "name": "visitPoolPhoto-20220305-151134.jpg",
-               "contentType": "image/jpeg",
-               "size": 170802,
-               "keywords": "visitPoolPhoto",
-               "url": "https://services1.arcgis.com/d3OaJoSAh2eh6OA9/ArcGIS/rest/services/service_fae86d23c46e403aa0dae67596be6073/FeatureServer/0/307/attachments/11",
-               "exifInfo": null
-           }
-       ]
-   }
+  INSERT or UPDATE an array of attachmentInfos for a single surveyId into table
+  vpsurvey_photos.
 */
-function upsertAttachments(req, jsonParents) {
+function upsertAttachments(req, jsonParent) {
   var update = 0;
   return new Promise((resolve, reject) => {
-    if (!req.query.surveyId) {reject({message:'surveyId required to Upsert attachments.'})}
     try {
+      if (!req.query.surveyId) {throw({message:'surveyId required to Upsert attachments.'});}
+      if (!jsonParent.attachmentInfos.length) {throw({message:'No attachments found.'});}
       if (req.query) {update = !!req.query.update;}
-      const jsonParent = jsonParents[0];
-      //jsonParent.surveyId=req.query.surveyId;
       const jsonArr = jsonParent.attachmentInfos;
       const typeArr = ['WOFR','SPSA','JESA','BLSA','FASH','CDFY','POOL'];
       var valArr = [];
@@ -310,11 +341,11 @@ function upsertAttachments(req, jsonParents) {
       //console.log('vpSurvey.s123.service::upsertAttachments | values', valArr);
       db.pgpDb.many(query) //'many' for expected return values
         .then(res => {
-          console.log('vpSurvey.s123.service::upsertAttachments | pgpDb SUCCESS', res);
+          console.log('vpSurvey.s123.service::upsertAttachments | pgpDb RESULTS', res);
           resolve(res);
         })
         .catch(err => {
-          console.log('vpSurvey.s123.service::upsert | pgpDb ERROR', err.message);
+          console.log('vpSurvey.s123.service::upsertAttachments | pgpDb ERROR', err.message);
           reject(err);
         }); //end pgpDb
     } catch (err) {

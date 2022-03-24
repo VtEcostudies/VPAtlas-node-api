@@ -27,6 +27,7 @@ function getData(qry) {
     if (!srvId) reject({message:'Please provide an S123 serviceId'});
     if (!objId) reject({message:'Please provide an S123 objectId'});
     const url = `${apiUrl}/${srvId}/FeatureServer/${fetId}/${objId}?${args}`;
+    console.log('vpS123.service::getData | NOTICE', url);
     fetch(url)
       .then(res => res.json()) //this step is necessary when using fetch. without it, result is garbage.
       .then(json => {
