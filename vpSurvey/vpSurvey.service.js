@@ -117,7 +117,7 @@ async function getObservers(params={}) {
 }
 
 async function getAll(params={}) {
-    var orderClause = 'order by "surveyId" desc';
+    var orderClause = 'ORDER BY "surveyDate" DESC, "surveyTime" DESC';
     if (params.orderBy) {
         var col = params.orderBy.split("|")[0];
         var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';

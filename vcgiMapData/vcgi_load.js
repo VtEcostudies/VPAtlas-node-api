@@ -17,13 +17,15 @@
 
     https://opendata.arcgis.com/datasets/0e4a5d2d58ac40bf87cd8aa950138ae8_39.geojson
 
-  Insert geoJSON data into PostGIS for eg. towns with:
+  Insert geoJSON data into PostGIS for eg. counties with:
 
-    'node vcgi_load town'
+    'node vcgi_load county'
 
   To-Do:
 
-  - Consider adding geoJSON download to this processing.
+  - Consder adding geoJSON download to this processing.
+  - This doesn't work for towns yet. Use 'vcgi_town_load.js' instead.
+    Convert towns to generic model in the future.
 
 */
 const db = require('../_helpers/db_postgres');
@@ -49,6 +51,7 @@ for (var i=2; i<process.argv.length; i++) {
   var arg = all[1]; //argument, right of action=argument
   console.log(`command-line argument ${i}`, all);
 	switch (act) {
+/*
 		case "town":
       geoFile = 'vcgi_town_polygons.geojson'; //'Polygon_VT_Town.geojson';
       geoTabl = 'geo_town';
@@ -57,6 +60,7 @@ for (var i=2; i<process.argv.length; i++) {
       nameCol = 'townName';
       idColum = 'townId';
 			break;
+*/
     case "county":
       geoFile = 'vcgi_county_polygons.geojson';
       geoTabl = 'geo_county';
