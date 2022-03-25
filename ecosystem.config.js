@@ -6,7 +6,7 @@ module.exports = {
     instances: 3, //-1,  // number of CPUs -1
     watch: true,  // auto restart app on change
     ignore_watch: ["node_modules"],
-    watch_delay: 10000,
+    watch_delay: 3000,
 /*
     wait_ready: true, // wait for app to send process.send('ready')
     listen_timeout: 10000, //timeout to wait for the ready signal, otherwise... do what?
