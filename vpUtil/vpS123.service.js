@@ -32,11 +32,14 @@ function getData(qry) {
       .then(res => res.json()) //this step is necessary when using fetch. without it, result is garbage.
       .then(json => {
         if (json.error) {
-          json.error.hint = url;
+          json.error.hint = json.error.message;
+          json.error.objectId = objId;
+          json.error.dataUrl = url;
           json.error.detail = json.error.details;
           console.log('vpS123.service::getData | ERROR', json);
           reject(json.error);
         } else {
+          json.feature.attributes.dataUrl = url;
           console.log('vpS123.service::getData | SUCCESS', json.feature.attributes);
           resolve(json.feature.attributes);
         }
