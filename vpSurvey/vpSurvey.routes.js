@@ -24,6 +24,7 @@ router.get('/upload/history', getUploadHistory);
 router.post('/s123', postS123);
 router.post('/s123/attachments', postS123Attachments);
 router.post('/s123/all', postS123All);
+router.post('/s123/abort', postS123Abort);
 router.post('/upload', upFile.single('surveyUploadFile'), upload);
 router.post('/', create);
 router.put('/:id', update);
@@ -51,6 +52,12 @@ function postS123(req, res, next) {
 
 function postS123All(req, res, next) {
     s123svc.getUpsertAll(req)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function postS123Abort(req, res, next) {
+    s123svc.abortAll(req)
         .then(items => res.json(items))
         .catch(err => next(err));
 }

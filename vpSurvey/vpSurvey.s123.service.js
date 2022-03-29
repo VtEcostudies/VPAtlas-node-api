@@ -13,13 +13,15 @@ const defaultFeatureId = 0;
 const maximumFeatureId = 7;
 const attachFeatureIds = {1:'WOFR',2:'SPSA',3:'JESA',4:'BLSA',5:'FASH',7:'POOL'};
 const upsertAtchWiData = 1;
+var abort = 0; //flag to abort loading, sent via the API
 
 module.exports = {
     getData,
     getUpsertData,
     getAttachments,
     getUpsertAttachments,
-    getUpsertAll
+    getUpsertAll,
+    abortAll
 };
 
 //file scope list of vpSurvey tables' columns retrieved at app startup (see 'getColumns()' below)
@@ -57,26 +59,43 @@ function getData(req) {
     });
 }
 
+function abortAll(req) {
+  abort = 1;
+  return Promise.resolve({message:'Abort requested!'})
+}
+
+ //you MUST parseInt on string values used to contol for-loops!!!
 function getUpsertAll(req) {
+  abort = 0; //always start this way
   return new Promise(async (resolve, reject) => {
-    var offset = req.query.offset?parseInt(req.query.offset):1;
-    var limit = req.query.limit?parseInt(req.query.limit):1;
+    var offset = req.query.offset?parseInt(req.query.offset):1; //you MUST parseInt on string values used to contol for-loops!!!
+    var limit = req.query.limit?parseInt(req.query.limit):1; //you MUST parseInt on string values used to contol for-loops!!!
     var stop = offset + limit;
-    var sucs = [], errs = [];
+    var sucs = [], errs = []; counts = {};
     for (z=offset; z<stop; z++) {
       req.query.featureId = 0;
       req.query.objectId = z;
-      await getUpsertData(req)
-        .then(res => {
-          console.log('vpSurvey.s123.service::getupsertAll | RESULTS', res);
-          sucs.push(res);
-        })
-        .catch(err => {
-          console.log('vpSurvey.s123.service::getupsertAll | ERROR', err);
-          errs.push(err)
-        });
+      if (abort) {
+        break;
+      } else {
+        await getUpsertData(req)
+          .then(res => {
+            //console.log('vpSurvey.s123.service::getupsertAll | RESULTS', res);
+            sucs.push(res);
+          })
+          .catch(err => {
+            console.log('vpSurvey.s123.service::getupsertAll | ERROR | err.message:', err.message, err);
+            errs.push(err)
+          });
+      }//end else
     }
-    resolve({results:sucs, errors:errs})
+    counts.success = sucs.length;
+    counts.errors = errs.length;
+    counts.target = limit;
+    counts.total = z - offset;
+    counts.aborted = abort;
+    console.log('vpSurvey.s123.service::getupsertAll | RESULTS |', counts);
+    resolve({counts:counts, results:sucs, errors:errs})
   });
 }
 
@@ -110,6 +129,7 @@ function upsertSurvey(req, jsonData) {
       });
       surveyColumns.push('surveyGlobalId'); //optional. sent as 'globalid'
       surveyColumns.push('surveyObjectId'); //required. sent as 'objectid'
+      surveyColumns.push('surveyDataUrl'); //required. sent as 'dataUrl'
       surveyColumns.push('surveyAmphibJson');
       surveyColumns.push('surveyMacroJson');
       surveyColumns.push('surveyYearJson');
@@ -127,6 +147,7 @@ function upsertSurvey(req, jsonData) {
       var value = null; //temporary local var to hold values for scrubbing
       jsonData['surveyGlobalId'] = jsonData.globalid; //this is helpful but optional
       jsonData['surveyObjectId'] = jsonData.objectid; //this is required
+      jsonData['surveyDataUrl'] = jsonData.dataUrl; //this is required
       Object.keys(jsonData).forEach(colum => { //iterate over keys in jsonData object (column names)
         value = jsonData[colum]; //this MUST be done FIRST, before stripping the leading 'obsN_'
         split = colum.split(obsDelim); colum = split[split.length-1]; //observer column_name is the last piece
@@ -141,7 +162,9 @@ function upsertSurvey(req, jsonData) {
         if (tableColumns['vpsurvey_macro'].includes(colum)) {macroRow[colum]=value;}
         if (tableColumns['vpsurvey_amphib'].includes(colum)) {amphibRow[obsId][colum]=value;}
         if ('surveyTypeId'==colum && value===5) surveyRow[colum]=9; //map their 5 to our 9
-        if ('surveyUserEmail'==colum && value===null) surveyRow[colum]=jsonData['obs1_surveyAmphibObsEmail'];
+        if ('surveyUserEmail'==colum && value===null) { //if not explicitly passed, use obs1 or obs2 for surveyUserEmail
+          surveyRow[colum]=jsonData['obs1_surveyAmphibObsEmail']?jsonData['obs1_surveyAmphibObsEmail']:jsonData['obs2_surveyAmphibObsEmail'];
+        }
         //if ('surveyUserEmail'==colum && value===null) surveyRow[colum]=req.query.surveyUserEmail;
       });
       surveyRow['surveyAmphibJson'] = amphibRow; //set the vpsurvey jsonb column value for survey_amphib table
@@ -159,12 +182,15 @@ function upsertSurvey(req, jsonData) {
         ON CONFLICT ON CONSTRAINT "vpsurvey_unique_surveyPoolId_surveyTypeId_surveyDate"
         DO UPDATE SET ("${surveyColumns.join('","')}")=(EXCLUDED."${surveyColumns.join('",EXCLUDED."')}")`;
         }
-      query += ' RETURNING "surveyId","surveyPoolId","surveyGlobalId","surveyObjectId","createdAt"!="updatedAt" AS updated ';
+      query += ' RETURNING "surveyId","surveyPoolId","surveyGlobalId","surveyObjectId","surveyDataUrl","createdAt"!="updatedAt" AS updated ';
       //console.log('vpsurvey.upload | query', query); //verbatim query with values for testing
       //console.log('vpsurvey.s123.service::upsertSurvey | columns', columns);
       //console.log('vpsurvey.s123.service::upsertSurvey | values', valArr);
     } catch (err) {
-      console.log('vpsurvey.s123.service::upsertSurvey | try-catch ERROR', err.message);
+      err.globalId = jsonData.globalid;
+      err.objectId = jsonData.objectid;
+      err.dataUrl = jsonData.dataUrl;
+      console.log('vpsurvey.s123.service::upsertSurvey | try-catch ERROR', err.message, err.dataUrl);
       reject(err);
     }
     db.pgpDb.many(query) //'many' for expected return values
@@ -177,19 +203,23 @@ function upsertSurvey(req, jsonData) {
         if (upsertAtchWiData) {
           getUpsertAttachments(req)
             .then(res_atch => {
-              console.log('getUpsertAttachments AFTER getUpsertData | DOUBLE SUCCESS:', [res_data[0], res_atch]);
-              resolve([res_data[0], res_atch]);
+              console.log('getUpsertAttachments AFTER getUpsertData | DOUBLE SUCCESS:', {data:res_data[0], attachments:res_atch});
+              resolve({data:res_data[0], attachments:res_atch});
             })
             .catch(err_atch => {
-              console.log('getUpsertAttachments AFTER getUpsertData | MIXED RESULTS:', [res_data[0], err_atch]);
-              resolve([res_data[0], err_atch]);
+              console.log('getUpsertAttachments AFTER getUpsertData | MIXED RESULTS:', {data:res_data[0], attachments:err_atch});
+              resolve({data:res_data[0], attachments:err_atch});
             })
           } else {
             resolve(res_data);
           }
       })
       .catch(err => {
-        console.log('vpsurvey.s123.service::upsertSurvey-pgpDb | ERROR', err.message);
+        err.globalId = jsonData.globalid;
+        err.objectId = jsonData.objectid;
+        err.dataUrl = jsonData.dataUrl;
+        err.hint = err.message; //err.message here does not percolate on return
+        console.log('vpsurvey.s123.service::upsertSurvey-pgpDb | ERROR', err.message, err.dataUrl);
         reject(err);
       }); //end pgpDb
   }); //end promise

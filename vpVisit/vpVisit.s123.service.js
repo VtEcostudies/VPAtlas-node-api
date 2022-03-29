@@ -51,26 +51,38 @@ function getData(req) {
     });
 }
 
+ //you MUST parseInt on string values used to contol for-loops!!!
 function getUpsertAll(req) {
+  abort = 0; //always start this way
   return new Promise(async (resolve, reject) => {
-    var offset = req.query.offset?parseInt(req.query.offset):1;
-    var limit = req.query.limit?parseInt(req.query.limit):1;
+    var offset = req.query.offset?parseInt(req.query.offset):1; //you MUST parseInt on string values used to contol for-loops!!!
+    var limit = req.query.limit?parseInt(req.query.limit):1; //you MUST parseInt on string values used to contol for-loops!!!
     var stop = offset + limit;
-    var sucs = [], errs = [];
+    var sucs = [], errs = []; counts = {};
     for (z=offset; z<stop; z++) {
       req.query.featureId = 0;
       req.query.objectId = z;
-      await getUpsertData(req)
-        .then(res => {
-          console.log('vpVisit.s123.service::getupsertAll | RESULTS', res);
-          sucs.push(res);
-        })
-        .catch(err => {
-          console.log('vpVisit.s123.service::getupsertAll | ERROR', err);
-          errs.push(err)
-        });
+      if (abort) {
+        break;
+      } else {
+        await getUpsertData(req)
+          .then(res => {
+            //console.log('vpVisit.s123.service::getupsertAll | RESULTS', res);
+            sucs.push(res);
+          })
+          .catch(err => {
+            console.log('vpVisit.s123.service::getupsertAll | ERROR | err.message:', err.message, err);
+            errs.push(err)
+          });
+      }//end else
     }
-    resolve({results:sucs, errors:errs})
+    counts.success = sucs.length;
+    counts.errors = errs.length;
+    counts.target = limit;
+    counts.total = z - offset;
+    counts.aborted = abort;
+    console.log('vpVisit.s123.service::getupsertAll | RESULTS |', counts);
+    resolve({counts:counts, results:sucs, errors:errs})
   });
 }
 
@@ -128,7 +140,7 @@ function upsertVisit(req, jsonArr) {
         ON CONFLICT ON CONSTRAINT "vpVisit_unique_visitPoolId_visitDate_visitUserName"
         DO UPDATE SET ("${visitColumns.join('","')}")=(EXCLUDED."${visitColumns.join('",EXCLUDED."')}")`;
       }
-      query += ' RETURNING "visitId","visitPoolId","visitGlobalId","visitObjectId","createdAt"!="updatedAt" AS updated ';
+      query += ' RETURNING "visitId","visitPoolId","visitGlobalId","visitObjectId","visitDataUrl","createdAt"!="updatedAt" AS updated ';
       //console.log('vpVisit.s123.service::upsertVisit | query', query); //verbatim query with values for testing
       //console.log('vpVisit.s123.service::upsertVisit | columns', columns);
       //console.log('vpVisit.s123.service::upsertVisit | values', valArr);
@@ -161,8 +173,9 @@ function upsertVisit(req, jsonArr) {
 
 function fixJsonColumnsData(jsonArr) {
   for (i=0; i<jsonArr.length; i++) { //iterate over jsonData objects in jsonArray
-      jsonArr[i]["visitGlobalId"]=jsonArr[i]["globalid"];
-      jsonArr[i]["visitObjectId"]=jsonArr[i]["objectid"];
+      jsonArr[i]["visitGlobalId"]=jsonArr[i]["globalid"]; //S123 global ID returned from API
+      jsonArr[i]["visitObjectId"]=jsonArr[i]["objectid"]; //S123 object ID requested and returned from API
+      jsonArr[i]["visitDataUrl"]=jsonArr[i]["dataUrl"]; //S123 data URL constructed within our query to ESRI
       jsonArr[i]["visitPoolId"]=jsonArr[i]["visitPoolId"];
       jsonArr[i]["visitUserName"]=jsonArr[i]["visitUsername"];
       jsonArr[i]["visitObserverUserName"]=jsonArr[i]["visitObserverUserName"]?jsonArr[i]["visitObserverUserName"]:jsonArr[i]["visitUsername"];
@@ -377,20 +390,20 @@ function upsertAttachments(req, jsonParent) {
         DO UPDATE SET ("${photoColumns.join('","')}")=(EXCLUDED."${photoColumns.join('",EXCLUDED."')}")`;
       }
       query += ' RETURNING *';
-      console.log('vpSurvey.s123.service::upsertAttachments | query', query); //verbatim query with values for testing
-      //console.log('vpSurvey.s123.service::upsertAttachments | columns', columns);
-      //console.log('vpSurvey.s123.service::upsertAttachments | values', valArr);
+      console.log('vpVisit.s123.service::upsertAttachments | query', query); //verbatim query with values for testing
+      //console.log('vpVisit.s123.service::upsertAttachments | columns', columns);
+      //console.log('vpVisit.s123.service::upsertAttachments | values', valArr);
       db.pgpDb.many(query) //'many' for expected return values
         .then(res => {
-          console.log('vpSurvey.s123.service::upsertAttachments | pgpDb SUCCESS', res);
+          console.log('vpVisit.s123.service::upsertAttachments | pgpDb SUCCESS', res);
           resolve(res);
         })
         .catch(err => {
-          console.log('vpSurvey.s123.service::upsertAttachments| pgpDb ERROR', err.message);
+          console.log('vpVisit.s123.service::upsertAttachments| pgpDb ERROR', err.message);
           reject(err);
         }); //end pgpDb
     } catch (err) {
-      console.log('vpSurvey.s123.service::upsertAttachments | try-catch ERROR', err.message);
+      console.log('vpVisit.s123.service::upsertAttachments | try-catch ERROR', err.message);
       reject(err);
     }
   }); //end Promise
