@@ -239,7 +239,7 @@ function fixJsonColumnsData(jsonArr) {
       jsonArr[i]["visitFingerNailClams"]=jsonArr[i]["visitFingernailClam"];
       jsonArr[i]["visitSpeciesOther1"]=jsonArr[i]["visitOther"];
       jsonArr[i]["visitSpeciesComments"]=jsonArr[i]["visitMiscNotes"];
-      jsonArr[i]["visitFish"]=jsonArr[i]["visitFish"];
+      jsonArr[i]["visitFish"]=!!jsonArr[i]["visitFish"]; //convert integers to boolean
       jsonArr[i]["visitFishCount"]=jsonArr[i]["visitFishCount"];
       jsonArr[i]["visitFishSize"]=jsonArr[i]["FishSize"];
       jsonArr[i]["visitFishSizeSmall"]=jsonArr[i]["visitFishSizeSmall"];
