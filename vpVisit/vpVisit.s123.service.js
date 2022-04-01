@@ -137,7 +137,7 @@ function upsertVisit(req, jsonArr) {
       query = db.pgp.helpers.insert(valArr, columns);
       if (update) {
         query += `
-        ON CONFLICT ON CONSTRAINT "vpVisit_unique_visitPoolId_visitDate_visitUserName"
+        ON CONFLICT ON CONSTRAINT "vpVisit_unique_visitPoolId_Date_UserName_GlobalId"
         DO UPDATE SET ("${visitColumns.join('","')}")=(EXCLUDED."${visitColumns.join('",EXCLUDED."')}")`;
       }
       query += ' RETURNING "visitId","visitPoolId","visitGlobalId","visitObjectId","visitDataUrl","createdAt"!="updatedAt" AS updated ';
