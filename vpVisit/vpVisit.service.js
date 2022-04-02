@@ -34,8 +34,8 @@ function getColumns() {
     });
 }
 
-async function getCount(body={}) {
-    const where = pgUtil.whereClause(body, staticColumns);
+async function getCount(params={}) {
+    const where = pgUtil.whereClause(params, staticColumns);
     const text = `select count(*) from vpvisit ${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -210,8 +210,10 @@ async function getById(id) {
     to_json("mappedPoolLocation"), "mappedPoolLocation", "mappedPoolStatus"
   FROM vpmapped
   WHERE "mappedPoolId"='NEW400';
+
+  Input: params are passed as req.query
 */
-async function getGeoJson(body={}) {
+async function getGeoJson(params={}) {
     const where = pgUtil.whereClause(params, staticColumns, 'AND');
     const sql = `
     SELECT

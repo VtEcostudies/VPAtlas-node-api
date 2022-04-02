@@ -35,8 +35,8 @@ function getColumns() {
     });
 }
 
-async function getCount(body={}) {
-    const where = pgUtil.whereClause(body, staticColumns);
+async function getCount(params={}) {
+    const where = pgUtil.whereClause(params, staticColumns);
     const text = `select count(*) from vpmapped ${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -44,9 +44,9 @@ async function getCount(body={}) {
 
 //TO-DO: filter out non-display pools for non-admin users
 //maybe do this by having roles available here, filtering queries based on role.
-async function getStats(body={"username":null}) {
-    if ('null' == body.username || !body.username) {body.username='unknownnobodyperson';}
-    console.log('getStats | body.username=', body.username);
+async function getStats(params={"username":null}) {
+    if ('null' == params.username || !params.username) {params.username='unknownnobodyperson';}
+    console.log('getStats | params.username=', params.username);
     const text = `
 select
 (select count("mappedPoolId") from vpmapped) as total_data,
@@ -74,26 +74,26 @@ inner join vpmapped on "mappedPoolId"="surveyPoolId"
 ) as monitored,
 (select count(distinct("mappedPoolId")) from vpmapped
 left join vpvisit on "mappedPoolId"="visitPoolId"
-where "mappedByUser"='${body.username}'
-OR "visitUserName"='${body.username}'
+where "mappedByUser"='${params.username}'
+OR "visitUserName"='${params.username}'
 ) as mine;`;
     return await query(text); //this can't work with a multi-command statement. results are returned per-command.
 
     /*
       Here's how it must be done if using the view 'pool_stats'. instead of in-lining values as above to this:
-      where "mappedByUser"=current_setting('body.username')
-      OR "visitUserName"=current_setting('body.username')
+      where "mappedByUser"=current_setting('params.username')
+      OR "visitUserName"=current_setting('params.username')
     */
     /*
-    const text = `SET body.username = ${body.username}; SELECT * from pool_stats;`;
+    const text = `SET params.username = ${params.username}; SELECT * from pool_stats;`;
     var res = await query(text);
     console.log(res[1].rows);
     return {"rowCount":res[1].rowCount, "rows":res[1].rows};
     */
 }
 
-async function getOverview(body={}) {
-    const where = pgUtil.whereClause(body, staticColumns);
+async function getOverview(params={}) {
+    const where = pgUtil.whereClause(params, staticColumns);
     const text = `
 SELECT
 "townId",
@@ -120,9 +120,9 @@ ${where.text};`;
     return await query(text, where.values);
 }
 
-async function getAll(body={}) {
+async function getAll(params={}) {
     console.log('vpmapped.service::getAll | ', staticColumns);
-    const where = pgUtil.whereClause(body, staticColumns);
+    const where = pgUtil.whereClause(params, staticColumns);
     const text = `
 SELECT
 "townId",
@@ -195,12 +195,12 @@ WHERE "mappedPoolId"=$1;`
     return await query(text, [id]);
 }
 
-async function getGeoJson(body={}) {
-    console.log('vpMapped.service | getGeoJson |', body);
-    const where = pgUtil.whereClause(body, staticColumns);
+async function getGeoJson(params={}) {
+    console.log('vpMapped.service | getGeoJson |', params);
+    const where = pgUtil.whereClause(params, staticColumns);
     const sql = `
     SELECT
-      row_to_json(fc)
+      row_to_json(fc) as geojson
       FROM (
         SELECT
     		'FeatureCollection' AS type,
