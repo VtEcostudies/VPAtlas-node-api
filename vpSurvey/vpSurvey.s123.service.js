@@ -351,6 +351,10 @@ function upsertAttachments(req, jsonParent) {
         for (j=0; j<typeArr.length; j++) {
           type = keyw.includes(typeArr[j])?typeArr[j]:'UNKNOWN';
         }
+        if (req.query.featureId) { //get photo type from featureId
+          console.log('ATTACHMENT SPECIES BY FEATURE ID', req.query.featureId, attachFeatureIds[req.query.featureId]);
+          type = attachFeatureIds[req.query.featureId];
+        }
         photoRow['surveyPhotoSpecies']=type;
         valArr.push(photoRow);
       }

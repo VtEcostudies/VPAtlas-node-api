@@ -205,9 +205,11 @@ function getById(surveyId) {
   (SELECT
     "surveyMacroTotalFASH"+"surveyMacroTotalCDFY"
     AS "sumMacros" FROM vpsurvey_macro WHERE "surveyMacroSurveyId"=$1),
-  (SELECT
-    array_agg("surveyPhotoUrl") AS "surveyPhotoUrls" FROM vpsurvey_photos
-  	WHERE "surveyPhotoSurveyId"=$1),
+  (SELECT json_agg(q) AS "surveyPhotos" FROM (
+      SELECT "surveyPhotoUrl","surveyPhotoSpecies","surveyPhotoName"
+      FROM vpsurvey_photos
+      WHERE vpsurvey."surveyId"=vpsurvey_photos."surveyPhotoSurveyId"
+    ) AS q),
   "mappedPoolId" AS "poolId",
   "mappedPoolStatus" AS "poolStatus",
   SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
@@ -253,8 +255,8 @@ function getByPoolId(poolId) {
   return query(text, [poolId]);
 }
 
-async function getGeoJson(body={}) {
-    const where = pgUtil.whereClause(body, staticColumns);
+async function getGeoJson(params={}) {
+    const where = pgUtil.whereClause(params, staticColumns);
     const sql = `
       SELECT
           row_to_json(fc) AS geojson
@@ -266,18 +268,29 @@ async function getGeoJson(body={}) {
           FROM (
               SELECT
                   'Feature' AS type,
-      			         ST_AsGeoJSON(
-                       ST_GeomFromText('POINT(' || "mappedLongitude" || ' ' || "mappedLatitude" || ')'))::json
-                       AS geometry,
-                  (SELECT
-                    vpsurvey.*
-      				row_to_json(p) FROM (SELECT
-      				) AS p
+                   ST_AsGeoJSON("mappedPoolLocation")::json as geometry,
+                   (SELECT
+                     row_to_json(p) FROM (SELECT
+                        vpmapped.*,
+                        vpsurvey.*,
+                        --vpsurvey_amphib.*,
+                        --vpsurvey_macro.*,
+                        (SELECT "surveyTypeName" FROM def_survey_type
+                          WHERE def_survey_type."surveyTypeId"=vpsurvey."surveyTypeId"),
+                        (SELECT array_agg(q) AS "surveyPhotos" FROM (
+         							      SELECT "surveyPhotoUrl","surveyPhotoSpecies","surveyPhotoName"
+       							        FROM vpsurvey_photos
+             						  	WHERE vpsurvey."surveyId"=vpsurvey_photos."surveyPhotoSurveyId"
+                            ) AS q
+             							)
+                     ) AS p
       			) AS properties
               FROM vpSurvey
           		INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
-              INNER JOIN vpsurvey_amphib ON "surveyId"="surveyAmphibSurveyId"
-              INNER JOIN vpsurvey_year ON "surveyId"="surveyYearSurveyId"
+              --INNER JOIN vpsurvey_amphib ON "surveyId"="surveyAmphibSurveyId"
+              --INNER JOIN vpsurvey_macro ON "surveyId"="surveyMacroSurveyId"
+              --LEFT JOIN vpsurvey_year ON "surveyId"="surveyYearSurveyId"
+              --LEFT JOIN vpsurvey_photos ON "surveyId"="surveyPhotoSurveyId"
               ${where.text}
           ) AS f
       ) AS fc; `;
@@ -435,18 +448,18 @@ upload req.file:
   size: 1971
 }
 */
-async function insert_log_upload_attempt(body={}, update=false) {
+async function insert_log_upload_attempt(params={}, update=false) {
   var columns = {};
   columns.named = [`"surveyUpload_fieldname"`,`"surveyUpload_mimetype"`,`"surveyUpload_path"`,`"surveyUpload_size"`,`"surveyUploadType"`];
   columns.numbered = ['$1','$2','$3','$4','$5'];
-  columns.values = [body.fieldname,body.mimetype,body.path,body.size,update?'update':'insert'];
+  columns.values = [params.fieldname,params.mimetype,params.path,params.size,update?'update':'insert'];
   text = `insert into vpsurvey_uploads (${columns.named}) values (${columns.numbered}) returning "surveyUploadId"`;
   console.log('vpSurvey.service::log_upload_attempt', text, columns.values);
   return await query(text, columns.values);
 }
 
-async function update_log_upload_attempt(surveyUploadId=0, body={}) {
-  var columns = pgUtil.parseColumns(body, 2, [surveyUploadId], staticColumns);
+async function update_log_upload_attempt(surveyUploadId=0, params={}) {
+  var columns = pgUtil.parseColumns(params, 2, [surveyUploadId], staticColumns);
   text = `update vpsurvey_uploads set (${columns.named}) = (${columns.numbered}) where "surveyUploadId"=$1`;
   console.log('vpSurvey.service::log_upload_attempt', text, columns.values);
   return await query(text, columns.values);

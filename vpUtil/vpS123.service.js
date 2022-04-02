@@ -159,7 +159,9 @@ function getRepeatAttachments (qry={}) {
             var arrInfo = [];
             for (let i=0; i<arrIds.length; i++) { //with await, here, the for entire for loop blocks until it's done
               await getFeatureAttachmentInfo(srvId, fetId, arrIds[i])
-                .then(info => {arrInfo.push(info);})
+                .then(infos => {
+                  arrInfo = arrInfo.concat(infos); //we expect an array of attachment infos
+                })
                 .catch(err => {console.log(err);})
             } //...which allows the resolve, below, to return an array of attachmentInfos
             resolve({parentObjectId:pObjId,featureId:fetId,objectIds:arrIds,attachmentInfos:arrInfo});
@@ -209,17 +211,12 @@ function getFeatureAttachmentInfo(srvId, fetId, objId) {
           console.log('vpS123.service::getFeatureAttachmentInfo | ERROR', json);
           reject(json.error);
         } else {
-          if (1 == json.attachmentInfos.length) { //there is ONE attachment info record
-            var ret = json.attachmentInfos[0];
-            if (!ret.url) {
-              ret.url = `${apiUrl}/${srvId}/FeatureServer/${fetId}/${objId}/attachments/${ret.id}`;
-            }
-            console.log('vpS123.service::getFeatureAttachmentInfo | SUCCESS', ret);
-            resolve(ret);
-          } else {
-            console.log('vpS123.service::getFeatureAttachmentInfo | SINGLE NOT FOUND', json.attachmentInfos);
-            reject({message:`Single attachment not found for featureId ${fetId} ojbectId ${objId}`, hint:url});
+          var arr = json.attachmentInfos;
+          for (i=0; i<arr.length; i++) { //iterate over infos
+            arr[i].url = `${apiUrl}/${srvId}/FeatureServer/${fetId}/${objId}/attachments/${arr[i].id}`;
           }
+          console.log(`vpS123.service::getFeatureAttachmentInfo | FOUND ${arr.length} attachmentInfos`, arr);
+          resolve(arr);
         }
       })
       .catch(err => {
