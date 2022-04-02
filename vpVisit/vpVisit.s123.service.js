@@ -361,7 +361,7 @@ function upsertAttachments(req, jsonParent) {
     if (!req.query.visitId) {reject({message:'visitId required to Upsert attachments.'})}
     try {
       if (req.query) {update = !!req.query.update;}
-      const typeArr = ['WOFR','SPSA','JESA','BLSA','BSSA','FASH','CDFY','FNC','OTHER','POOL'];
+      //const typeArr = ['WOFR','SPSA','JESA','BLSA','BSSA','FASH','CDFY','FNC','OTHER','POOL'];
       var valArr = [];
       var jsonArr = jsonParent.attachmentInfos;
       console.log('upsertAttachments | jsonArr', jsonArr);
@@ -370,16 +370,15 @@ function upsertAttachments(req, jsonParent) {
         photoRow['visitPhotoVisitId']=req.query.visitId;
         photoRow['visitPhotoUrl']=jsonArr[i].url;
         photoRow['visitPhotoName']=jsonArr[i].name;
+        photoRow['surveyPhotoSpecies']=attachFeatureIds[jsonArr[i].featureServerId]; //we set this now for each attachmentInfo in vpS123.service::getFeatureAttachmentInfo(...)
+/*
         var type = 'UNKNOWN';
         var keyw = jsonArr[i].keywords.toUpperCase();
         for (j=0; j<typeArr.length; j++) {
           type = keyw.includes(typeArr[j])?typeArr[j]:'UNKNOWN';
         }
-        if (req.query.featureId) { //get photo type from featureId
-          console.log('ATTACHMENT SPECIES BY FEATURE ID', req.query.featureId, attachFeatureIds[req.query.featureId]);
-          type = attachFeatureIds[req.query.featureId];
-        }
         photoRow['visitPhotoSpecies']=type;
+*/
         valArr.push(photoRow);
       } //end for loop
       var columns = [];
