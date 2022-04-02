@@ -264,7 +264,8 @@ async function getGeoJson(params={}) {
           SELECT
       		'FeatureCollection' AS type,
       		'Vermont Vernal Pool Atlas - Pool Surveys' AS name,
-              array_to_json(array_agg(f)) AS features
+          '{ "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } }'::json as crs,
+          array_to_json(array_agg(f)) AS features
           FROM (
               SELECT
                   'Feature' AS type,

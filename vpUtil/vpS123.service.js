@@ -214,6 +214,7 @@ function getFeatureAttachmentInfo(srvId, fetId, objId) {
           var arr = json.attachmentInfos;
           for (i=0; i<arr.length; i++) { //iterate over infos
             arr[i].url = `${apiUrl}/${srvId}/FeatureServer/${fetId}/${objId}/attachments/${arr[i].id}`;
+            arr[i].featureServerId = fetId;
           }
           console.log(`vpS123.service::getFeatureAttachmentInfo | FOUND ${arr.length} attachmentInfos`, arr);
           resolve(arr);
