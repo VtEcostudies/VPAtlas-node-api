@@ -1,6 +1,7 @@
 ﻿const db = require('_helpers/db_postgres');
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
+const common = require('_helpers/db_common');
 var staticColumns = [];
 
 module.exports = {
@@ -36,7 +37,7 @@ function getColumns() {
 }
 
 async function getCount(params={}) {
-    const where = pgUtil.whereClause(params, staticColumns);
+    var where = pgUtil.whereClause(params, staticColumns);
     const text = `select count(*) from vpmapped ${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -93,7 +94,7 @@ OR "visitUserName"='${params.username}'
 }
 
 async function getOverview(params={}) {
-    const where = pgUtil.whereClause(params, staticColumns);
+    var where = pgUtil.whereClause(params, staticColumns);
     const text = `
 SELECT
 "townId",
@@ -122,7 +123,7 @@ ${where.text};`;
 
 async function getAll(params={}) {
     console.log('vpmapped.service::getAll | ', staticColumns);
-    const where = pgUtil.whereClause(params, staticColumns);
+    var where = pgUtil.whereClause(params, staticColumns);
     const text = `
 SELECT
 "townId",
@@ -197,7 +198,7 @@ WHERE "mappedPoolId"=$1;`
 
 async function getGeoJson(params={}) {
     console.log('vpMapped.service | getGeoJson |', params);
-    const where = pgUtil.whereClause(params, staticColumns);
+    var where = pgUtil.whereClause(params, staticColumns);
     const sql = `
     SELECT
       row_to_json(fc) as geojson

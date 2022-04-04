@@ -4,6 +4,7 @@ const fastCsv = require('fast-csv');
 const db = require('_helpers/db_postgres');
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
+const common = require('_helpers/db_common');
 var staticColumns = []; //all tables' columns in a single 1D array
 var tableColumns = []; //each table's columns by table name
 
@@ -400,7 +401,7 @@ try { //try-catch with promise doesn't work wrapped around fastCsv call. Put ins
           query = db.pgp.helpers.insert(valArr, columns);
           if (update) {
             query += `
-            ON CONFLICT ON CONSTRAINT "vpsurvey_unique_surveyPoolId_surveyTypeId_surveyDate"
+            ON CONFLICT ON CONSTRAINT "vpsurvey_unique_survey_PoolId_TypeId_Date_GlobalId"
             DO UPDATE SET ("${surveyColumns.join('","')}")=(EXCLUDED."${surveyColumns.join('",EXCLUDED."')}")`;
           }
           query += ' RETURNING "surveyId", "surveyPoolId", "createdAt"!="updatedAt" AS updated ';
@@ -494,7 +495,7 @@ async function update(id, body) {
 }
 
 async function _delete(id) {
-    return await query(`delete from vpsurvey where "surveyId"=$1 CASCADE;`, [id]);
+    return await query(`delete from vpsurvey where "surveyId"=$1;`, [id]);
 }
 
 async function history(params={}) {

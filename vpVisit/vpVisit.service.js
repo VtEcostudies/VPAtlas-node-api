@@ -1,6 +1,7 @@
 ﻿const db = require('_helpers/db_postgres');
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
+const common = require('_helpers/db_common');
 var staticColumns = [];
 
 module.exports = {
@@ -10,6 +11,7 @@ module.exports = {
     getAll,
     getPage,
     getById,
+    getCsv,
     getGeoJson,
     create,
     update,
@@ -52,6 +54,7 @@ async function getOverview(params={}) {
         orderClause = `order by "${col}" ${dir}`;
     }
     const where = pgUtil.whereClause(params, staticColumns, 'AND');
+    if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
     const text = `
 SELECT
 "townId",
@@ -86,16 +89,16 @@ ${where.text} ${orderClause};`;
 }
 
 async function getAll(params={}) {
-    var orderClause = 'order by "visitId"';
-    if (params.orderBy) {
-        var col = params.orderBy.split("|")[0];
-        var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';
-        orderClause = `order by "${col}" ${dir}`;
-    }
-    const where = pgUtil.whereClause(params, staticColumns);
-    const text = `
+  var orderClause = 'order by "visitId"';
+  if (params.orderBy) {
+      var col = params.orderBy.split("|")[0];
+      var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';
+      orderClause = `order by "${col}" ${dir}`;
+  }
+  var where = pgUtil.whereClause(params, staticColumns);
+  if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
+  const text = `
 SELECT
-(SELECT COUNT(*) FROM vpmapped INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
 "townId",
 "townName",
 "countyName",
@@ -129,6 +132,7 @@ async function getPage(page, params={}) {
         orderClause = `order by "${col}" ${dir}`;
     }
     var where = pgUtil.whereClause(params, staticColumns, 'AND'); //whereClause filters output against vpvisit.columns
+    if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
     const text = `
 SELECT
 (SELECT COUNT(*) FROM vpmapped INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
@@ -201,6 +205,27 @@ async function getById(id) {
     return await query(text, [id])
 }
 
+async function getCsv(params={}) {
+    const where = pgUtil.whereClause(params, staticColumns);
+    if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
+    const sql = `
+    SELECT
+    "townName",
+    "countyName",
+    "mappedPoolId" AS "poolId",
+    "mappedPoolStatus" AS "poolStatus",
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+    vpvisit.*
+    FROM vpvisit
+    INNER JOIN vpmapped on "mappedPoolId"="visitPoolId"
+    LEFT JOIN vptown ON "mappedTownId"="townId"
+    LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+    ${where.text}`;
+
+    return await query(sql, where.values)
+}
+
 /*
   NOTE: WE DO NOT NEED TO USE ST_AsGeoJSON("mappedPoolLocation")::json to convert gemetry to geoJSON.
 
@@ -215,6 +240,7 @@ async function getById(id) {
 */
 async function getGeoJson(params={}) {
     const where = pgUtil.whereClause(params, staticColumns, 'AND');
+    if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
     const sql = `
     SELECT
         row_to_json(fc) as geojson
