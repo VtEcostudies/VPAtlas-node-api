@@ -137,7 +137,7 @@ function upsertVisit(req, jsonArr) {
       query = db.pgp.helpers.insert(valArr, columns);
       if (update) {
         query += `
-        ON CONFLICT ON CONSTRAINT "vpVisit_unique_visitPoolId_Date_UserName_GlobalId"
+        ON CONFLICT ON CONSTRAINT "unique_visitGlobalId"
         DO UPDATE SET ("${visitColumns.join('","')}")=(EXCLUDED."${visitColumns.join('",EXCLUDED."')}")`;
       }
       query += ' RETURNING "visitId","visitPoolId","visitGlobalId","visitObjectId","visitDataUrl","createdAt"!="updatedAt" AS updated ';
@@ -219,25 +219,25 @@ function fixJsonColumnsData(jsonArr) {
       jsonArr[i]["visitDisturbRunoff"]=Boolean(jsonArr[i]["visitDisturbRunoff"]);
       jsonArr[i]["visitDisturbDitching"]=Boolean(jsonArr[i]["visitDisturbDitching"]);
       jsonArr[i]["visitDisturbOther"]=jsonArr[i]["visitDisturbOther"];
-      jsonArr[i]["visitWoodFrogAdults"]=jsonArr[i]["visitWoodFrogAdults"];
-      jsonArr[i]["visitWoodFrogLarvae"]=jsonArr[i]["visitWoodFrogLarvae"];
-      jsonArr[i]["visitWoodFrogEgg"]=jsonArr[i]["visitWoodFrogEgg"];
+      jsonArr[i]["visitWoodFrogAdults"]=jsonArr[i]["visitWoodFrogAdults"]+0;
+      jsonArr[i]["visitWoodFrogLarvae"]=jsonArr[i]["visitWoodFrogLarvae"]+0;
+      jsonArr[i]["visitWoodFrogEgg"]=jsonArr[i]["visitWoodFrogEgg"]+0;
       jsonArr[i]["visitWoodFrogEggHow"]=jsonArr[i]["visitWoodFrogEggHow"];
-      jsonArr[i]["visitSpsAdults"]=jsonArr[i]["visitSpsAdults"];
-      jsonArr[i]["visitSpsLarvae"]=jsonArr[i]["visitSpsLarvae"];
-      jsonArr[i]["visitSpsEgg"]=jsonArr[i]["visitSpsEgg"];
+      jsonArr[i]["visitSpsAdults"]=jsonArr[i]["visitSpsAdults"]+0;
+      jsonArr[i]["visitSpsLarvae"]=jsonArr[i]["visitSpsLarvae"]+0;
+      jsonArr[i]["visitSpsEgg"]=jsonArr[i]["visitSpsEgg"]+0;
       jsonArr[i]["visitSpsEggHow"]=jsonArr[i]["visitSpsEggHow"];
-      jsonArr[i]["visitJesaAdults"]=jsonArr[i]["visitJesaAdults"];
-      jsonArr[i]["visitJesaLarvae"]=jsonArr[i]["visitJesaLarvae"];
-      jsonArr[i]["visitJesaEgg"]=jsonArr[i]["visitJesaEgg"];
+      jsonArr[i]["visitJesaAdults"]=jsonArr[i]["visitJesaAdults"]+0;
+      jsonArr[i]["visitJesaLarvae"]=jsonArr[i]["visitJesaLarvae"]+0;
+      jsonArr[i]["visitJesaEgg"]=jsonArr[i]["visitJesaEgg"]+0;
       jsonArr[i]["visitJesaEggHow"]=jsonArr[i]["visitJesaEggHow"];
-      jsonArr[i]["visitBssaAdults"]=jsonArr[i]["visitBssaAdults"];
-      jsonArr[i]["visitBssaLarvae"]=jsonArr[i]["visitBssaLarvae"];
-      jsonArr[i]["visitBssaEgg"]=jsonArr[i]["visitBssaEgg"];
+      jsonArr[i]["visitBssaAdults"]=jsonArr[i]["visitBssaAdults"]+0;
+      jsonArr[i]["visitBssaLarvae"]=jsonArr[i]["visitBssaLarvae"]+0;
+      jsonArr[i]["visitBssaEgg"]=jsonArr[i]["visitBssaEgg"]+0;
       jsonArr[i]["visitBssaEggHow"]=jsonArr[i]["visitBssaEggHow"];
-      jsonArr[i]["visitFairyShrimp"]=jsonArr[i]["visitFairyShrimp"];
-      jsonArr[i]["visitFingerNailClams"]=jsonArr[i]["visitFingernailClam"];
-      jsonArr[i]["visitSpeciesOther1"]=jsonArr[i]["visitOther"];
+      jsonArr[i]["visitFairyShrimp"]=jsonArr[i]["visitFairyShrimp"]+0;
+      jsonArr[i]["visitFingerNailClams"]=jsonArr[i]["visitFingernailClam"]+0;
+      jsonArr[i]["visitSpeciesOtherName"]=jsonArr[i]["visitOther"];
       jsonArr[i]["visitSpeciesComments"]=jsonArr[i]["visitMiscNotes"];
       jsonArr[i]["visitFish"]=!!jsonArr[i]["visitFish"]; //convert integers to boolean
       jsonArr[i]["visitFishCount"]=jsonArr[i]["visitFishCount"];
@@ -370,7 +370,7 @@ function upsertAttachments(req, jsonParent) {
         photoRow['visitPhotoVisitId']=req.query.visitId;
         photoRow['visitPhotoUrl']=jsonArr[i].url;
         photoRow['visitPhotoName']=jsonArr[i].name;
-        photoRow['surveyPhotoSpecies']=attachFeatureIds[jsonArr[i].featureServerId]; //we set this now for each attachmentInfo in vpS123.service::getFeatureAttachmentInfo(...)
+        photoRow['visitPhotoSpecies']=attachFeatureIds[jsonArr[i].featureServerId]; //we set this now for each attachmentInfo in vpS123.service::getFeatureAttachmentInfo(...)
 /*
         var type = 'UNKNOWN';
         var keyw = jsonArr[i].keywords.toUpperCase();

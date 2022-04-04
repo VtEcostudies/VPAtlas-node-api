@@ -179,7 +179,7 @@ function upsertSurvey(req, jsonData) {
       query = db.pgp.helpers.insert(valArr, columns);
       if (update) {
         query += `
-        ON CONFLICT ON CONSTRAINT "vpsurvey_unique_survey_PoolId_TypeId_Date_GlobalId"
+        ON CONFLICT ON CONSTRAINT "unique_surveyGlobalId"
         DO UPDATE SET ("${surveyColumns.join('","')}")=(EXCLUDED."${surveyColumns.join('",EXCLUDED."')}")`;
         }
       query += ' RETURNING "surveyId","surveyPoolId","surveyGlobalId","surveyObjectId","surveyDataUrl","createdAt"!="updatedAt" AS updated ';

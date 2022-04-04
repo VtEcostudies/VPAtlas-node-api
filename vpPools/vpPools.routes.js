@@ -5,9 +5,11 @@
 */
 const express = require('express');
 const router = express.Router();
+const convert = require('json-2-csv');
 const service = require('./vpPools.service');
 
 // routes
+router.get('/csv', getCsv);
 router.get('/columns', getColumns);
 router.get('/count', getCount);
 router.get('/overview', getOverview); //minimal dataset to support faster mapping views
@@ -55,6 +57,28 @@ function getAll(req, res, next) {
     console.log('vpPools.routes.getAll req.query', req.query);
     service.getAll(req.query)
         .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getCsv(req, res, next) {
+    console.log('vpPools.routes | getCsv', req.query);
+    service.getAll(req.query)
+        .then(items => {
+            if (items.rows) {
+              convert.json2csv(items.rows, (err, csv) => {
+                if (err) next(err);
+                if (req.query.download) {
+                      var file = csv;
+                      res.setHeader('Content-disposition', 'attachment; filename=vp_pools.csv');
+                      res.setHeader('Content-type', 'text/csv');
+                      res.send(file); //res.send not res.json
+                } else {
+                  res.send(csv);
+                }
+              });
+            }
+            else {res.json(items);}
+        })
         .catch(err => next(err));
 }
 

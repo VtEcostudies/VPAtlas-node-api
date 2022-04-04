@@ -1,14 +1,15 @@
 ﻿const express = require('express');
 const router = express.Router();
+const convert = require('json-2-csv');
 const service = require('./vpVisit.service');
 const uploads = require('./vpVisit.upload.service');
 const s123svc = require('./vpVisit.s123.service');
-
 const multer = require('multer');
 const upFile = multer({ dest: 'vpvisit/uploads/' });
 
 // routes NOTE: routes with names for same method (ie. GET) must be above routes
 // for things like /:id, or they are missed/skipped.
+router.get('/csv', getCsv);
 router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
 router.get('/count', getCount);
@@ -105,6 +106,28 @@ function getById(req, res, next) {
         .catch(err => next(err));
 }
 
+function getCsv(req, res, next) {
+    console.log('vpVisit.routes | getCsv', req.query);
+    service.getAll(req.query)
+        .then(items => {
+            if (items.rows) {
+              convert.json2csv(items.rows, (err, csv) => {
+                if (err) next(err);
+                if (req.query.download) {
+                      var file = csv;
+                      res.setHeader('Content-disposition', 'attachment; filename=vp_visit.csv');
+                      res.setHeader('Content-type', 'text/csv');
+                      res.send(file); //res.send not res.json
+                } else {
+                  res.send(csv);
+                }
+              });
+            }
+            else {res.json(items);}
+        })
+        .catch(err => next(err));
+}
+
 function getGeoJson(req, res, next) {
     console.log('vpVisit.routes | getGeoJson', req.query);
     service.getGeoJson(req.query)
@@ -112,7 +135,7 @@ function getGeoJson(req, res, next) {
             if (items.rows && items.rows[0].geojson) {
               if (req.query.download) {
                     var file = JSON.stringify(items.rows[0].geojson);
-                    res.setHeader('Content-disposition', 'attachment; filename=vpvisit.geojson');
+                    res.setHeader('Content-disposition', 'attachment; filename=vp_visit.geojson');
                     res.setHeader('Content-type', 'application/json');
                     res.send(file); //res.send not res.json
               } else {res.json(items.rows[0].geojson);}
