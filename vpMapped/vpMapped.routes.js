@@ -98,7 +98,7 @@ function getGeoJson(req, res, next) {
             if (items.rows && items.rows[0].geojson) {
               if (req.query.download) {
                     var file = JSON.stringify(items.rows[0].geojson);
-                    res.setHeader('Content-disposition', 'attachment; filename=vpmapped.geojson');
+                    res.setHeader('Content-disposition', 'attachment; filename=vp_mapped.geojson');
                     res.setHeader('Content-type', 'application/json');
                     res.send(file); //res.send not res.json
               } else {res.json(items.rows[0].geojson);}
