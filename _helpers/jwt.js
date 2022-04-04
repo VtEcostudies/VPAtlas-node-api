@@ -18,7 +18,6 @@ function jwt() {
     const secret = config.secret;
     const algorithms = ['HS256']; //NOTE: This has to match user.service jwt.sign algorithm.
     return expressJwt({ secret, algorithms, isRevoked }).unless({
-    //var ret = expressJwt({ secret, isRevoked }).unless({
         path: [
             /*
              public routes that don't require authentication
@@ -32,41 +31,36 @@ function jwt() {
 
             { url: /^\/utils\/where/, methods: ['GET'] },
 
-            '/vtinfo/towns',
-            '/parcel/townId/*',
-            '/parcel/townName',
-            { url: /^\/parcel\/townName\/.*/, methods: ['GET'] }, // /parcel/townName/:name
+            { url: /^\/vtinfo\/towns/, methods: ['GET'] },
+            { url: /^\/vtinfo\/counties/, methods: ['GET'] },
 
-            '/pools/mapped', // /pools/mapped performs a getAll()
-            { url: /^\/pools\/mapped\/.*/, methods: ['GET'] }, // /pools/mapped/:id
-            { url: /^\/pools\/mapped\/page\/.*/, methods: ['GET'] }, // /pools/mapped/page/:page
+            { url: /^\/parcel\/townId\/.*/, methods: ['GET'] },
+            { url: /^\/parcel\/townName\/.*/, methods: ['GET'] },
 
-            '/pools/visit', // /pools/visit performs a getAll()
+            { url: /^\/pools\/mapped\/.*/, methods: ['GET'] },
+            { url: /^\/pools\/mapped\/page\/.*/, methods: ['GET'] },
+            { url: /^\/mapped\/.*/, methods: ['GET'] },
+
             { url: /^\/pools\/visit\/.*/, methods: ['GET'] },
             { url: /^\/pools\/visit\/page\/.*/, methods: ['GET'] },
 
             { url: /^\/visit\/.*/, methods: ['GET'] },
 
-            //'/pools', // /pools performs a getAll()
             { url: /^\/pools/, methods: ['GET'] },
             { url: /^\/pools\/.*/, methods: ['GET'] },
             { url: /^\/pools\/page\/.*/, methods: ['GET'] },
 
-            //{ url: /^\/survey\/upload/, methods: ['POST'] },
             { url: /^\/survey\/columns/, methods: ['GET'] },
             { url: /^\/survey/, methods: ['GET'] },
             { url: /^\/survey\/.*/, methods: ['GET'] },
             { url: /^\/survey\/page\/.*/, methods: ['GET'] },
 
-            //for testing. remove these
-            { url: /^\/survey\/.*/, methods: ['POST'] },
-            { url: /^\/visit\/.*/, methods: ['POST'] }
+            //for testing. remove these in production.
+            //{ url: /^\/survey\/.*/, methods: ['POST'] },
+            //{ url: /^\/visit\/.*/, methods: ['POST'] }
 
         ]
     });
-
-    //console.log('jwt.js|jwt()|return: ', ret);
-    //return;
 }
 
 /*
