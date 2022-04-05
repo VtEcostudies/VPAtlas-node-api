@@ -4,10 +4,11 @@ const pgUtil = require('_helpers/db_pg_util');
 const fetch = require('node-fetch');
 const vpS123Util = require('vpUtil/vpS123.service');
 const moment = require('moment');
+const config = require('../config_s123.json');
 var staticColumns = []; //all tables' columns in a single 1D array
 var tableColumns = []; //each table's columns by table name
 
-const defaultServiceId = 'service_e4f2a9746905471a9bb0d7a2d3d2c2a1';
+const defaultServiceId = config.survey123.vpsurvey.serviceId; //'service_e4f2a9746905471a9bb0d7a2d3d2c2a1';
 //former services having direct attachments: service_fae86d23c46e403aa0dae67596be6073, service_71386df693ec4db8868d7a7c64c50761
 const defaultFeatureId = 0;
 const maximumFeatureId = 7;
@@ -166,6 +167,9 @@ function upsertSurvey(req, jsonData) {
           surveyRow[colum]=jsonData['obs1_surveyAmphibObsEmail']?jsonData['obs1_surveyAmphibObsEmail']:jsonData['obs2_surveyAmphibObsEmail'];
         }
         //if ('surveyUserEmail'==colum && value===null) surveyRow[colum]=req.query.surveyUserEmail;
+        if ('surveyTime'==colum && !value) {
+          surveyRow[colum]='00:00';
+        }
       });
       surveyRow['surveyAmphibJson'] = amphibRow; //set the vpsurvey jsonb column value for survey_amphib table
       surveyRow['surveyMacroJson'] = macroRow; //set the vpsurvey jsonb column value for survey_macro table

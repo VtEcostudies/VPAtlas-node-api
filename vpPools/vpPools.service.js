@@ -105,6 +105,14 @@ vpmapped."updatedAt" AS "mappedUpdatedAt",
   COALESCE("visitFairyShrimp",0)+
   COALESCE("visitFingerNailClams",0)
 AS "speciesCount",
+(SELECT array_agg(
+  "surveyAmphibEdgeWOFR"+"surveyAmphibEdgeSPSA"+"surveyAmphibEdgeJESA"+"surveyAmphibEdgeBLSA"+
+  "surveyAmphibInteriorWOFR"+"surveyAmphibInteriorSPSA"+"surveyAmphibInteriorJESA"+"surveyAmphibInteriorBLSA")
+  AS "sumAmphib" FROM vpsurvey_amphib WHERE "surveyAmphibSurveyId"="surveyId"),
+(SELECT
+  "surveyMacroNorthFASH"+"surveyMacroEastFASH"+"surveyMacroSouthFASH"+"surveyMacroWestFASH"+
+  "surveyMacroNorthCDFY"+"surveyMacroEastCDFY"+"surveyMacroSouthCDFY"+"surveyMacroWestCDFY"
+  AS "sumMacros" FROM vpsurvey_macro WHERE "surveyMacroSurveyId"="surveyId"),
 vpvisit."updatedAt" AS "visitUpdatedAt",
 "reviewId",
 "reviewQACode",

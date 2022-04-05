@@ -144,12 +144,13 @@ async function getAll(params={}) {
     (SELECT array_agg(
       "surveyAmphibEdgeWOFR"+"surveyAmphibEdgeSPSA"+"surveyAmphibEdgeJESA"+"surveyAmphibEdgeBLSA"+
       "surveyAmphibInteriorWOFR"+"surveyAmphibInteriorSPSA"+"surveyAmphibInteriorJESA"+"surveyAmphibInteriorBLSA")
-      AS "sumAmphib" FROM vpsurvey_amphib WHERE vpsurvey_amphib."surveyAmphibSurveyId"=vpsurvey."surveyId"),
+      AS "sumAmphib" FROM vpsurvey_amphib WHERE "surveyAmphibSurveyId"="surveyId"),
     --vpsurvey_amphib.*,
     --to_json(vpsurvey_amphib) AS "surveyAmphib",
     (SELECT
-      "surveyMacroTotalFASH"+"surveyMacroTotalCDFY"
-      AS "sumMacros" FROM vpsurvey_macro WHERE vpsurvey_macro."surveyMacroSurveyId"=vpsurvey."surveyId"),
+      "surveyMacroNorthFASH"+"surveyMacroEastFASH"+"surveyMacroSouthFASH"+"surveyMacroWestFASH"+
+      "surveyMacroNorthCDFY"+"surveyMacroEastCDFY"+"surveyMacroSouthCDFY"+"surveyMacroWestCDFY"
+      AS "sumMacros" FROM vpsurvey_macro WHERE "surveyMacroSurveyId"="surveyId"),
     --vpsurvey_macro.*,
     --to_json(vpsurvey_macro) AS "surveyMacros",
     --vpsurvey_year.*,
@@ -202,14 +203,16 @@ function getById(surveyId) {
     "surveyAmphibInteriorWOFR"+"surveyAmphibInteriorSPSA"+"surveyAmphibInteriorJESA"+"surveyAmphibInteriorBLSA")
     AS "sumAmphib"
     FROM vpsurvey_amphib
-    WHERE "surveyAmphibSurveyId"=$1),
+    WHERE "surveyAmphibSurveyId"="surveyId"),
   (SELECT
-    "surveyMacroTotalFASH"+"surveyMacroTotalCDFY"
-    AS "sumMacros" FROM vpsurvey_macro WHERE "surveyMacroSurveyId"=$1),
+      "surveyMacroNorthFASH"+"surveyMacroEastFASH"+"surveyMacroSouthFASH"+"surveyMacroWestFASH"+
+      "surveyMacroNorthCDFY"+"surveyMacroEastCDFY"+"surveyMacroSouthCDFY"+"surveyMacroWestCDFY"
+      AS "sumMacros" FROM vpsurvey_macro
+      WHERE "surveyMacroSurveyId"="surveyId"),
   (SELECT json_agg(q) AS "surveyPhotos" FROM (
       SELECT "surveyPhotoUrl","surveyPhotoSpecies","surveyPhotoName"
       FROM vpsurvey_photos
-      WHERE vpsurvey."surveyId"=vpsurvey_photos."surveyPhotoSurveyId"
+      WHERE "surveyId"="surveyPhotoSurveyId"
     ) AS q),
   "mappedPoolId" AS "poolId",
   "mappedPoolStatus" AS "poolStatus",
