@@ -120,7 +120,7 @@ function upsertSurvey(req, jsonData) {
   var update = 0;
   return new Promise((resolve, reject) => {
     try {
-      if (req.query) {update = !!req.query.update;}
+      if (req.query) {update = req.query.update === 'true';}
       const obsDelim = '_'; //delimiter for observer field prefix
       var colum = null; var split = []; var obsId = 0;
       var surveyColumns = []; //tableColumns['vpsurvey']; //this fails. pgpDb INSERT needs to match values to columns
@@ -146,7 +146,7 @@ function upsertSurvey(req, jsonData) {
       var split = [];
       var obsId = 1; //obsId is 1-based for actual observers
       var value = null; //temporary local var to hold values for scrubbing
-      jsonData['surveyGlobalId'] = jsonData.globalid; //this is helpful but optional
+      jsonData['surveyGlobalId'] = jsonData.globalid; //this is required
       jsonData['surveyObjectId'] = jsonData.objectid; //this is required
       jsonData['surveyDataUrl'] = jsonData.dataUrl; //this is required
       Object.keys(jsonData).forEach(colum => { //iterate over keys in jsonData object (column names)
@@ -157,11 +157,13 @@ function upsertSurvey(req, jsonData) {
         if (obsId && !amphibRow[obsId]) {amphibRow[obsId] = {};} //initialize valid amphibRow array element
         if ('' === value) {value = null;} //convert empty strings to null
         if (`${Number(value)}` === value) {value = Number(value);} //convert string number to numbers (MUST USE '===' or it converts bool to int!!!)
-        if (tableColumns['vpsurvey'].includes(colum)) {surveyRow[colum]=value;}
+        if (tableColumns['vpsurvey'].includes(colum)) {surveyRow[colum] = fixJsonColumnData(colum, value, jsonData);}
         if (tableColumns['vpsurvey_photos'].includes(colum)) {photoRow[colum]=value;}
         if (tableColumns['vpsurvey_year'].includes(colum)) {yearRow[colum]=value;}
         if (tableColumns['vpsurvey_macro'].includes(colum)) {macroRow[colum]=value;}
         if (tableColumns['vpsurvey_amphib'].includes(colum)) {amphibRow[obsId][colum]=value;}
+
+/*
         if ('surveyTypeId'==colum && value===5) surveyRow[colum]=9; //map their 5 to our 9
         if ('surveyUserEmail'==colum && value===null) { //if not explicitly passed, use obs1 or obs2 for surveyUserEmail
           surveyRow[colum]=jsonData['obs1_surveyAmphibObsEmail']?jsonData['obs1_surveyAmphibObsEmail']:jsonData['obs2_surveyAmphibObsEmail'];
@@ -170,6 +172,7 @@ function upsertSurvey(req, jsonData) {
         if ('surveyTime'==colum && !value) {
           surveyRow[colum]='00:00';
         }
+*/
       });
       surveyRow['surveyAmphibJson'] = amphibRow; //set the vpsurvey jsonb column value for survey_amphib table
       surveyRow['surveyMacroJson'] = macroRow; //set the vpsurvey jsonb column value for survey_macro table
@@ -227,6 +230,41 @@ function upsertSurvey(req, jsonData) {
         reject(err);
       }); //end pgpDb
   }); //end promise
+}
+
+function fixJsonColumnData(colum, value, jsonData) {
+  var fixed = null;
+  switch(colum) {
+    /*
+    case 'surveyGlobalId': fixed=jsonData.globalid; break;
+    case 'surveyObjectId': fixed=jsonData.objectid; break;
+    case 'surveyDataUrl': fixed=jsonData.dataUrl; break;
+    */
+    case 'surveyTypeId': fixed=value; if (value===5) fixed=9; break;
+    case 'surveyUserEmail': fixed=value; if (!value) fixed=jsonData['obs1_surveyAmphibObsEmail']?jsonData['obs1_surveyAmphibObsEmail']:jsonData['obs2_surveyAmphibObsEmail']; break;
+    case 'surveyTime': fixed=value; if (!value) fixed='00:00'; break;
+    case 'surveyAmphibEdgeWOFR': fixed=value+0; break;
+    case 'surveyAmphibEdgeSPSA': fixed=value+0; break;
+    case 'surveyAmphibEdgeJESA': fixed=value+0; break;
+    case 'surveyAmphibEdgeBLSA': fixed=value+0; break;
+    case 'surveyAmphibInteriorWOFR': fixed=value+0; break;
+    case 'surveyAmphibInteriorSPSA': fixed=value+0; break;
+    case 'surveyAmphibInteriorJESA': fixed=value+0; break;
+    case 'surveyAmphibInteriorBLSA': fixed=value+0; break;
+    case 'surveyMacroNorthFASH': fixed=value+0; break;
+    case 'surveyMacroEastFASH': fixed=value+0; break;
+    case 'surveyMacroSouthFASH': fixed=value+0; break;
+    case 'surveyMacroWestFASH': fixed=value+0; break;
+    case 'surveyMacroTotalFASH': fixed=value+0; break;
+    case 'surveyMacroNorthCDFY': fixed=value+0; break;
+    case 'surveyMacroEastCDFY': fixed=value+0; break;
+    case 'surveyMacroSouthCDFY': fixed=value+0; break;
+    case 'surveyMacroWestCDFY': fixed=value+0; break;
+    case 'surveyMacroTotalCDFY': fixed=value+0; break;
+    default: fixed=value;
+  }
+  console.log('vpSurvey.s123.service::fixJsonColumnData |', colum, value, fixed)
+  return fixed;
 }
 
 /*

@@ -92,7 +92,13 @@ function getCsv(req, res, next) {
 }
 
 function getGeoJson(req, res, next) {
-    console.log('vpMapped.routes | getGeoJson', req.query);
+    console.log('vpMapped.routes::getGeoJson | req.query:', req.query);
+    console.log('vpMapped.routes::getGeoJson | req.user:', req.user);
+
+    if (!req.user || (req.user && req.user.userrole != 'admin')) {
+      req.query['mappedPoolStatus|NOT IN'] = [ 'Eliminated', 'Duplicate' ];
+    }
+
     service.getGeoJson(req.query)
         .then(items => {
             if (items.rows && items.rows[0].geojson) {

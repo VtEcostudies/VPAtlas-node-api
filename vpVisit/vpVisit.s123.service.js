@@ -111,7 +111,7 @@ function upsertVisit(req, jsonArr) {
   var update = 0;
   return new Promise((resolve, reject) => {
     try {
-      if (req.query) {update = !!req.query.update;}
+      if (req.query) {update = req.query.update === 'true';}
       var colum = null;
       var visitColumns = [];
       jsonArr = fixJsonColumnsData(jsonArr);
