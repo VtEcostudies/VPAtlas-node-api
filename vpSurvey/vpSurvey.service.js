@@ -103,15 +103,17 @@ function getYears(params={}) {
 async function getObservers(params={}) {
   const where = pgUtil.whereClause(params, staticColumns);
   const text = `
-  SELECT DISTINCT("username") AS "surveyObserver"
-  FROM vpuser
-  INNER JOIN vpsurvey ON id="surveyUserId"
-  UNION
-  SELECT DISTINCT("username") AS "surveyObserver"
-  FROM vpuser
-  INNER JOIN vpsurvey_amphib ON id="surveyAmphibObsId"
+  SELECT DISTINCT("surveyUser"), "surveyUserEmail", "surveyUserId"  FROM (
+    SELECT DISTINCT("username") AS "surveyUser", email AS "surveyUserEmail", "id" AS "surveyUserId"
+    FROM vpuser
+    INNER JOIN vpsurvey ON id="surveyUserId"
+    UNION
+    SELECT DISTINCT("username") AS "surveyUser", email AS "surveyUserEmail", "id" AS "surveyUserId"
+    FROM vpuser
+    INNER JOIN vpsurvey_amphib ON id="surveyAmphibObsId"
+  ) AS u
   ${where.text}
-  ORDER BY "surveyObserver"
+  ORDER BY "surveyUser"
   `;
   console.log(text, where.values);
   return await query(text, where.values);
@@ -156,8 +158,11 @@ async function getAll(params={}) {
     --vpsurvey_year.*,
     --vpsurvey_photos.*,
     (SELECT "surveyTypeName" FROM def_survey_type WHERE def_survey_type."surveyTypeId"=vpsurvey."surveyTypeId"),
-    (SELECT array_agg("surveyPhotoUrl") as "surveyPhotoUrls" FROM vpsurvey_photos WHERE
-    vpsurvey."surveyId"=vpsurvey_photos."surveyPhotoSurveyId"),
+    (SELECT json_agg(sp) AS "surveyPhotos" FROM (
+        SELECT "surveyPhotoUrl","surveyPhotoSpecies","surveyPhotoName"
+        FROM vpsurvey_photos
+        WHERE "surveyId"="surveyPhotoSurveyId"
+      ) AS sp),
     "mappedPoolId" AS "poolId",
     "mappedPoolStatus" AS "poolStatus",
     SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
@@ -209,11 +214,11 @@ function getById(surveyId) {
       "surveyMacroNorthCDFY"+"surveyMacroEastCDFY"+"surveyMacroSouthCDFY"+"surveyMacroWestCDFY"
       AS "sumMacros" FROM vpsurvey_macro
       WHERE "surveyMacroSurveyId"="surveyId"),
-  (SELECT json_agg(q) AS "surveyPhotos" FROM (
+  (SELECT json_agg(sp) AS "surveyPhotos" FROM (
       SELECT "surveyPhotoUrl","surveyPhotoSpecies","surveyPhotoName"
       FROM vpsurvey_photos
       WHERE "surveyId"="surveyPhotoSurveyId"
-    ) AS q),
+    ) AS sp),
   "mappedPoolId" AS "poolId",
   "mappedPoolStatus" AS "poolStatus",
   SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
