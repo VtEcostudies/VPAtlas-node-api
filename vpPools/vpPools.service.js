@@ -59,9 +59,9 @@ async function getCount(body={}) {
   This still supports filtering results by "updatedAt" to reduce network
   traffic and speed the UX.
 */
-async function getOverview(params={timestamp:'1970-02-28'}) {
+async function getOverview(params={}) {
   if (0 === Object.keys(params).length) {params={timestamp:'1970-01-31'};}
-  if (!params.timestamp) {params.timestamp = '1970-01-31'};
+  if (!params.timestamp) {params.timestamp = '1970-01-01'};
   var timestamp = params.timestamp;
   delete params.timestamp;
   console.log('vpPools.service::getOverview | timestamp', timestamp);
@@ -148,10 +148,11 @@ ${where.text} ${orderClause}`;
   This endpoint serves the UI filter for 'Review', which is all the pools that need
   to be Reviewed by an administrator.
 */
-async function getPoolsNeedReview(params={timestamp:'1970-02-28'}) {
-  var orderClause = 'order by "poolId"';
+async function getPoolsNeedReview(params={}) {
+  console.log('vpPools.service::getPoolsNeedReview | params:', params);
+  var orderClause = `ORDER BY vpreview."updatedAt"`;
+  if (!params.timestamp) {params.timestamp = '1970-01-01';}
   const timestamp = params.timestamp;
-  delete params.timestamp;
   var where = pgUtil.whereClause(params, staticColumns, 'AND');
   text = `
 SELECT
@@ -191,7 +192,8 @@ LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
 --LEFT JOIN vpuser ON "mappedByUserId"="id";
 WHERE
 ("reviewId" IS NULL AND "visitId" IS NOT NULL
-OR (vpreview."updatedAt" IS NOT NULL AND vpmapped."updatedAt" > vpreview."updatedAt")
+--new db triggers update vpmapped when review saved, so this criterion is bad
+--OR (vpreview."updatedAt" IS NOT NULL AND vpmapped."updatedAt" > vpreview."updatedAt")
 OR (vpreview."updatedAt" IS NOT NULL AND vpvisit."updatedAt" > vpreview."updatedAt"))
 AND
 (vpmapped."updatedAt">'${timestamp}'::timestamp
