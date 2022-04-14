@@ -93,7 +93,7 @@ function getUpsertData(req) {
     if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
     vpS123Util.getData(req.query)
       .then(jsonData => {
-        upsertVisit(req, [jsonData]) //put a single json Data object into array for future multi-object upsertVisit
+        upsertVisit(req, jsonData)
           .then(res => {resolve(res);})
           .catch(err => {reject(err);})
       })
@@ -107,31 +107,29 @@ function getUpsertData(req) {
 /*
  INSERT or UPDATE VPVisit data from S123 VPVisit Data Sheet
 */
-function upsertVisit(req, jsonArr) {
+function upsertVisit(req, jsonData) {
   var update = 0;
   return new Promise((resolve, reject) => {
     try {
       if (req.query) {update = req.query.update === 'true';}
       var colum = null;
       var visitColumns = [];
-      jsonArr = fixJsonColumnsData(jsonArr);
-      Object.keys(jsonArr[0]).forEach(colum => {
+      jsonData = fixJsonColumnsData(jsonData);
+      Object.keys(jsonData).forEach(colum => {
         if (tableColumns['vpvisit'].includes(colum)) visitColumns.push(colum);
       });
       //console.log('vpvisit header', visitColumns);
       var valArr = [];
-      for (i=0; i<jsonArr.length; i++) { //iterate over jsonData objects in jsonArray
-        var visitRow = {}; //single object of colum:value pairs for one insert row into vpVisit
-        var value = null; //temporary local var to hold values for scrubbing
-        if (!jsonArr[i].visitPoolId && !jsonArr[i].visitPoolMapped) {jsonArr[i].visitPoolId='NEW*';}
-        Object.keys(jsonArr[i]).forEach(colum => { //iterate over keys in jsonData object (column names)
-          value = jsonArr[i][colum];
-          if ('' === value) {value = null;} //convert empty strings to null
-          if (`${Number(value)}` === value) {value = Number(value);} //convert string number to numbers (MUST USE '===' or it converts bool to int!!!)
-          if (tableColumns['vpvisit'].includes(colum)) {visitRow[colum]=value;}
-        });
-        valArr.push(visitRow);
-      }
+      var visitRow = {}; //single object of colum:value pairs for one insert row into vpVisit
+      var value = null; //temporary local var to hold values for scrubbing
+      if (!jsonData.visitPoolId && !jsonData.visitPoolMapped) {jsonData.visitPoolId='NEW*';}
+      Object.keys(jsonData).forEach(colum => { //iterate over keys in jsonData object (column names)
+        value = jsonData[colum];
+        if ('' === value) {value = null;} //convert empty strings to null
+        if (`${Number(value)}` === value) {value = Number(value);} //convert string number to numbers (MUST USE '===' or it converts bool to int!!!)
+        if (tableColumns['vpvisit'].includes(colum)) {visitRow[colum]=value;}
+      });
+      valArr.push(visitRow);
       var columns = [];
       var query = null;
       //https://stackoverflow.com/questions/37300997/multi-row-insert-with-pg-promise
@@ -147,6 +145,9 @@ function upsertVisit(req, jsonArr) {
       //console.log('vpVisit.s123.service::upsertVisit | columns', columns);
       //console.log('vpVisit.s123.service::upsertVisit | values', valArr);
     } catch (err) {
+      err.globalId = jsonData.globalid;
+      err.objectId = jsonData.objectid;
+      err.dataUrl = jsonData.dataUrl;
       console.log('vpVisit.s123.service::upsertVisit | try-catch ERROR', err.message);
       reject(err);
     }
@@ -167,88 +168,90 @@ function upsertVisit(req, jsonArr) {
           })
       })
       .catch(err => {
-        console.log('vpVisit.s123.service::upsertVisit | pgpDb ERROR', err.message);
+        err.globalId = jsonData.globalid;
+        err.objectId = jsonData.objectid;
+        err.dataUrl = jsonData.dataUrl;
+        err.hint = err.message; //err.message here does not percolate on return
+        console.log('vpVisit.s123.service::upsertVisit | pgpDb ERROR', err.message, err.dataUrl);
         reject(err);
       }); //end pgpDb
   }); //end Promise
 }
 
-function fixJsonColumnsData(jsonArr) {
-  for (i=0; i<jsonArr.length; i++) { //iterate over jsonData objects in jsonArray
-      jsonArr[i]["visitGlobalId"]=jsonArr[i]["globalid"]; //S123 global ID returned from API
-      jsonArr[i]["visitObjectId"]=jsonArr[i]["objectid"]; //S123 object ID requested and returned from API
-      jsonArr[i]["visitDataUrl"]=jsonArr[i]["dataUrl"]; //S123 data URL constructed within our query to ESRI
-      jsonArr[i]["visitPoolId"]=jsonArr[i]["visitPoolId"];
-      jsonArr[i]["visitUserName"]=jsonArr[i]["visitUsername"];
-      jsonArr[i]["visitObserverUserName"]=jsonArr[i]["visitObserverUserName"]?jsonArr[i]["visitObserverUserName"]:jsonArr[i]["visitUsername"];
-      jsonArr[i]["visitLongitude"]=jsonArr[i]["longitude"];
-      jsonArr[i]["visitLatitude"]=jsonArr[i]["latitude"];
-      jsonArr[i]["visitDate"]=moment(jsonArr[i]["visitDateFormat"]).format("YYYY-MM-DD");
-      jsonArr[i]["visitPoolMapped"]=jsonArr[i]["visitmapped"].includes('unmapped')?false:true; //custom field not in db to catch NEW* pools
-      jsonArr[i]["visitLocatePool"]=jsonArr[i]["visitlocated"];
-      jsonArr[i]["visitCertainty"]=jsonArr[i]["visitCertainty"];
-      jsonArr[i]["visitNavMethod"]=jsonArr[i]["visitNavMethod"];
-      jsonArr[i]["visitNavMethodOther"]=jsonArr[i]["visitNavMethod_other"];
-      jsonArr[i]["visitDirections"]=jsonArr[i]["visitdirections"];
-      jsonArr[i]["visitLocationComments"]=jsonArr[i]["visitComments"];
-      jsonArr[i]["visitVernalPool"]=jsonArr[i]["visitVernalPool"];
-      jsonArr[i]["visitPoolType"]=jsonArr[i]["visitPoolType"];
-      jsonArr[i]["visitPoolTypeOther"]=jsonArr[i]["visitPoolType_other"];
-      jsonArr[i]["visitInletType"]=jsonArr[i]["visitInletType"];
-      jsonArr[i]["visitOutletType"]=jsonArr[i]["visitOutletType"];
-      jsonArr[i]["visitForestUpland"]=jsonArr[i]["visitForestUpland"];
-      jsonArr[i]["visitForestCondition"]=jsonArr[i]["visitForestCondition"];
-      jsonArr[i]["visitHabitatAgriculture"]=Boolean(jsonArr[i]["visitHabAgriculture"]);
-      jsonArr[i]["visitHabitatLightDev"]=Boolean(jsonArr[i]["visitHabitatLightDev"]);
-      jsonArr[i]["visitHabitatHeavyDev"]=Boolean(jsonArr[i]["visitHabitatHeavyDev"]);
-      jsonArr[i]["visitHabitatPavedRd"]=Boolean(jsonArr[i]["visitHabitatPavedRd"]);
-      jsonArr[i]["visitHabitatDirtRd"]=Boolean(jsonArr[i]["visitHabitatDirtRd"]);
-      jsonArr[i]["visitHabitatPowerline"]=Boolean(jsonArr[i]["visitHabitatPowerline"]);
-      jsonArr[i]["visitHabitatOther"]=jsonArr[i]["visitHabitatOther"];
-      jsonArr[i]["visitMaxDepth"]=jsonArr[i]["visitMaxDepth"];
-      jsonArr[i]["visitWaterLevelObs"]=jsonArr[i]["visitWaterLevelObs"];
-      jsonArr[i]["visitMaxWidth"]=jsonArr[i]["visitMaxWidth"];
-      jsonArr[i]["visitMaxLength"]=jsonArr[i]["visitMaxLength"];
-      jsonArr[i]["visitPoolTrees"]=jsonArr[i]["visitPoolTrees"];
-      jsonArr[i]["visitPoolShrubs"]=jsonArr[i]["visitPoolShrubs"];
-      jsonArr[i]["visitPoolEmergents"]=jsonArr[i]["visitPoolEmergents"];
-      jsonArr[i]["visitPoolFloatingVeg"]=jsonArr[i]["visitPoolFloatingVeg"];
-      jsonArr[i]["visitSubstrate"]=jsonArr[i]["visitSubstrate"];
-      jsonArr[i]["visitSubstrateOther"]=jsonArr[i]["visitSubstrate_other"];
-      jsonArr[i]["visitDisturbDumping"]=Boolean(jsonArr[i]["visitDisturbDumping"]);
-      jsonArr[i]["visitDisturbSiltation"]=Boolean(jsonArr[i]["visitDisturbSiltation"]);
-      jsonArr[i]["visitDisturbVehicleRuts"]=Boolean(jsonArr[i]["visitDisturbVehicleRuts"]);
-      jsonArr[i]["visitDisturbRunoff"]=Boolean(jsonArr[i]["visitDisturbRunoff"]);
-      jsonArr[i]["visitDisturbDitching"]=Boolean(jsonArr[i]["visitDisturbDitching"]);
-      jsonArr[i]["visitDisturbOther"]=jsonArr[i]["visitDisturbOther"];
-      jsonArr[i]["visitWoodFrogAdults"]=jsonArr[i]["visitWoodFrogAdults"]+0;
-      jsonArr[i]["visitWoodFrogLarvae"]=jsonArr[i]["visitWoodFrogLarvae"]+0;
-      jsonArr[i]["visitWoodFrogEgg"]=jsonArr[i]["visitWoodFrogEgg"]+0;
-      jsonArr[i]["visitWoodFrogEggHow"]=jsonArr[i]["visitWoodFrogEggHow"];
-      jsonArr[i]["visitSpsAdults"]=jsonArr[i]["visitSpsAdults"]+0;
-      jsonArr[i]["visitSpsLarvae"]=jsonArr[i]["visitSpsLarvae"]+0;
-      jsonArr[i]["visitSpsEgg"]=jsonArr[i]["visitSpsEgg"]+0;
-      jsonArr[i]["visitSpsEggHow"]=jsonArr[i]["visitSpsEggHow"];
-      jsonArr[i]["visitJesaAdults"]=jsonArr[i]["visitJesaAdults"]+0;
-      jsonArr[i]["visitJesaLarvae"]=jsonArr[i]["visitJesaLarvae"]+0;
-      jsonArr[i]["visitJesaEgg"]=jsonArr[i]["visitJesaEgg"]+0;
-      jsonArr[i]["visitJesaEggHow"]=jsonArr[i]["visitJesaEggHow"];
-      jsonArr[i]["visitBssaAdults"]=jsonArr[i]["visitBssaAdults"]+0;
-      jsonArr[i]["visitBssaLarvae"]=jsonArr[i]["visitBssaLarvae"]+0;
-      jsonArr[i]["visitBssaEgg"]=jsonArr[i]["visitBssaEgg"]+0;
-      jsonArr[i]["visitBssaEggHow"]=jsonArr[i]["visitBssaEggHow"];
-      jsonArr[i]["visitFairyShrimp"]=jsonArr[i]["visitFairyShrimp"]+0;
-      jsonArr[i]["visitFingerNailClams"]=jsonArr[i]["visitFingernailClam"]+0;
-      jsonArr[i]["visitSpeciesOtherName"]=jsonArr[i]["visitOther"];
-      jsonArr[i]["visitSpeciesComments"]=jsonArr[i]["visitMiscNotes"];
-      jsonArr[i]["visitFish"]=!!jsonArr[i]["visitFish"]; //convert integers to boolean
-      jsonArr[i]["visitFishCount"]=jsonArr[i]["visitFishCount"];
-      jsonArr[i]["visitFishSize"]=jsonArr[i]["FishSize"];
-      jsonArr[i]["visitFishSizeSmall"]=jsonArr[i]["visitFishSizeSmall"];
-      jsonArr[i]["visitFishSizeMedium"]=jsonArr[i]["visitFishSizeMedium"];
-      jsonArr[i]["visitFishSizeLarge"]=jsonArr[i]["visitFishSizeLarge"];
-    }
-    return jsonArr;
+function fixJsonColumnsData(jsonData) {
+    jsonData["visitGlobalId"]=jsonData["globalid"]; //S123 global ID returned from API
+    jsonData["visitObjectId"]=jsonData["objectid"]; //S123 object ID requested and returned from API
+    jsonData["visitDataUrl"]=jsonData["dataUrl"]; //S123 data URL constructed within our query to ESRI
+    jsonData["visitPoolId"]=jsonData["visitPoolId"];
+    jsonData["visitUserName"]=jsonData["visitUsername"];
+    jsonData["visitObserverUserName"]=jsonData["visitObserverUserName"]?jsonData["visitObserverUserName"]:jsonData["visitUsername"];
+    jsonData["visitLongitude"]=jsonData["longitude"];
+    jsonData["visitLatitude"]=jsonData["latitude"];
+    jsonData["visitDate"]=moment(jsonData["visitDateFormat"]).format("YYYY-MM-DD");
+    jsonData["visitPoolMapped"]=jsonData["visitmapped"].includes('unmapped')?false:true; //custom field not in db to catch NEW* pools
+    jsonData["visitLocatePool"]=jsonData["visitlocated"];
+    jsonData["visitCertainty"]=jsonData["visitCertainty"];
+    jsonData["visitNavMethod"]=jsonData["visitNavMethod"];
+    jsonData["visitNavMethodOther"]=jsonData["visitNavMethod_other"];
+    jsonData["visitDirections"]=jsonData["visitdirections"];
+    jsonData["visitLocationComments"]=jsonData["visitComments"];
+    jsonData["visitVernalPool"]=jsonData["visitVernalPool"];
+    jsonData["visitPoolType"]=jsonData["visitPoolType"];
+    jsonData["visitPoolTypeOther"]=jsonData["visitPoolType_other"];
+    jsonData["visitInletType"]=jsonData["visitInletType"];
+    jsonData["visitOutletType"]=jsonData["visitOutletType"];
+    jsonData["visitForestUpland"]=jsonData["visitForestUpland"];
+    jsonData["visitForestCondition"]=jsonData["visitForestCondition"];
+    jsonData["visitHabitatAgriculture"]=Boolean(jsonData["visitHabAgriculture"]);
+    jsonData["visitHabitatLightDev"]=Boolean(jsonData["visitHabitatLightDev"]);
+    jsonData["visitHabitatHeavyDev"]=Boolean(jsonData["visitHabitatHeavyDev"]);
+    jsonData["visitHabitatPavedRd"]=Boolean(jsonData["visitHabitatPavedRd"]);
+    jsonData["visitHabitatDirtRd"]=Boolean(jsonData["visitHabitatDirtRd"]);
+    jsonData["visitHabitatPowerline"]=Boolean(jsonData["visitHabitatPowerline"]);
+    jsonData["visitHabitatOther"]=jsonData["visitHabitatOther"];
+    jsonData["visitMaxDepth"]=jsonData["visitMaxDepth"];
+    jsonData["visitWaterLevelObs"]=jsonData["visitWaterLevelObs"];
+    jsonData["visitMaxWidth"]=jsonData["visitMaxWidth"];
+    jsonData["visitMaxLength"]=jsonData["visitMaxLength"];
+    jsonData["visitPoolTrees"]=jsonData["visitPoolTrees"];
+    jsonData["visitPoolShrubs"]=jsonData["visitPoolShrubs"];
+    jsonData["visitPoolEmergents"]=jsonData["visitPoolEmergents"];
+    jsonData["visitPoolFloatingVeg"]=jsonData["visitPoolFloatingVeg"];
+    jsonData["visitSubstrate"]=jsonData["visitSubstrate"];
+    jsonData["visitSubstrateOther"]=jsonData["visitSubstrate_other"];
+    jsonData["visitDisturbDumping"]=Boolean(jsonData["visitDisturbDumping"]);
+    jsonData["visitDisturbSiltation"]=Boolean(jsonData["visitDisturbSiltation"]);
+    jsonData["visitDisturbVehicleRuts"]=Boolean(jsonData["visitDisturbVehicleRuts"]);
+    jsonData["visitDisturbRunoff"]=Boolean(jsonData["visitDisturbRunoff"]);
+    jsonData["visitDisturbDitching"]=Boolean(jsonData["visitDisturbDitching"]);
+    jsonData["visitDisturbOther"]=jsonData["visitDisturbOther"];
+    jsonData["visitWoodFrogAdults"]=jsonData["visitWoodFrogAdults"]+0;
+    jsonData["visitWoodFrogLarvae"]=jsonData["visitWoodFrogLarvae"]+0;
+    jsonData["visitWoodFrogEgg"]=jsonData["visitWoodFrogEgg"]+0;
+    jsonData["visitWoodFrogEggHow"]=jsonData["visitWoodFrogEggHow"];
+    jsonData["visitSpsAdults"]=jsonData["visitSpsAdults"]+0;
+    jsonData["visitSpsLarvae"]=jsonData["visitSpsLarvae"]+0;
+    jsonData["visitSpsEgg"]=jsonData["visitSpsEgg"]+0;
+    jsonData["visitSpsEggHow"]=jsonData["visitSpsEggHow"];
+    jsonData["visitJesaAdults"]=jsonData["visitJesaAdults"]+0;
+    jsonData["visitJesaLarvae"]=jsonData["visitJesaLarvae"]+0;
+    jsonData["visitJesaEgg"]=jsonData["visitJesaEgg"]+0;
+    jsonData["visitJesaEggHow"]=jsonData["visitJesaEggHow"];
+    jsonData["visitBssaAdults"]=jsonData["visitBssaAdults"]+0;
+    jsonData["visitBssaLarvae"]=jsonData["visitBssaLarvae"]+0;
+    jsonData["visitBssaEgg"]=jsonData["visitBssaEgg"]+0;
+    jsonData["visitBssaEggHow"]=jsonData["visitBssaEggHow"];
+    jsonData["visitFairyShrimp"]=jsonData["visitFairyShrimp"]+0;
+    jsonData["visitFingerNailClams"]=jsonData["visitFingernailClam"]+0;
+    jsonData["visitSpeciesOtherName"]=jsonData["visitOther"];
+    jsonData["visitSpeciesComments"]=jsonData["visitMiscNotes"];
+    jsonData["visitFish"]=!!jsonData["visitFish"]; //convert integers to boolean
+    jsonData["visitFishCount"]=jsonData["visitFishCount"];
+    jsonData["visitFishSize"]=jsonData["FishSize"];
+    jsonData["visitFishSizeSmall"]=jsonData["visitFishSizeSmall"];
+    jsonData["visitFishSizeMedium"]=jsonData["visitFishSizeMedium"];
+    jsonData["visitFishSizeLarge"]=jsonData["visitFishSizeLarge"];
+    return jsonData;
 }
 
 /*
