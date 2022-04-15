@@ -188,7 +188,8 @@ function fixJsonColumnsData(jsonData) {
     jsonData["visitLongitude"]=jsonData["longitude"];
     jsonData["visitLatitude"]=jsonData["latitude"];
     jsonData["visitDate"]=moment(jsonData["visitDateFormat"]).format("YYYY-MM-DD");
-    jsonData["visitPoolMapped"]=jsonData["visitmapped"].includes('unmapped')?false:true; //custom field not in db to catch NEW* pools
+    //jsonData["visitPoolMapped"]=jsonData["visitmapped"].includes('unmapped')?false:true; //custom field not in db to catch NEW* pools
+    jsonData["visitPoolMapped"]=jsonData["visitmapped"].toLowerCase()=='true'; //custom field not in db. updated to have true/false value
     jsonData["visitLocatePool"]=jsonData["visitlocated"];
     jsonData["visitCertainty"]=jsonData["visitCertainty"];
     jsonData["visitNavMethod"]=jsonData["visitNavMethod"];
@@ -202,12 +203,12 @@ function fixJsonColumnsData(jsonData) {
     jsonData["visitOutletType"]=jsonData["visitOutletType"];
     jsonData["visitForestUpland"]=jsonData["visitForestUpland"];
     jsonData["visitForestCondition"]=jsonData["visitForestCondition"];
-    jsonData["visitHabitatAgriculture"]=Boolean(jsonData["visitHabAgriculture"]);
-    jsonData["visitHabitatLightDev"]=Boolean(jsonData["visitHabitatLightDev"]);
-    jsonData["visitHabitatHeavyDev"]=Boolean(jsonData["visitHabitatHeavyDev"]);
-    jsonData["visitHabitatPavedRd"]=Boolean(jsonData["visitHabitatPavedRd"]);
-    jsonData["visitHabitatDirtRd"]=Boolean(jsonData["visitHabitatDirtRd"]);
-    jsonData["visitHabitatPowerline"]=Boolean(jsonData["visitHabitatPowerline"]);
+    jsonData["visitHabitatAgriculture"]=Boolean(Number(jsonData["visitHabAgriculture"]));
+    jsonData["visitHabitatLightDev"]=Boolean(Number(jsonData["visitHabitatLightDev"]));
+    jsonData["visitHabitatHeavyDev"]=Boolean(Number(jsonData["visitHabitatHeavyDev"]));
+    jsonData["visitHabitatPavedRd"]=Boolean(Number(jsonData["visitHabitatPavedRd"]));
+    jsonData["visitHabitatDirtRd"]=Boolean(Number(jsonData["visitHabitatDirtRd"]));
+    jsonData["visitHabitatPowerline"]=Boolean(Number(jsonData["visitHabitatPowerline"]));
     jsonData["visitHabitatOther"]=jsonData["visitHabitatOther"];
     jsonData["visitMaxDepth"]=jsonData["visitMaxDepth"];
     jsonData["visitWaterLevelObs"]=jsonData["visitWaterLevelObs"];
@@ -219,11 +220,11 @@ function fixJsonColumnsData(jsonData) {
     jsonData["visitPoolFloatingVeg"]=jsonData["visitPoolFloatingVeg"];
     jsonData["visitSubstrate"]=jsonData["visitSubstrate"];
     jsonData["visitSubstrateOther"]=jsonData["visitSubstrate_other"];
-    jsonData["visitDisturbDumping"]=Boolean(jsonData["visitDisturbDumping"]);
-    jsonData["visitDisturbSiltation"]=Boolean(jsonData["visitDisturbSiltation"]);
-    jsonData["visitDisturbVehicleRuts"]=Boolean(jsonData["visitDisturbVehicleRuts"]);
-    jsonData["visitDisturbRunoff"]=Boolean(jsonData["visitDisturbRunoff"]);
-    jsonData["visitDisturbDitching"]=Boolean(jsonData["visitDisturbDitching"]);
+    jsonData["visitDisturbDumping"]=Boolean(Number(jsonData["visitDisturbDumping"]));
+    jsonData["visitDisturbSiltation"]=Boolean(Number(jsonData["visitDisturbSiltation"]));
+    jsonData["visitDisturbVehicleRuts"]=Boolean(Number(jsonData["visitDisturbVehicleRuts"]));
+    jsonData["visitDisturbRunoff"]=Boolean(Number(jsonData["visitDisturbRunoff"]));
+    jsonData["visitDisturbDitching"]=Boolean(Number(jsonData["visitDisturbDitching"]));
     jsonData["visitDisturbOther"]=jsonData["visitDisturbOther"];
     jsonData["visitWoodFrogAdults"]=jsonData["visitWoodFrogAdults"]+0;
     jsonData["visitWoodFrogLarvae"]=jsonData["visitWoodFrogLarvae"]+0;
