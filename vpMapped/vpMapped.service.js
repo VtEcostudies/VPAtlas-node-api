@@ -63,7 +63,7 @@ left join vpvisit v on v."visitPoolId"=m."mappedPoolId"
 left join vpreview r on r."reviewVisitId"=v."visitId"
 where
 ("reviewId" IS NULL AND "visitId" IS NOT NULL
-OR (r."updatedAt" IS NOT NULL AND m."updatedAt" > r."updatedAt")
+--OR (r."updatedAt" IS NOT NULL AND m."updatedAt" > r."updatedAt")
 OR (r."updatedAt" IS NOT NULL AND v."updatedAt" > r."updatedAt"))
 ) as review,
 (select count(distinct("visitPoolId")) from vpvisit
