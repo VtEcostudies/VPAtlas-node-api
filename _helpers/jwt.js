@@ -43,8 +43,9 @@ function jwt() {
 
             { url: /^\/pools\/visit\/.*/, methods: ['GET'] },
             { url: /^\/pools\/visit\/page\/.*/, methods: ['GET'] },
-
             { url: /^\/visit\/.*/, methods: ['GET'] },
+
+            { url: /^\/review\/.*/, methods: ['GET'] }, //add ability for public to view Reviews
 
             { url: /^\/pools/, methods: ['GET'] },
             { url: /^\/pools\/.*/, methods: ['GET'] },
