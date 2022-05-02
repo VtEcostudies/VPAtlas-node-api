@@ -199,10 +199,26 @@ function getById(surveyId) {
   vpSurvey."updatedAt" AS "surveyUpdatedAt",
   vpSurvey."createdAt" AS "surveyCreatedAt",
   def_survey_type.*,
-  (SELECT array_agg(username) AS "surveyAmphibObs"
-    FROM vpsurvey_amphib
-    INNER JOIN vpuser ON "surveyAmphibObsId"=id
-    WHERE "surveyAmphibSurveyId"=$1),
+
+  (SELECT username AS "surveyAmphibObs1"
+  FROM vpsurvey_amphib
+  INNER JOIN vpuser ON "surveyAmphibObsId"=id
+  WHERE "surveyAmphibSurveyId"="surveyId"
+  AND LOWER(email)=LOWER("surveyAmphibJson"->'1'->>'surveyAmphibObsEmail')),
+
+  (SELECT username AS "surveyAmphibObs2"
+  FROM vpsurvey_amphib
+  INNER JOIN vpuser ON "surveyAmphibObsId"=id
+  WHERE "surveyAmphibSurveyId"="surveyId"
+  AND LOWER(email)=LOWER("surveyAmphibJson"->'2'->>'surveyAmphibObsEmail')),
+
+--  (SELECT json_agg(so) AS "surveyAmphibObs" FROM (
+--    SELECT username, email, id
+--    FROM vpsurvey_amphib
+--    INNER JOIN vpuser ON "surveyAmphibObsId"=id
+--    WHERE "surveyAmphibSurveyId"="surveyId"
+--  ) as so),
+
   (SELECT array_agg
     ("surveyAmphibEdgeWOFR"+"surveyAmphibEdgeSPSA"+"surveyAmphibEdgeJESA"+"surveyAmphibEdgeBLSA"+
     "surveyAmphibInteriorWOFR"+"surveyAmphibInteriorSPSA"+"surveyAmphibInteriorJESA"+"surveyAmphibInteriorBLSA")
