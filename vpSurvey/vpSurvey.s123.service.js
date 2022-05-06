@@ -12,7 +12,7 @@ const defaultServiceId = config.survey123.vpsurvey.serviceId; //'service_e4f2a97
 //former services having direct attachments: service_fae86d23c46e403aa0dae67596be6073, service_71386df693ec4db8868d7a7c64c50761
 const defaultFeatureId = 0;
 const maximumFeatureId = 7;
-const attachFeatureIds = {1:'WOFR',2:'SPSA',3:'JESA',4:'BLSA',5:'FASH',7:'POOL'};
+const attachFeatureIds = {1:'WOFR',2:'SPSA',3:'JESA',4:'BLSA',5:'FASH',6:'CDFY',7:'POOL'};
 const upsertAtchWiData = 1;
 var abort = 0; //flag to abort loading, sent via the API
 
