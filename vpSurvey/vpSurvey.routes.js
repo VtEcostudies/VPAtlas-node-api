@@ -146,11 +146,19 @@ function getCsv(req, res, next) {
         .catch(err => next(err));
 }
 
+/*
+  Here's how to use http to query same param for list of values:
+
+  http://localhost:4000/survey/geojson?mappedPoolStatus|NOT IN=Confirmed&mappedPoolStatus|NOT IN=Probable
+  http://localhost:4000/survey/geojson?mappedPoolStatus|IN=Confirmed&mappedPoolStatus|IN=Probable
+*/
 function getGeoJson(req, res, next) {
   console.log('vpSurvey.routes::getGeoJson | req.query:', req.query);
   console.log('vpSurvey.routes::getGeoJson | req.user:', req.user);
 
-  if (req.user || (req.user && req.user.userrole != 'admin')) {
+  var statusParam = req.query.mappedPoolStatus || req.query['mappedPoolStatus|IN'] || req.query['mappedPoolStatus|NOT IN'];
+
+  if (!statusParam && (!req.user || (req.user && req.user.userrole != 'admin'))) {
     req.query['mappedPoolStatus|NOT IN'] = [ 'Eliminated', 'Duplicate' ];
   }
 

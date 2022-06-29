@@ -112,7 +112,7 @@ function whereClause(params={}, staticColumns=[], clause='WHERE') {
                     else {values.push(params[key]);}
                   }
                 }
-                //if (idx > 1) where += ` AND `;
+                if (idx > 1) where += ` AND `;
                 if (col.includes(`."`)) {
                   where += ` ${col} ${opr} $${idx++}`; //columns with table spec have double-quotes already
                 } else if ('logical'===col.substring(0,7)) {
