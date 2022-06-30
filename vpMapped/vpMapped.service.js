@@ -220,6 +220,7 @@ async function getGeoJson(params={}) {
                 (SELECT
                   "mappedPoolId" AS "poolId",
                   "mappedPoolStatus" AS "poolStatus",
+                  CONCAT('https://vpatlas.org/pools/list?poolId=',"mappedPoolId",'&zoomFilter=false') AS vpatlas_pool_url,
                   vpmapped.*,
                   vptown.*,
                   vpcounty.*

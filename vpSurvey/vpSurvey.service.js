@@ -302,6 +302,11 @@ async function getGeoJson(params={}) {
                    ST_AsGeoJSON("mappedPoolLocation")::json as geometry,
                    (SELECT
                      row_to_json(p) FROM (SELECT
+                       "mappedPoolId" AS "poolId",
+                       "mappedPoolStatus" AS "poolStatus",
+                       CONCAT('https://vpatlas.org/pools/list?poolId=',"mappedPoolId",'&zoomFilter=false') AS vpatlas_pool_url,
+                       CONCAT('https://vpatlas.org/survey/pool/',"mappedPoolId") AS vpatlas_survey_pool_url,
+                       CONCAT('https://vpatlas.org/survey/view/',"surveyId") AS vpatlas_survey_url,
                         vpmapped.*,
                         vpsurvey.*,
                         --vpsurvey_amphib.*,
