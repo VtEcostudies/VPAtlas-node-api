@@ -35,7 +35,9 @@ const tables = [
   "vpsurvey_macro",
   "vpsurvey_photos",
   "vpsurvey_uploads",
-  "vptown"
+  "vpmapped",
+  "vptown",
+  "vpcounty"
 ];
 for (i=0; i<tables.length; i++) {
   pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
@@ -281,7 +283,9 @@ function getByPoolId(poolId) {
 }
 
 async function getGeoJson(params={}) {
-    const where = pgUtil.whereClause(params, staticColumns);
+    console.log('vpSurvey.service | getGeoJson |', params);
+    var where = pgUtil.whereClause(params, staticColumns);
+    where.pretty = JSON.stringify(params).replace(/\"/g,'');
     const sql = `
       SELECT
           row_to_json(fc) AS geojson
@@ -289,6 +293,7 @@ async function getGeoJson(params={}) {
           SELECT
       		'FeatureCollection' AS type,
       		'Vermont Vernal Pool Atlas - Pool Surveys' AS name,
+          'WHERE ${where.pretty}' AS filter,
           '{ "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } }'::json as crs,
           array_to_json(array_agg(f)) AS features
           FROM (
@@ -308,11 +313,15 @@ async function getGeoJson(params={}) {
        							        FROM vpsurvey_photos
              						  	WHERE vpsurvey."surveyId"=vpsurvey_photos."surveyPhotoSurveyId"
                             ) AS q
-             							)
+             							),
+                        vptown.*,
+                        vpcounty.*
                      ) AS p
       			) AS properties
               FROM vpSurvey
           		INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
+              INNER JOIN vptown ON "mappedTownId"="townId"
+              INNER JOIN vpcounty ON "townCountyId"="govCountyId"
               --INNER JOIN vpsurvey_amphib ON "surveyId"="surveyAmphibSurveyId"
               --INNER JOIN vpsurvey_macro ON "surveyId"="surveyMacroSurveyId"
               --LEFT JOIN vpsurvey_year ON "surveyId"="surveyYearSurveyId"

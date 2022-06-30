@@ -21,7 +21,9 @@ module.exports = {
 //file scope list of vpvisit table columns retrieved on app startup (see 'getColumns()' below)
 const tables = [
   "vpvisit",
-  "vptown"
+  "vpmapped",
+  "vptown",
+  "vpcounty"
 ];
 for (i=0; i<tables.length; i++) {
   pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
@@ -239,8 +241,10 @@ async function getCsv(params={}) {
   Input: params are passed as req.query
 */
 async function getGeoJson(params={}) {
-    const where = pgUtil.whereClause(params, staticColumns, 'AND');
+    console.log('vpVisit.service | getGeoJson |', params);
+    var where = pgUtil.whereClause(params, staticColumns, 'AND');
     if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
+    where.pretty = JSON.stringify(params).replace(/\"/g,'');
     const sql = `
     SELECT
         row_to_json(fc) as geojson
@@ -248,20 +252,25 @@ async function getGeoJson(params={}) {
         SELECT
     		'FeatureCollection' AS type,
     		'Vermont Vernal Pool Atlas - Pool Visits' as name,
+        'WHERE ${where.pretty}' AS filter,
     		'{ "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } }'::json as crs,
         array_to_json(array_agg(f)) AS features
         FROM (
             SELECT
                 'Feature' AS type,
                 ST_AsGeoJSON("mappedPoolLocation")::json as geometry,
-                (SELECT
-                  row_to_json(p) FROM (SELECT
+                (SELECT row_to_json(p) FROM
+                  (SELECT
                     vpmapped.*,
-                    vpvisit.*
+                    vpvisit.*,
+                    vptown.*,
+                    vpcounty.*
                   ) AS p
               ) AS properties
             FROM vpmapped
-            INNER JOIN vpvisit on "visitPoolId"="mappedPoolId"
+            INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+            INNER JOIN vptown ON "mappedTownId"="townId"
+            INNER JOIN vpcounty ON "townCountyId"="govCountyId"
             WHERE "visitId" > 0
             ${where.text}
         ) AS f

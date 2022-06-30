@@ -55,7 +55,7 @@ for (var i=0; i<process.argv.length; i++) {
     var arg = all[1]; //argument, right of action=argument
     console.log(`command-line argument ${i}`, all);
 	switch(act) {
-    case debug:
+    case "debug":
       debug = true;
       break;
 		case "http":

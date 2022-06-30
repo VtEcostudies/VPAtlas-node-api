@@ -21,7 +21,8 @@ module.exports = {
 //file scope list of vpmapped table columns retrieved on app startup (see 'getColumns()' below)
 const tables = [
   "vpmapped",
-  "vptown"
+  "vptown",
+  "vpcounty"
 ];
 for (i=0; i<tables.length; i++) {
   pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
@@ -198,7 +199,9 @@ WHERE "mappedPoolId"=$1;`
 
 async function getGeoJson(params={}) {
     console.log('vpMapped.service | getGeoJson |', params);
+    //console.log('vpMapped.service | getGeoJson |', staticColumns);
     var where = pgUtil.whereClause(params, staticColumns);
+    where.pretty = JSON.stringify(params).replace(/\"/g,'');
     const sql = `
     SELECT
       row_to_json(fc) as geojson
@@ -206,6 +209,7 @@ async function getGeoJson(params={}) {
         SELECT
     		'FeatureCollection' AS type,
     		'Vermont Vernal Pool Atlas - Mapped Pools' AS name,
+        'WHERE ${where.pretty}' AS filter,
     		'{ "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } }'::json as crs,
         array_to_json(array_agg(f)) AS features
         FROM (
@@ -216,11 +220,14 @@ async function getGeoJson(params={}) {
                 (SELECT
                   "mappedPoolId" AS "poolId",
                   "mappedPoolStatus" AS "poolStatus",
-                  vpmapped.*
+                  vpmapped.*,
+                  vptown.*,
+                  vpcounty.*
                 ) AS p
               ) AS properties
             FROM vpmapped
             INNER JOIN vptown on "mappedTownId"=vptown."townId"
+            INNER JOIN vpcounty ON "townCountyId"="govCountyId"
             ${where.text}
         ) AS f
       ) AS fc`;
