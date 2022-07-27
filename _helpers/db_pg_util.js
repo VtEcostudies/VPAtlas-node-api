@@ -102,7 +102,7 @@ function whereClause(params={}, staticColumns=[], clause='WHERE') {
                 if (where == '') where = clause; //'WHERE', or 'AND' depending on caller
                 if ('logical'!=col.substring(0,7)) {
                   if (Array.isArray(params[key])) { //search token has multiple values, passed as array
-                    //opr = 'IN'; //array of values for same column assumes 'IN' operator
+                    opr = 'IN'; //array of values for same column assumes 'IN' operator
                     params[key].forEach((item, index) => {
                       if (item.toLowerCase()=='null') {}//values.push(null);}
                       else {values.push(item);}

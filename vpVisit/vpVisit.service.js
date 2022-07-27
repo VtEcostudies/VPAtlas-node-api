@@ -253,7 +253,8 @@ async function getGeoJson(params={}) {
     		'FeatureCollection' AS type,
     		'Vermont Vernal Pool Atlas - Pool Visits' as name,
         'WHERE ${where.pretty}' AS filter,
-        --the CRS type below causes importing this dataset into GIS software to fail
+        --The CRS type below causes importing this dataset into GIS software to fail.
+        --The default GeoJSON CRS is WGS84, which is what we have.
     		--'{ "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } }'::json as crs,
         array_to_json(array_agg(f)) AS features
         FROM (
