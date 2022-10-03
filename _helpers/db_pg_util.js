@@ -88,6 +88,7 @@ function whereClause(params={}, staticColumns=[], clause='WHERE') {
     var idx = 1;
     //console.log('dg_pg_util::whereClause | params', params);
     if (Object.keys(params).length) {
+        prev_log_opr = false; //keep track of logical operator in the previous argument in a multi-arg list
         for (var key in params) {
             console.log('key', key, 'params[key]', params[key]);
             var col = key.split("|")[0];
@@ -112,11 +113,13 @@ function whereClause(params={}, staticColumns=[], clause='WHERE') {
                     else {values.push(params[key]);}
                   }
                 }
-                if (idx > 1) where += ` AND `;
+                if (idx > 1 && 'logical' != col.substring(0,7) && !prev_log_opr) where += ` AND `; //if multiple args and no logical, must add AND, the default logical operator
+                prev_log_opr = false;
                 if (col.includes(`."`)) {
                   where += ` ${col} ${opr} $${idx++}`; //columns with table spec have double-quotes already
                 } else if ('logical'===col.substring(0,7)) {
-                  where += ` ${params[key]} `; //append logical operator
+                  where += ` ${params[key]} `; //append logical operator (AND, OR)
+                  prev_log_opr = params[key]; //flag a logical operator for the next loop-iteration
                 } else if (Array.isArray(params[key])) { //break array of values into list like '($2,$3,...)'
                     where += ` "${col}" ${opr} (`; //() around array of args
                     params[key].forEach((item, index) => {
