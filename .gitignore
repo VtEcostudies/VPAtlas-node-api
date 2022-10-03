@@ -1,7 +1,10 @@
-# IDE definition files
-vpatlas-node-api.komodoproject
+# Secrets files
 config.json
 
+# IDE definition files
+vpatlas-node-api.komodoproject
+
+# npm config files
 package-lock.json
 
 #geoJSON downloads
