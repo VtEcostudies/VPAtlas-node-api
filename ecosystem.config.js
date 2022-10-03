@@ -16,7 +16,7 @@ module.exports = {
 /*
     env: {
        NODE_ENV: "prod",
-       watch: ["./server.js", "/etc/etsencrypt/live"]
+       watch: ["./server.js", "/etc/letsencrypt/live"]
     },
 */
     env_dev: {
@@ -29,15 +29,15 @@ module.exports = {
     },
     env_dev_remote: {
        NODE_ENV: "dev-remote",
-       watch: ["./server.js", "/etc/etsencrypt/live"]
+       watch: ["./server.js", "/etc/letsencrypt/live"]
     },
     env_prod: {
        NODE_ENV: "prod",
-       watch: ["./server.js", "/etc/etsencrypt/live"]
+       watch: ["./server.js", "/etc/letsencrypt/live"]
     },
     env_production: {
        NODE_ENV: "prod",
-       watch: ["./server.js", "/etc/etsencrypt/live"]
+       watch: ["./server.js", "/etc/letsencrypt/live"]
     }
   }]
 }
