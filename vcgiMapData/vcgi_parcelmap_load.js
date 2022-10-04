@@ -1,6 +1,4 @@
 /*
-  Author: Jason Loomis
-
   Project: VPAtlas
 
   File: vcgi_parcelmap_load.js
@@ -14,7 +12,7 @@
 
   Specifics:
     - GET geoJSON map data from VCGI API by town and store in postgres table by town
-    as jsonb, or put in local filesystem with file names like 'Townname.geoJSON'.
+      as jsonb, or put in local filesystem with file names like 'Townname.geoJSON'.
 
     - Example call to get geoJSON for a town and insert/update the database:
 
@@ -73,7 +71,7 @@ console.log(`Program arguments | town:${town} | destination: ${dest}`);
 loadParcels(town);
 
 function loadParcels(townName=null) {
-  console.log('Loading parcels for ', townName?townName:'All Towns')
+  console.log('Loading parcels for', townName?townName:'All Towns')
   getTowns(townName)
     .then(async towns => {
       //console.dir(towns);
@@ -83,7 +81,7 @@ function loadParcels(townName=null) {
         let offset = 0;
         let end = false;
         let parcel = {};
-        console.log(towns.rows[i].townName);
+        console.log(i, towns.rows[i].townName);
         await getTownParcel(towns.rows[i], pageSize, offset, end, parcel);
       }
     })
@@ -110,7 +108,7 @@ async function getTownParcel(town, pageSize, offset, end, parcel) {
       offset += pageSize;
       if (!end) {await getTownParcel(town, pageSize, offset, end, parcel);}
       else {
-        console.log(`getTownParcel finished getting parcel for ${town.townName} destination ${dest}`);
+        console.log(`getTownParcel finished getting parcel for ${town.townName} | Destination: ${dest}`);
         if ('db' == dest) {
           await insertVcgiParcel(town, parcel)
             .then(res => {console.log('insertVcgiParcel SUCCESS |', res.rowCount, res.rows?res.rows[0]:null);})
@@ -132,33 +130,34 @@ async function getTownParcel(town, pageSize, offset, end, parcel) {
     })
     .catch(err => {
       end = true;
-      console.log('getTownParcel', err.message);
+      console.log('getTownParcel call to httpsGetVcgiParcelPage returned ERROR:', err.message);
       return(err);
     });
 }
 
 function httpsGetVcgiParcelPage(townName, pageSize, offset){
   var apiUrl = 'https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/OPENDATA_VCGI_CADASTRAL_SP_NOCACHE_v1/MapServer/17/query';
+  apiUrl = 'https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_VTPARCELS_WM_NOCACHE_v2/FeatureServer/1/query';
   var query = `?where=TOWN='${townName}'`;
   var fields = `&outFields=*`;
   var paging = `&resultOffset=${offset}&resultRecordCount=${pageSize}`;
   var types = `&outSR=4326&f=geojson`;
   var url = apiUrl+query+fields+paging+types;
 
-  console.log('httpsGetVcgiParcelPage', url);
+  console.log('httpsGetVcgiParcelPage URL:', url);
 
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
       const { statusCode } = res;
-      const contentType = res.headers['content-type'];
+      const contentType = res.headers['content-type']; //.split(';'); //new VCGI endpoint returns 'application/json; charset=utf-8'
 
       let error;
       if (statusCode !== 200) {
         error = new Error('Request Failed.\n' +
                           `Status Code: ${statusCode}`);
-      } else if (!/^application\/geo\+json/.test(contentType)) {
+      } else if (!(/^application\/json/.test(contentType))) {
         error = new Error('Invalid content-type.\n' +
-                          `Expected application/json but received ${contentType}`);
+                          `Expected content-type to be 'application/json' but received '${contentType}'`);
       }
       if (error) {
         console.error(error.message);
