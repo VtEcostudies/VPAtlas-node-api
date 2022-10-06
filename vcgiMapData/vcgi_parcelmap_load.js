@@ -31,6 +31,11 @@
     - To *Update* parcel maps as new data are available on vcgi, simply re-run the load.
     This service checks for SQL INSERT error type 23505, and switches to an SQL UPDATE.
 
+    - In the fall of 2022, the original VCGI endpoint was no longer valid:
+        'https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/OPENDATA_VCGI_CADASTRAL_SP_NOCACHE_v1/MapServer/17/query';
+      Switched to:
+        'https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_VTPARCELS_WM_NOCACHE_v2/FeatureServer/1/query'
+      which had a different location for endOfRecords indicator. It was moved from top-level to under 'properties'.
 */
 const db = require('../_helpers/db_postgres');
 const query = db.query;
@@ -76,13 +81,11 @@ function loadParcels(townName=null) {
     .then(async towns => {
       //console.dir(towns);
       for (var i=0; i<towns.rows.length; i++) {
-      //for (var i=0; i<1; i++) {
-        let pageSize = 500;
+        let limit = 500;
         let offset = 0;
-        let end = false;
         let parcel = {};
         console.log(i, towns.rows[i].townName);
-        await getTownParcel(towns.rows[i], pageSize, offset, end, parcel);
+        await getTownParcel(towns.rows[i], limit, offset, parcel);
       }
     })
     .catch(err => {
@@ -98,15 +101,17 @@ function getTowns(townName=null) {
     return query(text, value);
 }
 
-async function getTownParcel(town, pageSize, offset, end, parcel) {
-  await httpsGetVcgiParcelPage(town.townName, pageSize, offset)
+async function getTownParcel(town, limit, offset, parcel) {
+  await httpsGetVcgiParcelPage(town.townName, limit, offset)
     .then(async data => {
-      console.log(town.townName, pageSize, offset, data.features.length);
+      console.log(town.townName, limit, offset, data.features.length);
       if (0 == offset) {parcel = data;}
       else {parcel.features = parcel.features.concat(data.features);}
-      end = !data.exceededTransferLimit;
-      offset += pageSize;
-      if (!end) {await getTownParcel(town, pageSize, offset, end, parcel);}
+      let more = data.properties && data.properties.exceededTransferLimit; //with new VCGI endpoint, endOfRecords moved from top-level to under 'properties'
+      if (more) { //more records to get. recurse.
+        offset += limit;
+        await getTownParcel(town, limit, offset, parcel);
+      }
       else {
         console.log(`getTownParcel finished getting parcel for ${town.townName} | Destination: ${dest}`);
         if ('db' == dest) {
@@ -129,18 +134,17 @@ async function getTownParcel(town, pageSize, offset, end, parcel) {
       }
     })
     .catch(err => {
-      end = true;
       console.log('getTownParcel call to httpsGetVcgiParcelPage returned ERROR:', err.message);
       return(err);
     });
 }
 
-function httpsGetVcgiParcelPage(townName, pageSize, offset){
-  var apiUrl = 'https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/OPENDATA_VCGI_CADASTRAL_SP_NOCACHE_v1/MapServer/17/query';
-  apiUrl = 'https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_VTPARCELS_WM_NOCACHE_v2/FeatureServer/1/query';
+function httpsGetVcgiParcelPage(townName, limit, offset){
+  //var apiUrl = 'https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/OPENDATA_VCGI_CADASTRAL_SP_NOCACHE_v1/MapServer/17/query';
+  var apiUrl = 'https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_VTPARCELS_WM_NOCACHE_v2/FeatureServer/1/query'; //new 10/2022
   var query = `?where=TOWN='${townName}'`;
   var fields = `&outFields=*`;
-  var paging = `&resultOffset=${offset}&resultRecordCount=${pageSize}`;
+  var paging = `&resultOffset=${offset}&resultRecordCount=${limit}`;
   var types = `&outSR=4326&f=geojson`;
   var url = apiUrl+query+fields+paging+types;
 
