@@ -1,11 +1,21 @@
-# node-postgres API for VPAtlas
+# VPAtlas node-postgres API
 
-NodeJS/ExpressJ + Postgres/PostGIS API serves routes which handle
-Registration
-Authentication
-Authorization
-Vernal Pool Mapping CRUD
-Vernal Pool Visit CRUD
+NodeJS/ExpressJS + Postgres/PostGIS API serves routes which handle:
+
+- User Management
+  - Registration
+  - Authentication
+  - Authorization (role-based user auth)
+  - Administrattion (add/remove/update/reset)
+
+- Vernal Pool Web UX Data
+  - Vernal Pool Mapping CRUD
+  - Vernal Pool Visit CRUD
+  - Vernal Pool Survey (Read/View only. Includes Admin S123 data-links)
+
+- Vernal Pool Survey 123 Data
+  - VPVisit S123 Pull (Create/Update)
+  - VPMon Survey S123 Pull (Create/Update)
 
 Shield: [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
 
