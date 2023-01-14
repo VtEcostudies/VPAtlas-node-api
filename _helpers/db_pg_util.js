@@ -98,12 +98,12 @@ function whereClause(params={}, staticColumns=[], clause='WHERE') {
             if (!Array.isArray(params[key]) && params[key].toLowerCase()=='null') { //null value requires special operators
               opr = opr==='!=' ? ' IS NOT NULL' : ' IS NULL';
             }
-            //console.log('db_pg_util::whereClause |', col);
+            console.log('db_pg_util::whereClause | column:', col, '| operator:', opr);
             if (staticColumns.includes(col) || 'logical'===col.substring(0,7)) {
                 if (where == '') where = clause; //'WHERE', or 'AND' depending on caller
-                if ('logical'!=col.substring(0,7)) {
+                if ('logical' != col.substring(0,7)) {
                   if (Array.isArray(params[key])) { //search token has multiple values, passed as array
-                    opr = 'IN'; //array of values for same column assumes 'IN' operator
+                    if ('=' == opr) {opr = 'IN'}; //an array of values must use 'IN' operator, unless API sent one, eg. 'NOT IN'
                     params[key].forEach((item, index) => {
                       if (item.toLowerCase()=='null') {}//values.push(null);}
                       else {values.push(item);}
