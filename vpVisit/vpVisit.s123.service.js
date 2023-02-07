@@ -127,6 +127,11 @@ function upsertVisit(req, jsonData) {
         value = jsonData[colum];
         if ('' === value) {value = null;} //convert empty strings to null
         if (`${Number(value)}` === value) {value = Number(value);} //convert string number to numbers (MUST USE '===' or it converts bool to int!!!)
+        if ('visitLandowner' == colum) {
+          if (typeof value != 'object') {
+            value = {'name': value};
+          }
+        }
         if (tableColumns['vpvisit'].includes(colum)) {visitRow[colum]=value;}
       });
       valArr.push(visitRow);

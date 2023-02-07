@@ -19,6 +19,10 @@ module.exports = {
 /*
  Note: Removing the default env means a no-arg call ('pm2 start') will try to detect server context from os hostname
 */
+    default: {
+       NODE_ENV: "dev-local",
+       watch: ["./server.js","_helpers","users","vcgiMapData","vtInfo","vpMapped","vpPools","vpReview","vpSurvey","vpUtil","vpVisit"],
+    },
     env_dev: {
        NODE_ENV: "dev-local",
        watch: ["./server.js","_helpers","users","vcgiMapData","vtInfo","vpMapped","vpPools","vpReview","vpSurvey","vpUtil","vpVisit"],
