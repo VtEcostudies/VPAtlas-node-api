@@ -1,1 +1,0 @@
-update vpuser set "userrole"='user' where "userrole"='guest' OR "userrole"='Guest';
