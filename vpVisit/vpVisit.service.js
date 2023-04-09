@@ -11,6 +11,7 @@ module.exports = {
     getAll,
     getPage,
     getById,
+    getByPoolId,
     getCsv,
     getGeoJson,
     create,
@@ -205,6 +206,31 @@ async function getById(id) {
     WHERE "visitId"=$1;`;
 
     return await query(text, [id])
+}
+
+function getByPoolId(poolId) {
+  const text = `
+  SELECT
+  "townId",
+  "townName",
+  "countyName",
+  visituser.username AS "visitUserName",
+  visituser.id AS "visitUserId",
+  --visituser.email AS "visitUserEmail",
+  vpVisit.*,
+  vpVisit."updatedAt" AS "visitUpdatedAt",
+  vpVisit."createdAt" AS "visitCreatedAt",
+  vpmapped.*,
+  vpmapped."updatedAt" AS "mappedUpdatedAt",
+  vpmapped."createdAt" AS "mappedCreatedAt"
+  FROM vpvisit
+  INNER JOIN vpmapped ON "mappedPoolId"="visitPoolId"
+  LEFT JOIN vpuser AS visituser ON "visitUserId"="id"
+  LEFT JOIN vptown ON "mappedTownId"="townId"
+  LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+  WHERE "visitPoolId"=$1`
+
+  return query(text, [poolId]);
 }
 
 async function getCsv(params={}) {
