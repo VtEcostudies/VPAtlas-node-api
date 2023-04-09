@@ -1,5 +1,6 @@
 ﻿const express = require('express');
 const router = express.Router();
+const routes = require('../_helpers/routes');
 const convert = require('json-2-csv');
 const service = require('./vpMapped.service');
 
@@ -8,6 +9,7 @@ const service = require('./vpMapped.service');
 router.get('/csv', getCsv);
 router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
+router.get('/routes', getRoutes);
 router.get('/count', getCount);
 router.get('/stats', getStats);
 router.get('/overview', getOverview);
@@ -24,6 +26,10 @@ function getColumns(req, res, next) {
     service.getColumns()
         .then(columns => res.json(columns))
         .catch(err => next(err));
+}
+
+function getRoutes(req, res, next) {
+    res.json(routes(router));
 }
 
 function getCount(req, res, next) {

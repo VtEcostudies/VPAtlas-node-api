@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
+const routes = require('../_helpers/routes');
 const convert = require('json-2-csv');
 const service = require('./vpSurvey.service');
 const s123svc = require('./vpSurvey.s123.service');
-
 const multer = require('multer');
 const upFile = multer({ dest: 'vpsurvey/uploads/' });
 
@@ -12,6 +12,7 @@ const upFile = multer({ dest: 'vpsurvey/uploads/' });
 router.get('/csv', getCsv);
 router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
+router.get('/routes', getRoutes);
 router.get('/count', getCount);
 router.get('/poolids', getPoolIds); //get surveyed pool ids
 router.get('/types', getTypes); //get pool-survey types
@@ -22,7 +23,7 @@ router.get('/s123', getS123);
 router.get('/s123/attachments', getS123attachments);
 router.get('/:id', getById);
 router.get('/pool/:poolId', getByPoolId);
-router.get('/upload/history', getUploadHistory);
+//router.get('/upload/history', getUploadHistory);
 router.post('/s123', postS123);
 router.post('/s123/attachments', postS123Attachments);
 router.post('/s123/all', postS123All);
@@ -38,6 +39,10 @@ function getColumns(req, res, next) {
     service.getColumns()
         .then(columns => res.json(columns))
         .catch(err => next(err));
+}
+
+function getRoutes(req, res, next) {
+    res.json(routes(router));
 }
 
 function getS123(req, res, next) {

@@ -1,9 +1,11 @@
 ﻿const express = require('express');
 const router = express.Router();
+const routes = require('../_helpers/routes');
 const userService = require('./vpUser.service.pg');
 const sendmail = require('./sendmail');
 
 // routes
+router.get('/routes', getRoutes);
 router.post('/authenticate', authenticate);
 router.post('/register', register);
 router.post('/check', check);
@@ -20,6 +22,10 @@ router.put('/:id', update);
 router.delete('/:id', _delete);
 
 module.exports = router;
+
+function getRoutes(req, res, next) {
+    res.json(routes(router));
+}
 
 function authenticate(req, res, next) {
     console.log(`vpUser.routes.pg.authenticate | req.body:`, req.body);

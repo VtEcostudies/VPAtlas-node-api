@@ -28,11 +28,13 @@ function jwt() {
             '/users/reset',
             '/users/verify',
             '/users/confirm',
+            '/users/routes',
 
             { url: /^\/utils\/where/, methods: ['GET'] },
 
             { url: /^\/vtinfo\/towns/, methods: ['GET'] },
             { url: /^\/vtinfo\/counties/, methods: ['GET'] },
+            { url: /^\/vtinfo\/routes/, methods: ['GET'] },
 
             { url: /^\/parcel\/townId\/.*/, methods: ['GET'] },
             { url: /^\/parcel\/townName\/.*/, methods: ['GET'] },
