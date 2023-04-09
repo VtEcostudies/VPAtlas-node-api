@@ -44,6 +44,7 @@ function jwt() {
             { url: /^\/pools\/visit\/.*/, methods: ['GET'] },
             { url: /^\/pools\/visit\/page\/.*/, methods: ['GET'] },
             { url: /^\/visit\/.*/, methods: ['GET'] },
+            { url: /^\/visit\/pool\/.*/, methods: ['GET'] }, //visit/pool/:poolId
 
             { url: /^\/review\/.*/, methods: ['GET'] }, //add ability for public to view Reviews
 
@@ -55,6 +56,7 @@ function jwt() {
             { url: /^\/survey/, methods: ['GET'] },
             { url: /^\/survey\/.*/, methods: ['GET'] },
             { url: /^\/survey\/page\/.*/, methods: ['GET'] },
+            { url: /^\/survey\/pool\/.*/, methods: ['GET'] }, //survey/pool/:poolId
 
             //for testing. remove these in production.
             //{ url: /^\/survey\/.*/, methods: ['POST'] },

@@ -19,6 +19,7 @@ router.get('/page/:page', getPage);
 router.get('/s123', getS123);
 router.get('/s123/attachments', getS123attachments);
 router.get('/:id', getById);
+router.get('/pool/:poolId', getByPoolId);
 router.get('/upload/history', getUploadHistory);
 router.post('/s123', postS123);
 router.post('/s123/attachments', postS123Attachments);
@@ -100,8 +101,16 @@ function getPage(req, res, next) {
 function getById(req, res, next) {
     service.getById(req.params.id)
         .then(item => {
-          console.log(item.rows);
-          item ? res.json(item) : res.sendStatus(404);
+          //item ? res.json({'rowCount': item.rows.length, 'rows': item.rows}) : res.sendStatus(404);
+          item ? res.json(item.rows) : res.sendStatus(404);
+        })
+        .catch(err => next(err));
+}
+
+function getByPoolId(req, res, next) {
+    service.getByPoolId(req.params.poolId)
+        .then(item => {
+            item ? res.json({'rowCount': item.rows.length, 'rows': item.rows}) : res.sendStatus(404)
         })
         .catch(err => next(err));
 }

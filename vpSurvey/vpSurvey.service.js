@@ -263,16 +263,16 @@ function getByPoolId(poolId) {
   "townId",
   "townName",
   "countyName",
-  surveyuser.username AS surveyUserName,
-  surveyuser.id AS surveyUserId,
-  surveyuser.email AS surveyUserEmail,
+  surveyuser.username AS "surveyUserName",
+  surveyuser.id AS "surveyUserId",
+  --surveyuser.email AS "surveyUserEmail",
   vpSurvey.*,
   vpSurvey."updatedAt" AS "surveyUpdatedAt",
   vpSurvey."createdAt" AS "surveyCreatedAt",
   vpmapped.*,
   vpmapped."updatedAt" AS "mappedUpdatedAt",
   vpmapped."createdAt" AS "mappedCreatedAt"
-  FROM vpSurvey
+  FROM vpsurvey
   INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
   LEFT JOIN vpuser AS surveyuser ON "surveyUserId"="id"
   LEFT JOIN vptown ON "mappedTownId"="townId"
