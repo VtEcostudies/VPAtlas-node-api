@@ -1,6 +1,6 @@
 {
     "name": "vpatlas-node-postgis-api",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "description": "NodeJS + Postgres + PostGIS API for VPAtlas",
     "license": "MIT",
     "repository": {
