@@ -108,7 +108,6 @@ function getById(req, res, next) {
     service.getById(req.params.id)
         .then(item => {
           item ? res.json({'rowCount': item.rows.length, 'rows': item.rows}) : res.sendStatus(404);
-          //item ? res.json(item) : res.sendStatus(404);
         })
         .catch(err => next(err));
 }

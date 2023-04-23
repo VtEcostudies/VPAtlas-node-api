@@ -1,6 +1,7 @@
 ﻿require('rootpath')();
 const fs = require('fs');
 const https = require('https');
+const compression = require('compression');
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -112,6 +113,8 @@ app.use(function (req, res, next) {
 
 // use JWT auth to secure the api
 app.use(jwt());
+
+app.use(compression());
 
 try {
   //test the db connection first. each of the below routes include services that make a db connection, creating lots of errors.

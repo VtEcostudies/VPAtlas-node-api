@@ -4,8 +4,8 @@
 const os = require("os");
 const os_env = os.hostname()=='vpatlas.org'?'prod':(os.hostname()=='dev.vpatlas.org'?'dev-remote':'dev-local');
 const process = require('process');
-const env = process.env;
-const api_env = env.NODE_ENV?env.NODE_ENV:'dev-local';
+const prc_env = process.env;
+const api_env = prc_env.NODE_ENV?prc_env.NODE_ENV:'dev-local';
 const config = require('../config.json');
 
 if (!config.pg[api_env]) {

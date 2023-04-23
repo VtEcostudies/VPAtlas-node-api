@@ -8,6 +8,7 @@ const service = require('./vpMapped.service');
 // for things like /:id, or they are missed/skipped.
 router.get('/csv', getCsv);
 router.get('/geojson', getGeoJson);
+router.get('/shapeFile', getShapeFile);
 router.get('/columns', getColumns);
 router.get('/routes', getRoutes);
 router.get('/count', getCount);
@@ -126,6 +127,24 @@ function getGeoJson(req, res, next) {
             else {res.json(items);}
         })
         .catch(err => next(err));
+}
+
+function getShapeFile(req, res, next) {
+    console.log('vpMapped.routes::getShapeFile | req.query:', req.query);
+    console.log('vpMapped.routes::getShapeFile | req.user:', req.user);
+
+    let ret = service.getShapeFile(req.query);
+    console.log('vpMapped.routes::getShapeFile | ret', ret);
+    ret.then(shpObj => {
+        console.log('vpMapped.routes::getShapeFile result', process.cwd(), shpObj.all);
+        res.setHeader('Content-disposition', `attachment; filename=${shpObj.filename}`);
+        res.setHeader('Content-type', 'application/x-tar');
+        res.download(`${process.cwd()}/${shpObj.all}`);
+    })
+    ret.catch(err => {
+        console.log('vpMapped.routes::getShapeFile ERROR', err);
+        next(err);
+    })
 }
 
 function create(req, res, next) {

@@ -2,6 +2,7 @@
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
 const common = require('_helpers/db_common');
+const env = require('_helpers/env').env;
 var staticColumns = [];
 
 module.exports = {
@@ -13,6 +14,7 @@ module.exports = {
     getPage,
     getById,
     getGeoJson,
+    getShapeFile,
     create,
     update,
     delete: _delete
@@ -236,6 +238,68 @@ async function getGeoJson(params={}) {
       ) AS fc`;
     console.log('vpMapped.service | getGeoJson |', where.text, where.values);
     return await query(sql, where.values);
+}
+
+var cp = require('child_process');
+
+async function procExec(cmd) {
+  var ch = cp.exec(cmd);
+  return await new Promise((resolve, reject) => {
+    let info = {}; let iter = 0;
+    let errs = {}; let erri = 0;
+    ch.on('close', () => {
+      if (iter && !erri) {resolve({'info': info});}
+      if (!iter && erri) {resolve({'error': errs});}
+      if (iter && erri) {resolve({'info': info, 'error': errs});}
+    })
+    ch.stdout.on('data', (data) => {
+      //console.log('vpMapped.service::procExec stdout data', data);
+      info[iter++] = data;
+    });
+    ch.stderr.on('data', derr => {
+      //console.log('vpMapped.service::procExec stderr data', derr)
+      errs[erri++] = derr;
+    })
+    ch.on('error', err => {
+      //console.log('vpMapped.service::procExec process error', err)
+      reject(err);
+    })
+  })
+}
+
+async function getShapeFile(params={}) {
+  var where = pgUtil.whereClause(params, staticColumns);
+  where.pretty = JSON.stringify(params).replace(/\"/g,'');
+  let dir = `shapefile`;
+  let fyl = 'vpmapped';
+  let ext = 'tar.gz';
+  let qry = `select * from vpmapped`;
+  let cmd = `pgsql2shp -f ${dir}/${fyl} -h ${env.db_env.host} -u ${env.db_env.user} -P ${env.db_env.password} ${env.db_env.database} "${qry}"`;
+  console.log('vpMapped.service::getShapeFile | cmd', cmd);
+  let pe = procExec(cmd);
+  return await new Promise((resolve, reject) =>{
+    pe.then(async out => {
+      let tz = tarZip(dir, fyl, ext);
+      tz.then(async res => {
+        console.log(`getShapeFile=>tarZip | success`, `${dir}/${fyl}`);
+        resolve({all:`${dir}/${fyl}.${ext}`, filename:`${fyl}.${ext}`, subdir:dir});
+      })
+      tz.catch(async err => {
+        console.log(`getShapeFile=>tarZip | error`, err);
+        reject(err);
+      })
+    })
+    pe.catch(async err => {
+      console.log(`getShapeFile=>procExec | error`, err);
+      reject(err);
+    })
+  })
+}
+
+async function tarZip(dir='shapefile', fyl='vpmapped', ext='tar.gz') {
+  let cmd = `cd ${dir} && tar -czf ${fyl}.${ext} *`;
+  console.log('vpMapped.service::tarZip | cmd', cmd);
+  return await procExec(cmd);
 }
 
 async function create(body) {
