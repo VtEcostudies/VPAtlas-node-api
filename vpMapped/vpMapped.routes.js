@@ -3,6 +3,7 @@ const router = express.Router();
 const routes = require('../_helpers/routes');
 const convert = require('json-2-csv');
 const service = require('./vpMapped.service');
+const fs = require('fs');
 
 // routes NOTE: routes with names for same method (ie. GET) must be above routes
 // for things like /:id, or they are missed/skipped.
@@ -133,18 +134,38 @@ function getShapeFile(req, res, next) {
     console.log('vpMapped.routes::getShapeFile | req.query:', req.query);
     console.log('vpMapped.routes::getShapeFile | req.user:', req.user);
 
-    let ret = service.getShapeFile(req.query);
-    console.log('vpMapped.routes::getShapeFile | ret', ret);
-    ret.then(shpObj => {
-        console.log('vpMapped.routes::getShapeFile result', process.cwd(), shpObj.all);
-        res.setHeader('Content-disposition', `attachment; filename=${shpObj.filename}`);
-        res.setHeader('Content-type', 'application/x-tar');
-        res.download(`${process.cwd()}/${shpObj.all}`);
-    })
-    ret.catch(err => {
-        console.log('vpMapped.routes::getShapeFile ERROR', err);
-        next(err);
-    })
+    var statusParam = req.query.mappedPoolStatus || req.query['mappedPoolStatus|IN'] || req.query['mappedPoolStatus|NOT IN'];
+    var excludeHidden = 0;
+
+    if (!statusParam && (!req.user || (req.user && req.user.userrole != 'admin'))) {
+        excludeHidden = 1;
+    }
+
+    service.getShapeFile(req.query, excludeHidden)
+        .then(shpObj => {
+            let fileSpec = `${process.cwd()}/${shpObj.all}`;
+            console.log('vpMapped.routes::getShapeFile result', process.cwd(), shpObj.all);
+            if (req.query.download) {
+                res.setHeader('Content-disposition', `attachment; filename=${shpObj.filename}`);
+                res.setHeader('Content-type', 'application/x-tar');
+                res.download(fileSpec); //res.sendFile does the same
+            } else {
+                fs.readFile(fileSpec, (err, data) => {
+                    if (err) {next(err);}
+                    else {
+                        res.setHeader('Content-type', 'application/x-tar');
+                        res.send(data);
+                    }
+                })
+            }
+        })
+        .catch(ret => {
+            console.log('vpMapped.routes::getShapeFile ERROR | ret:', ret);
+            let errs = ''; Object.keys(ret.error).map(key => {errs += ret.error[key];})
+            let err = new Error(errs);
+            console.log('vpMapped.routes::getShapeFile ERROR | Constructed error object:', err);
+            next(err);
+        })
 }
 
 function create(req, res, next) {

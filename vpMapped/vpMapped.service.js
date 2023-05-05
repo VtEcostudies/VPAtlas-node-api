@@ -2,7 +2,7 @@
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
 const common = require('_helpers/db_common');
-const env = require('_helpers/env').env;
+const shapeFile = require('_helpers/db_shapefile').shapeFile;
 var staticColumns = [];
 
 module.exports = {
@@ -24,7 +24,8 @@ module.exports = {
 const tables = [
   "vpmapped",
   "vptown",
-  "vpcounty"
+  "vpcounty",
+  "vpuser"
 ];
 for (i=0; i<tables.length; i++) {
   pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
@@ -225,9 +226,9 @@ async function getGeoJson(params={}) {
                   "mappedPoolId" AS "poolId",
                   "mappedPoolStatus" AS "poolStatus",
                   CONCAT('https://vpatlas.org/pools/list?poolId=',"mappedPoolId",'&zoomFilter=false') AS vpatlas_pool_url,
-                  vpmapped.*,
-                  vptown.*,
-                  vpcounty.*
+                  vptown."townName",
+                  vpcounty."countyName",
+                  vpmapped.*
                 ) AS p
               ) AS properties
             FROM vpmapped
@@ -240,66 +241,30 @@ async function getGeoJson(params={}) {
     return await query(sql, where.values);
 }
 
-var cp = require('child_process');
-
-async function procExec(cmd) {
-  var ch = cp.exec(cmd);
-  return await new Promise((resolve, reject) => {
-    let info = {}; let iter = 0;
-    let errs = {}; let erri = 0;
-    ch.on('close', () => {
-      if (iter && !erri) {resolve({'info': info});}
-      if (!iter && erri) {resolve({'error': errs});}
-      if (iter && erri) {resolve({'info': info, 'error': errs});}
-    })
-    ch.stdout.on('data', (data) => {
-      //console.log('vpMapped.service::procExec stdout data', data);
-      info[iter++] = data;
-    });
-    ch.stderr.on('data', derr => {
-      //console.log('vpMapped.service::procExec stderr data', derr)
-      errs[erri++] = derr;
-    })
-    ch.on('error', err => {
-      //console.log('vpMapped.service::procExec process error', err)
-      reject(err);
-    })
-  })
-}
-
-async function getShapeFile(params={}) {
-  var where = pgUtil.whereClause(params, staticColumns);
+async function getShapeFile(params={}, excludeHidden=1) {
+  var where = pgUtil.whereClause(params, staticColumns, 'AND');
   where.pretty = JSON.stringify(params).replace(/\"/g,'');
-  let dir = `shapefile`;
-  let fyl = 'vpmapped';
-  let ext = 'tar.gz';
-  let qry = `select * from vpmapped`;
-  let cmd = `pgsql2shp -f ${dir}/${fyl} -h ${env.db_env.host} -u ${env.db_env.user} -P ${env.db_env.password} ${env.db_env.database} "${qry}"`;
-  console.log('vpMapped.service::getShapeFile | cmd', cmd);
-  let pe = procExec(cmd);
-  return await new Promise((resolve, reject) =>{
-    pe.then(async out => {
-      let tz = tarZip(dir, fyl, ext);
-      tz.then(async res => {
-        console.log(`getShapeFile=>tarZip | success`, `${dir}/${fyl}`);
-        resolve({all:`${dir}/${fyl}.${ext}`, filename:`${fyl}.${ext}`, subdir:dir});
-      })
-      tz.catch(async err => {
-        console.log(`getShapeFile=>tarZip | error`, err);
-        reject(err);
-      })
-    })
-    pe.catch(async err => {
-      console.log(`getShapeFile=>procExec | error`, err);
-      reject(err);
-    })
+  where.combined = where.text;
+  where.values.map((val, idx) => {
+    console.log('vpMapped.service::getShapeFile | WHERE values', val, idx);
+    where.combined = where.combined.replace(`$${idx+1}`, `'${val}'`)
   })
-}
-
-async function tarZip(dir='shapefile', fyl='vpmapped', ext='tar.gz') {
-  let cmd = `cd ${dir} && tar -czf ${fyl}.${ext} *`;
-  console.log('vpMapped.service::tarZip | cmd', cmd);
-  return await procExec(cmd);
+  console.log('vpMapped.service::getShapeFile | WHERE', where);
+  let qry = `SELECT
+  "mappedPoolId" AS "poolId",
+  "mappedPoolStatus" AS "poolStatus",
+  CONCAT('https://vpatlas.org/pools/list?poolId=',"mappedPoolId",'&zoomFilter=false') AS "poolUrl",
+  "townName",
+  "countyName",
+  vpmapped.*
+  FROM vpmapped
+  LEFT JOIN vptown on "mappedTownId"="townId"
+  LEFT JOIN vpcounty ON "townCountyId"="govCountyId"
+  WHERE TRUE
+  ${where.combined}
+  `;
+  if (excludeHidden) {qry += ` AND "mappedPoolStatus" NOT IN ('Duplicate', 'Eliminated')`}
+  return await shapeFile(qry,'vpmapped')
 }
 
 async function create(body) {

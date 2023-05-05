@@ -7,11 +7,13 @@ const uploads = require('./vpVisit.upload.service');
 const s123svc = require('./vpVisit.s123.service');
 const multer = require('multer');
 const upFile = multer({ dest: 'vpvisit/uploads/' });
+const fs = require('fs');
 
 // routes NOTE: routes with names for same method (ie. GET) must be above routes
 // for things like /:id, or they are missed/skipped.
 router.get('/csv', getCsv);
 router.get('/geojson', getGeoJson);
+router.get('/shapeFile', getShapeFile);
 router.get('/columns', getColumns);
 router.get('/routes', getRoutes);
 router.get('/count', getCount);
@@ -171,6 +173,44 @@ function getGeoJson(req, res, next) {
             else {res.json(items);}
         })
         .catch(err => next(err));
+}
+
+function getShapeFile(req, res, next) {
+    console.log('vpVisit.routes::getShapeFile | req.query:', req.query);
+    console.log('vpVisit.routes::getShapeFile | req.user:', req.user);
+
+    var statusParam = req.query.mappedPoolStatus || req.query['mappedPoolStatus|IN'] || req.query['mappedPoolStatus|NOT IN'];
+    var excludeHidden = 0;
+
+    if (!statusParam && (!req.user || (req.user && req.user.userrole != 'admin'))) {
+        excludeHidden = 1;
+    }
+
+    service.getShapeFile(req.query, excludeHidden)
+        .then(shpObj => {
+            let fileSpec = `${process.cwd()}/${shpObj.all}`;
+            console.log('vpVisit.routes::getShapeFile result', process.cwd(), shpObj.all);
+            if (req.query.download) {
+                res.setHeader('Content-disposition', `attachment; filename=${shpObj.filename}`);
+                res.setHeader('Content-type', 'application/x-tar');
+                res.download(fileSpec); //res.sendFile does the same
+            } else {
+                fs.readFile(fileSpec, (err, data) => {
+                    if (err) {next(err);}
+                    else {
+                        res.setHeader('Content-type', 'application/x-tar');
+                        res.send(data);
+                    }
+                })
+            }
+        })
+        .catch(ret => {
+            console.log('vpVisit.routes::getShapeFile ERROR | ret:', ret);
+            let errs = ''; Object.keys(ret.error).map(key => {errs += ret.error[key]; errs += '|';})
+            let err = new Error(errs);
+            console.log('vpVisit.routes::getShapeFile ERROR | Constructed error object:', err);
+            next(err);
+        })
 }
 
 function create(req, res, next) {

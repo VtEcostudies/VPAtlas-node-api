@@ -7,6 +7,7 @@ const pgUtil = require('_helpers/db_pg_util');
 const common = require('_helpers/db_common');
 var staticColumns = []; //all tables' columns in a single 1D array
 var tableColumns = []; //each table's columns by table name
+const shapeFile = require('_helpers/db_shapefile').shapeFile;
 
 module.exports = {
     getColumns,
@@ -19,6 +20,7 @@ module.exports = {
     getById,
     getByPoolId,
     getGeoJson,
+    getShapeFile,
     upload,
     history,
     create,
@@ -37,7 +39,8 @@ const tables = [
   "vpsurvey_uploads",
   "vpmapped",
   "vptown",
-  "vpcounty"
+  "vpcounty",
+  "vpuser"
 ];
 for (i=0; i<tables.length; i++) {
   pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
@@ -321,8 +324,8 @@ async function getGeoJson(params={}) {
              						  	WHERE vpsurvey."surveyId"=vpsurvey_photos."surveyPhotoSurveyId"
                             ) AS q
              							),
-                        vptown.*,
-                        vpcounty.*
+                        vptown."townName",
+                        vpcounty."countyName"
                      ) AS p
       			) AS properties
               FROM vpSurvey
@@ -338,6 +341,41 @@ async function getGeoJson(params={}) {
       ) AS fc; `;
     console.log('vpSurvey.service | getGeoJson |', where.text, where.values);
     return await query(sql, where.values);
+}
+
+/*
+NOTE: 
+  
+  pgsql2shp *can* use a VIEW directly, like:
+
+    pgsql2shp -f shapefile/vpsurvey -h localhost -u vpatlas -P EatArugula vpatlas survey_amphib_safe
+
+  pgsql2shp *can* also use a VIEW withing a SELECT, like eg.:
+
+    pgsql2shp -f shapefile/vpsurvey -h localhost -u vpatlas -P EatArugula vpatlas "SELECT * FROM survey_shapefil"
+
+    HOWEVER: pgsql2shp will crash without notice due to bad characters in text fields
+
+  ALSO NOTE:
+
+    pgsql2shp appears to be unable to call a query or a VIEW having functions like json_agg and array_agg.
+*/
+async function getShapeFile(params={}) {
+  var where = pgUtil.whereClause(params, staticColumns, 'AND');
+  if (params.surveyHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.surveyHasIndicator();}
+  where.pretty = JSON.stringify(params).replace(/\"/g,'');
+  where.combined = where.text;
+  where.values.map((val, idx) => {
+    console.log('vpSurvey.service::getShapeFile | WHERE values', val, idx);
+    where.combined = where.combined.replace(`$${idx+1}`, `'${val}'`)
+  })
+  console.log('vpSurvey.service::getShapeFile | WHERE', where);
+  let qry = `SELECT * 
+  FROM survey_shapefile
+  WHERE TRUE
+  ${where.combined}
+  `;
+  return await shapeFile(qry,'vpsurvey')
 }
 
 /*

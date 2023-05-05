@@ -2,6 +2,7 @@
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
 const common = require('_helpers/db_common');
+const shapeFile = require('_helpers/db_shapefile').shapeFile;
 var staticColumns = [];
 
 module.exports = {
@@ -14,6 +15,7 @@ module.exports = {
     getByPoolId,
     getCsv,
     getGeoJson,
+    getShapeFile,
     create,
     update,
     delete: _delete
@@ -24,7 +26,8 @@ const tables = [
   "vpvisit",
   "vpmapped",
   "vptown",
-  "vpcounty"
+  "vpcounty",
+  "vpuser"
 ];
 for (i=0; i<tables.length; i++) {
   pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
@@ -59,34 +62,34 @@ async function getOverview(params={}) {
     const where = pgUtil.whereClause(params, staticColumns, 'AND');
     if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
     const text = `
-SELECT
-"townId",
-"townName",
-"countyName",
-"mappedPoolId" AS "poolId",
-"mappedPoolStatus" AS "poolStatus",
-SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
-SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
-"mappedByUser",
-"mappedMethod",
-"mappedConfidence",
-"mappedObserverUserName",
-"mappedLandownerPermission",
-vpvisit."visitId",
-vpvisit."visitUserName",
-vpvisit."visitDate",
-vpvisit."visitLatitude",
-vpvisit."visitLongitude",
-vpvisit."visitVernalPool",
-vpvisit."visitLatitude",
-vpvisit."visitLongitude",
-vpvisit."updatedAt" AS "visitUpdatedAt"
-FROM vpmapped
-INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
-LEFT JOIN vptown ON "mappedTownId"="townId"
-LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
-WHERE "visitId" > 0
-${where.text} ${orderClause};`;
+    SELECT
+    "townId",
+    "townName",
+    "countyName",
+    "mappedPoolId" AS "poolId",
+    "mappedPoolStatus" AS "poolStatus",
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+    "mappedByUser",
+    "mappedMethod",
+    "mappedConfidence",
+    "mappedObserverUserName",
+    "mappedLandownerPermission",
+    vpvisit."visitId",
+    vpvisit."visitUserName",
+    vpvisit."visitDate",
+    vpvisit."visitLatitude",
+    vpvisit."visitLongitude",
+    vpvisit."visitVernalPool",
+    vpvisit."visitLatitude",
+    vpvisit."visitLongitude",
+    vpvisit."updatedAt" AS "visitUpdatedAt"
+    FROM vpmapped
+    INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+    LEFT JOIN vptown ON "mappedTownId"="townId"
+    LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+    WHERE "visitId" > 0
+    ${where.text} ${orderClause};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
@@ -238,12 +241,12 @@ async function getCsv(params={}) {
     if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
     const sql = `
     SELECT
-    "townName",
-    "countyName",
     "mappedPoolId" AS "poolId",
     "mappedPoolStatus" AS "poolStatus",
     SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
     SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+    "townName",
+    "countyName",
     vpvisit.*
     FROM vpvisit
     INNER JOIN vpmapped on "mappedPoolId"="visitPoolId"
@@ -255,7 +258,7 @@ async function getCsv(params={}) {
 }
 
 /*
-  NOTE: WE DO NOT NEED TO USE ST_AsGeoJSON("mappedPoolLocation")::json to convert gemetry to geoJSON.
+  NOTE: WE DO NOT NEED TO USE ST_AsGeoJSON("mappedPoolLocation")::json to convert geometry to geoJSON.
 
   Simply use eg. this:
 
@@ -268,7 +271,7 @@ async function getCsv(params={}) {
 */
 async function getGeoJson(params={}) {
     console.log('vpVisit.service | getGeoJson |', params);
-    var where = pgUtil.whereClause(params, staticColumns, 'AND');
+    var where = pgUtil.whereClause(params, staticColumns, 'WHERE');
     if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
     where.pretty = JSON.stringify(params).replace(/\"/g,'');
     const sql = `
@@ -293,22 +296,40 @@ async function getGeoJson(params={}) {
                     "mappedPoolStatus" AS "poolStatus",
                     CONCAT('https://vpatlas.org/pools/list?poolId=',"mappedPoolId",'&zoomFilter=false') AS vpatlas_pool_url,
                     CONCAT('https://vpatlas.org/pools/visit/view/',"visitId") AS vpatlas_visit_url,
+                    vptown."townName",
+                    vpcounty."countyName",
                     vpmapped.*,
-                    vpvisit.*,
-                    vptown.*,
-                    vpcounty.*
-                  ) AS p
+                    vpvisit.*
+                    ) AS p
               ) AS properties
-            FROM vpmapped
-            INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+            FROM vpvisit
+            INNER JOIN vpmapped ON "visitPoolId"="mappedPoolId"
             INNER JOIN vptown ON "mappedTownId"="townId"
             INNER JOIN vpcounty ON "townCountyId"="govCountyId"
-            WHERE "visitId" > 0
             ${where.text}
         ) AS f
     ) AS fc;`
     console.log('vpVisit.service | getGeoJson |', where.text, where.values);
     return await query(sql, where.values);
+}
+
+async function getShapeFile(params={}, excludeHidden=1) {
+  var where = pgUtil.whereClause(params, staticColumns, 'AND');
+  where.pretty = JSON.stringify(params).replace(/\"/g,'');
+  where.combined = where.text;
+  where.values.map((val, idx) => {
+    console.log('vpVisit.service::getShapeFile | WHERE values', val, idx);
+    where.combined = where.combined.replace(`$${idx+1}`, `'${val}'`)
+  })
+  console.log('vpVisit.service::getShapeFile | WHERE', where);
+  //Important: notes and comments fields have characters that crash the shapefile dump. It must be handled.
+  let qry = `SELECT * 
+  FROM visit_shapefile
+  WHERE TRUE
+  ${where.combined}
+  `;
+  if (excludeHidden) {qry += `AND "mappedPoolStatus" NOT IN ('Duplicate', 'Eliminated')`}
+  return await shapeFile(qry,'vpvisit')
 }
 
 async function create(body) {
