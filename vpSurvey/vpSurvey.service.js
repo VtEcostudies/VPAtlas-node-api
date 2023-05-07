@@ -362,7 +362,7 @@ NOTE:
 */
 async function getShapeFile(params={}) {
   var where = pgUtil.whereClause(params, staticColumns, 'AND');
-  if (params.surveyHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.surveyHasIndicator();}
+  //if (params.surveyHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.surveyHasIndicator();}
   where.pretty = JSON.stringify(params).replace(/\"/g,'');
   where.combined = where.text;
   where.values.map((val, idx) => {
