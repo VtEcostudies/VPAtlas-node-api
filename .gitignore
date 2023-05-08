@@ -14,10 +14,10 @@ vcgiMapData/parcel_KML
 
 vpsurvey/uploads
 
-shapefile
-
 #database exports
 database/export
+
+shapefile/*
 
 # Logs
 logs
