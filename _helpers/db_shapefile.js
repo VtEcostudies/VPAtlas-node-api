@@ -1,4 +1,5 @@
 const env = require('_helpers/env').env;
+const moment =  require('moment');
 
 module.exports = {
     shapeFile,
@@ -6,20 +7,22 @@ module.exports = {
     tarZip
 }
 
-async function shapeFile(qry, fyl='shapefile', dir='shapefile', ext='tar.gz') {
+async function shapeFile(qry, usr='unknown', fyl='shapefile', dir='shapefile', ext='tar.gz') {
     //console.log('QUERY BEFORE CLEANUP', JSON.stringify(qry));
     qry = qry.replace(/\n/g, ' '); //replace LF with spaces for pgsql2shp
     qry = qry.replace(/\r/g, ''); //remove CR for pgsql2shp
     qry = qry.replace(/["]/g,`\\"`); //escape double-quotes for pgsql2shp
     console.log('QUERY AFTER CLEANUP', qry);
     //console.log('QUERY AFTER CLEANUP', JSON.stringify(qry));
-    let cmd = `rm -f ${dir}/* && pgsql2shp -f ${dir}/${fyl} -h ${env.db_env.host} -u ${env.db_env.user} -P ${env.db_env.password} ${env.db_env.database} "${qry}"`;
+    let out = `${fyl}_${usr}` + moment.utc(Date.now()).format("_YYYY-MM-DD_HH-mm-SS");
+    console.log('shapeFile | filename:', out);
+    let cmd = `rm -f ${dir}/${fyl}_${usr}* && pgsql2shp -f ${dir}/${out} -h ${env.db_env.host} -u ${env.db_env.user} -P ${env.db_env.password} ${env.db_env.database} "${qry}"`;
     console.log('db_shapefile::getShapeFile | cmd', cmd);
     return await new Promise((resolve, reject) => {
-      procExec(cmd).then(async out => {
-        tarZip(dir, fyl, ext).then(async res => {
-          console.log(`getShapeFile=>tarZip | success`, `${dir}/${fyl}`);
-          resolve({all:`${dir}/${fyl}.${ext}`, filename:`${fyl}.${ext}`, subdir:dir});
+      procExec(cmd).then(async res => {
+        tarZip(dir, out, ext).then(async res => {
+          console.log(`getShapeFile=>tarZip | success`, `${dir}/${out}`);
+          resolve({all:`${dir}/${out}.${ext}`, filename:`${out}.${ext}`, subdir:dir});
         })
         .catch(async err => {
           console.log(`getShapeFile=>tarZip | error`, err);

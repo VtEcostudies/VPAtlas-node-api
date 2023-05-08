@@ -186,7 +186,7 @@ function getShapeFile(req, res, next) {
         excludeHidden = 1;
     }
 
-    service.getShapeFile(req.query, excludeHidden)
+    service.getShapeFile(req.query, req.user, excludeHidden)
         .then(shpObj => {
             let fileSpec = `${process.cwd()}/${shpObj.all}`;
             console.log('vpVisit.routes::getShapeFile result', process.cwd(), shpObj.all);

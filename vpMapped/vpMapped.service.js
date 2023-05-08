@@ -241,7 +241,7 @@ async function getGeoJson(params={}) {
     return await query(sql, where.values);
 }
 
-async function getShapeFile(params={}, excludeHidden=1) {
+async function getShapeFile(params={}, user={}, excludeHidden=1) {
   var where = pgUtil.whereClause(params, staticColumns, 'AND');
   where.pretty = JSON.stringify(params).replace(/\"/g,'');
   where.combined = where.text;
@@ -264,7 +264,7 @@ async function getShapeFile(params={}, excludeHidden=1) {
   ${where.combined}
   `;
   if (excludeHidden) {qry += ` AND "mappedPoolStatus" NOT IN ('Duplicate', 'Eliminated')`}
-  return await shapeFile(qry,'vpmapped')
+  return await shapeFile(qry, user.username, 'vpmapped')
 }
 
 async function create(body) {
