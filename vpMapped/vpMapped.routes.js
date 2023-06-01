@@ -9,7 +9,7 @@ const fs = require('fs');
 // for things like /:id, or they are missed/skipped.
 router.get('/csv', getCsv);
 router.get('/geojson', getGeoJson);
-router.get('/shapeFile', getShapeFile);
+router.get('/shapefile', getShapeFile);
 router.get('/columns', getColumns);
 router.get('/routes', getRoutes);
 router.get('/count', getCount);
@@ -140,7 +140,7 @@ function getShapeFile(req, res, next) {
     if (!statusParam && (!req.user || (req.user && req.user.userrole != 'admin'))) {
         excludeHidden = 1;
     }
-
+/*
     service.getShapeFile(req.query, req.user, excludeHidden)
         .then(shpObj => {
             let fileSpec = `${process.cwd()}/${shpObj.all}`;
@@ -166,7 +166,8 @@ function getShapeFile(req, res, next) {
             console.log('vpMapped.routes::getShapeFile ERROR | Constructed error object:', err);
             next(err);
         })
-}
+*/
+    }
 
 function create(req, res, next) {
     console.log(`create req.body:`);

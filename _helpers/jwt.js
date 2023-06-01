@@ -41,7 +41,7 @@ function jwt() {
 
             { url: /^\/pools\/mapped\/.*/, methods: ['GET'] },
             { url: /^\/pools\/mapped\/page\/.*/, methods: ['GET'] },
-            { url: /^\/mapped\/.*/, methods: ['GET'] },
+            //{ url: /^\/mapped\/.*/, methods: ['GET'] },
 
             { url: /^\/pools\/visit\/.*/, methods: ['GET'] },
             { url: /^\/pools\/visit\/page\/.*/, methods: ['GET'] },

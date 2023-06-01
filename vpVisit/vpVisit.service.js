@@ -201,9 +201,11 @@ async function getById(id) {
     		vpvisit."updatedAt" AS "visitUpdatedAt",
     		vpvisit."createdAt" AS "visitCreatedAt"
     		) visit)
-    ) AS both
+    ) AS both,
+    "reviewId"
     FROM vpmapped
     INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+    LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
     LEFT JOIN vptown ON "mappedTownId"="townId"
     LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
     WHERE "visitId"=$1;`;
@@ -252,6 +254,8 @@ async function getCsv(params={}) {
     INNER JOIN vpmapped on "mappedPoolId"="visitPoolId"
     LEFT JOIN vptown ON "mappedTownId"="townId"
     LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+    LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser.id
+    LEFT JOIN vpuser AS visituser ON "visitUserId"=visituser.id
     ${where.text}`;
 
     return await query(sql, where.values)
@@ -304,8 +308,10 @@ async function getGeoJson(params={}) {
               ) AS properties
             FROM vpvisit
             INNER JOIN vpmapped ON "visitPoolId"="mappedPoolId"
-            INNER JOIN vptown ON "mappedTownId"="townId"
-            INNER JOIN vpcounty ON "townCountyId"="govCountyId"
+            LEFT JOIN vptown ON "mappedTownId"="townId"
+            LEFT JOIN vpcounty ON "townCountyId"="govCountyId"
+            LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser."id"
+            LEFT JOIN vpuser AS visituser ON "visitUserId"=visituser."id"
             ${where.text}
         ) AS f
     ) AS fc;`

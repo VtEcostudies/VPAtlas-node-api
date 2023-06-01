@@ -8,29 +8,30 @@ module.exports = {
 }
 
 async function shapeFile(qry, usr='unknown', fyl='shapefile', dir='shapefile', ext='tar.gz') {
+    console.log('db_shapefile::shapeFile | dir/file params:', usr, fyl, dir, ext)
     //console.log('QUERY BEFORE CLEANUP', JSON.stringify(qry));
     qry = qry.replace(/\n/g, ' '); //replace LF with spaces for pgsql2shp
     qry = qry.replace(/\r/g, ''); //remove CR for pgsql2shp
     qry = qry.replace(/["]/g,`\\"`); //escape double-quotes for pgsql2shp
-    console.log('QUERY AFTER CLEANUP', qry);
+    console.log('db_shapefile::shapeFile pgsql2shp QUERY AFTER CLEANUP', qry);
     //console.log('QUERY AFTER CLEANUP', JSON.stringify(qry));
-    let out = `${fyl}_${usr}` + moment.utc(Date.now()).format("_YYYY-MM-DD_HH-mm-SS");
+    let out = `${fyl}_${usr}` + moment.utc(Date.now()).format("_YYYY-MM-DD_HH-mm-ss");
     console.log('shapeFile | filename:', out);
     let cmd = `rm -f ${dir}/${fyl}_${usr}* && pgsql2shp -f ${dir}/${out} -h ${env.db_env.host} -u ${env.db_env.user} -P ${env.db_env.password} ${env.db_env.database} "${qry}"`;
-    console.log('db_shapefile::getShapeFile | cmd', cmd);
+    console.log('db_shapefile::shapeFile | cmd', cmd);
     return await new Promise((resolve, reject) => {
       procExec(cmd).then(async res => {
         tarZip(dir, out, ext).then(async res => {
-          console.log(`getShapeFile=>tarZip | success`, `${dir}/${out}`);
+          console.log(`db_shapefile::shapeFile=>tarZip | success`, `${dir}/${out}`);
           resolve({all:`${dir}/${out}.${ext}`, filename:`${out}.${ext}`, subdir:dir});
         })
         .catch(async err => {
-          console.log(`getShapeFile=>tarZip | error`, err);
+          console.log(`db_shapefile::shapeFile=>tarZip | error`, err);
           reject(err);
         })
       })
       .catch(async err => {
-        console.log(`getShapeFile=>procExec | error`, err);
+        console.log(`db_shapefile::shapeFile=>procExec | error`, err);
         reject(err);
       })
     })
@@ -51,7 +52,19 @@ async function procExec(cmd) {
       ch.on('close', () => {
         console.log('db_shapefile::procExec=>close | cmd:', cmd, '| info:', info, '| error:', errs);
         if (!erri) {resolve({'info': info, 'error': errs});}
-        else {reject({'info': info, 'error': errs});}
+        else {
+          /*
+          tar: Error exit delayed from previous errors.
+          What this means is that tar hit errors which weren't bad enough for tar to fail immediately 
+          on hitting the error. tar kept going. Then when tar ends it says that it had errors but 
+          managed to run to completion.
+          */
+          if (errs[`${erri-1}`] == 'tar: Error exit delayed from previous errors.\r\n') {
+            resolve({'info': info, 'error': errs});
+          } else {
+            reject({'info': info, 'error': errs});
+          }
+        }
       })
       ch.stdout.on('data', (data) => {
         console.log('db_shapefile::procExec=>stdOUT=>data:', data);

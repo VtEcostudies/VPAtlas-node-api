@@ -14,7 +14,7 @@ module.exports = {
     getColumns,
     getCount,
     getOverview,
-    getPoolsNeedReview,
+    getPoolsNeedReview, //no longer used. for primary UX view of data, all queries call getOverview. views of data are filtered in UI logic (uxValuesService.ts)
     getAll,
     getPage,
     getByVisitId,
@@ -58,6 +58,11 @@ async function getCount(body={}) {
 
   This still supports filtering results by "updatedAt" to reduce network
   traffic and speed the UX.
+
+  Otherwise, the new paradigm is to query UX-filterable values here to be
+  filtered in UI logic (uxvalues.service.ts).
+
+  To filter by user, we return mappedByUser, mappedUserName, visitUserName, visitObserverUserName, surveyUserName
 */
 async function getOverview(params={}) {
   if (0 === Object.keys(params).length) {params={timestamp:'1970-01-31'};}
@@ -105,7 +110,7 @@ vpmapped."updatedAt" AS "mappedUpdatedAt",
   COALESCE("visitFairyShrimp",0)+
   COALESCE("visitFingerNailClams",0)
 AS "speciesCount",
-(SELECT array_agg(
+(SELECT array_agg( --sumAmphib[0] and sumAmphib[1]
   "surveyAmphibEdgeWOFR"+"surveyAmphibEdgeSPSA"+"surveyAmphibEdgeJESA"+"surveyAmphibEdgeBLSA"+
   "surveyAmphibInteriorWOFR"+"surveyAmphibInteriorSPSA"+"surveyAmphibInteriorJESA"+"surveyAmphibInteriorBLSA")
   AS "sumAmphib" FROM vpsurvey_amphib WHERE "surveyAmphibSurveyId"="surveyId"),
@@ -121,12 +126,15 @@ vpreview."updatedAt" AS "reviewUpdatedAt",
 "surveyId",
 surveyuser.username AS "surveyUserName",
 --surveyamphibuser.username AS "surveyAmphibObsUser", --remove this, it adds too many rows to results
-vpsurvey."updatedAt" AS "surveyUpdatedAt"
+vpsurvey."updatedAt" AS "surveyUpdatedAt",
+(ARRAY(SELECT "visitId" FROM vpvisit WHERE "visitPoolId"="mappedPoolId")) AS visits,
+--(ARRAY(SELECT "reviewId" FROM vpreview WHERE "reviewPoolId"="mappedPoolId")) AS reviews, --adds 1 second to query. why?
+(ARRAY(SELECT "surveyId" FROM vpsurvey WHERE "surveyPoolId"="mappedPoolId")) AS surveys
 FROM vpmapped
 LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
 LEFT JOIN vpreview ON "reviewVisitId"="visitId" -- Must be reviews by visitId, not by poolId
 LEFT JOIN vpsurvey ON "surveyPoolId"="mappedPoolId"
---INNER JOIN vpsurvey_amphib ON "surveyAmphibSurveyId"=vpsurvey."surveyId" --remove this, it adds too many rows to results
+--LEFT JOIN vpsurvey_amphib ON "surveyAmphibSurveyId"=vpsurvey."surveyId" --remove this, it adds too many rows to results
 LEFT JOIN vptown ON "mappedTownId"="townId"
 LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
 LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser."id"
@@ -147,6 +155,9 @@ ${where.text} ${orderClause}`;
 /*
   This endpoint serves the UI filter for 'Review', which is all the pools that need
   to be Reviewed by an administrator.
+
+  NOTE: This endpoint is no longer used by the primary map/table UX view. To speed the UX,
+  it calls getOverview, and results are filtered in UI logic (uxValuesService.ts).
 */
 async function getPoolsNeedReview(params={}) {
   console.log('vpPools.service::getPoolsNeedReview | params:', params);
@@ -183,8 +194,8 @@ vpvisit."updatedAt" AS "visitUpdatedAt",
 vpreview."updatedAt" AS "reviewUpdatedAt",
 "surveyId",
 vpsurvey."updatedAt" AS "surveyUpdatedAt"
-FROM vpmapped
-LEFT JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+FROM vpvisit
+JOIN vpmapped ON "visitPoolId"="mappedPoolId"
 LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
 LEFT JOIN vpsurvey ON "surveyPoolId"="mappedPoolId"
 LEFT JOIN vptown ON "mappedTownId"="townId"
@@ -192,14 +203,17 @@ LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
 --LEFT JOIN vpuser ON "mappedByUserId"="id";
 WHERE
 ("reviewId" IS NULL AND "visitId" IS NOT NULL
---new db triggers update vpmapped when review saved, so this criterion is bad
+--New db triggers update vpmapped when review saved, so this criterion doesn't work.
 --OR (vpreview."updatedAt" IS NOT NULL AND vpmapped."updatedAt" > vpreview."updatedAt")
-OR (vpreview."updatedAt" IS NOT NULL AND vpvisit."updatedAt" > vpreview."updatedAt"))
+--With S123-Visit, too many pools get updated frequently. This criterion is a nuisance.
+--OR (vpreview."updatedAt" IS NOT NULL AND vpvisit."updatedAt" > vpreview."updatedAt")
+)
 AND
 (vpmapped."updatedAt">'${timestamp}'::timestamp
 OR vpvisit."updatedAt">'${timestamp}'::timestamp
 OR vpreview."updatedAt">'${timestamp}'::timestamp
-OR vpsurvey."updatedAt">'${timestamp}'::timestamp)
+OR vpsurvey."updatedAt">'${timestamp}'::timestamp
+)
 ${where.text}
 ${orderClause};
 `;

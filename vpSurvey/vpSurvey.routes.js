@@ -12,7 +12,7 @@ const fs = require('fs');
 // for things like /:id, or they are missed/skipped.
 router.get('/csv', getCsv);
 router.get('/geojson', getGeoJson);
-router.get('/shapeFile', getShapeFile);
+router.get('/shapefile', getShapeFile);
 router.get('/columns', getColumns);
 router.get('/routes', getRoutes);
 router.get('/count', getCount);

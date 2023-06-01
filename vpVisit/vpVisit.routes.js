@@ -13,7 +13,7 @@ const fs = require('fs');
 // for things like /:id, or they are missed/skipped.
 router.get('/csv', getCsv);
 router.get('/geojson', getGeoJson);
-router.get('/shapeFile', getShapeFile);
+router.get('/shapefile', getShapeFile);
 router.get('/columns', getColumns);
 router.get('/routes', getRoutes);
 router.get('/count', getCount);
@@ -124,7 +124,7 @@ function getByPoolId(req, res, next) {
 
 function getCsv(req, res, next) {
     console.log('vpVisit.routes | getCsv', req.query);
-    service.getAll(req.query)
+    service.getCsv(req.query)
         .then(items => {
             if (items.rows) {
               convert.json2csv(items.rows, (err, csv) => {

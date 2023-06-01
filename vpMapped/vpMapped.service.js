@@ -68,8 +68,8 @@ left join vpreview r on r."reviewVisitId"=v."visitId"
 where
 ("reviewId" IS NULL AND "visitId" IS NOT NULL
 --OR (r."updatedAt" IS NOT NULL AND m."updatedAt" > r."updatedAt")
-OR (r."updatedAt" IS NOT NULL AND v."updatedAt" > r."updatedAt"))
-) as review,
+--OR (r."updatedAt" IS NOT NULL AND v."updatedAt" > r."updatedAt")
+)) as review,
 (select count(distinct("visitPoolId")) from vpvisit
 inner join vpmapped on vpmapped."mappedPoolId"=vpvisit."visitPoolId"
 where "mappedPoolStatus"!='Eliminated' AND "mappedPoolStatus"!='Duplicate'
@@ -79,8 +79,10 @@ inner join vpmapped on "mappedPoolId"="surveyPoolId"
 ) as monitored,
 (select count(distinct("mappedPoolId")) from vpmapped
 left join vpvisit on "mappedPoolId"="visitPoolId"
+left join vpsurvey on "mappedPoolId"="surveyPoolId"
 where "mappedByUser"='${params.username}'
 OR "visitUserName"='${params.username}'
+OR "surveyUserId"=(SELECT id from vpuser WHERE username='${params.username}')
 ) as mine;`;
     return await query(text); //this can't work with a multi-command statement. results are returned per-command.
 
@@ -138,11 +140,12 @@ SELECT
 SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
 SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
 vpmapped.*,
-"createdAt" AS "mappedCreatedAt",
-"updatedAt" AS "mappedUpdatedAt"
+vpmapped."createdAt" AS "mappedCreatedAt",
+vpmapped."updatedAt" AS "mappedUpdatedAt"
 FROM vpmapped
 LEFT JOIN vptown ON "mappedTownId"="townId"
 LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+LEFT JOIN vpuser ON "mappedUserId"=id
 ${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
@@ -232,8 +235,9 @@ async function getGeoJson(params={}) {
                 ) AS p
               ) AS properties
             FROM vpmapped
-            INNER JOIN vptown on "mappedTownId"=vptown."townId"
-            INNER JOIN vpcounty ON "townCountyId"="govCountyId"
+            LEFT JOIN vptown on "mappedTownId"=vptown."townId"
+            LEFT JOIN vpcounty ON "townCountyId"="govCountyId"
+            LEFT JOIN vpuser ON "mappedUserId"=id
             ${where.text}
         ) AS f
       ) AS fc`;
@@ -260,6 +264,7 @@ async function getShapeFile(params={}, user={}, excludeHidden=1) {
   FROM vpmapped
   LEFT JOIN vptown on "mappedTownId"="townId"
   LEFT JOIN vpcounty ON "townCountyId"="govCountyId"
+  LEFT JOIN vpuser ON "mappedUserId" = id
   WHERE TRUE
   ${where.combined}
   `;
