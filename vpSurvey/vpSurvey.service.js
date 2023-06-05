@@ -360,7 +360,7 @@ NOTE:
 
     pgsql2shp appears to be unable to call a query or a VIEW having functions like json_agg and array_agg.
 */
-async function getShapeFile(params={}, user={}) {
+async function getShapeFile(params={}, excludeHidden=1) {
   var where = pgUtil.whereClause(params, staticColumns, 'AND');
   //if (params.surveyHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.surveyHasIndicator();}
   where.pretty = JSON.stringify(params).replace(/\"/g,'');
@@ -375,7 +375,7 @@ async function getShapeFile(params={}, user={}) {
   WHERE TRUE
   ${where.combined}
   `;
-  return await shapeFile(qry, user.username, 'vpsurvey')
+  return await shapeFile(qry, params.authUser, 'vpsurvey')
 }
 
 /*

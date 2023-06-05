@@ -132,16 +132,17 @@ function getGeoJson(req, res, next) {
 
 function getShapeFile(req, res, next) {
     console.log('vpMapped.routes::getShapeFile | req.query:', req.query);
-    console.log('vpMapped.routes::getShapeFile | req.user:', req.user);
+    //console.log('vpMapped.routes::getShapeFile | req.user:', req.user);
+    //console.log('vpMapped.routes::getShapeFile | req.dbUser:', req.dbUser);
 
     var statusParam = req.query.mappedPoolStatus || req.query['mappedPoolStatus|IN'] || req.query['mappedPoolStatus|NOT IN'];
     var excludeHidden = 0;
 
-    if (!statusParam && (!req.user || (req.user && req.user.userrole != 'admin'))) {
+    if (!statusParam && (!req.dbUser || (req.dbUser && req.dbUser.userrole != 'admin'))) {
         excludeHidden = 1;
     }
-/*
-    service.getShapeFile(req.query, req.user, excludeHidden)
+
+    service.getShapeFile(req.query, excludeHidden)
         .then(shpObj => {
             let fileSpec = `${process.cwd()}/${shpObj.all}`;
             console.log('vpMapped.routes::getShapeFile result', process.cwd(), shpObj.all);
@@ -166,7 +167,6 @@ function getShapeFile(req, res, next) {
             console.log('vpMapped.routes::getShapeFile ERROR | Constructed error object:', err);
             next(err);
         })
-*/
     }
 
 function create(req, res, next) {

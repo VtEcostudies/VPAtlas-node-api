@@ -191,11 +191,11 @@ function getShapeFile(req, res, next) {
     var statusParam = req.query.mappedPoolStatus || req.query['mappedPoolStatus|IN'] || req.query['mappedPoolStatus|NOT IN'];
     var excludeHidden = 0;
 
-    if (!statusParam && (!req.user || (req.user && req.user.userrole != 'admin'))) {
+    if (!statusParam && (!req.dbUser || (req.dbUser && req.dbUser.userrole != 'admin'))) {
         excludeHidden = 1;
     }
 
-    service.getShapeFile(req.query, req.user)
+    service.getShapeFile(req.query, excludeHidden)
         .then(shpObj => {
             let fileSpec = `${process.cwd()}/${shpObj.all}`;
             console.log('vpSurvey.routes::getShapeFile result', process.cwd(), shpObj.all);

@@ -177,7 +177,8 @@ function getGeoJson(req, res, next) {
 
 function getShapeFile(req, res, next) {
     console.log('vpVisit.routes::getShapeFile | req.query:', req.query);
-    console.log('vpVisit.routes::getShapeFile | req.user:', req.user);
+    //console.log('vpMapped.routes::getShapeFile | req.user:', req.user);
+    //console.log('vpMapped.routes::getShapeFile | req.dbUser:', req.dbUser);
 
     var statusParam = req.query.mappedPoolStatus || req.query['mappedPoolStatus|IN'] || req.query['mappedPoolStatus|NOT IN'];
     var excludeHidden = 0;
@@ -186,7 +187,7 @@ function getShapeFile(req, res, next) {
         excludeHidden = 1;
     }
 
-    service.getShapeFile(req.query, req.user, excludeHidden)
+    service.getShapeFile(req.query, excludeHidden)
         .then(shpObj => {
             let fileSpec = `${process.cwd()}/${shpObj.all}`;
             console.log('vpVisit.routes::getShapeFile result', process.cwd(), shpObj.all);

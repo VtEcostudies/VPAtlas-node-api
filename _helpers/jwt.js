@@ -41,7 +41,7 @@ function jwt() {
 
             { url: /^\/pools\/mapped\/.*/, methods: ['GET'] },
             { url: /^\/pools\/mapped\/page\/.*/, methods: ['GET'] },
-            //{ url: /^\/mapped\/.*/, methods: ['GET'] },
+            { url: /^\/mapped\/.*/, methods: ['GET'] },
 
             { url: /^\/pools\/visit\/.*/, methods: ['GET'] },
             { url: /^\/pools\/visit\/page\/.*/, methods: ['GET'] },
@@ -88,9 +88,10 @@ async function isRevoked(req, payload, done) {
                 payload:[${Object.keys(payload)}] [${Object.values(payload)}]`
                 );
 
-    if (payload.sub) {
+    if (payload.sub) { //on login we put userid into payload.sub
       req.user = await userService.getById(payload.sub);
       //console.log('jwt::isRevoked | req.user |', req.user);
+      req.dbUser = req.user; //odd behavior - req.user is dbUser here, but elsewhere not. set separate value for downstream use.
     }
 
     // revoke token if user no longer exists or not found, or we need to disable logins
