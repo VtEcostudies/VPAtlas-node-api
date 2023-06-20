@@ -1,76 +1,130 @@
 ﻿const db = require('_helpers/db_postgres');
 const query = db.query;
 const pgUtil = require('_helpers/db_pg_util');
+const common = require('_helpers/db_common');
+const shapeFile = require('_helpers/db_shapefile').shapeFile;
 var staticColumns = [];
 
 module.exports = {
     getColumns,
     getCount,
+    getOverview,
     getAll,
     getPage,
     getById,
+    getByPoolId,
+    getCsv,
     getGeoJson,
+    getShapeFile,
     create,
     update,
     delete: _delete
 };
 
 //file scope list of vpvisit table columns retrieved on app startup (see 'getColumns()' below)
-pgUtil.getColumns("vpvisit", staticColumns) //run it once on init: to create the array here. also diplays on console.
-    .then(res => {
-        staticColumns.push(`vptown."townName"`); //Add this for town filter query
-        staticColumns.push(`visittown."townName"`); //Add this for town filter query
-        staticColumns.push(`mappedtown."townName"`); //Add this for town filter query
-        return res;
-    })
-    .catch(err => {
-        console.log(`vpVisit.service.pg.pgUtil.getColumns | error: `, err.message);
-    });
+const tables = [
+  "vpvisit",
+  "vpmapped",
+  "vptown",
+  "vpcounty",
+  "vpuser"
+];
+for (i=0; i<tables.length; i++) {
+  pgUtil.getColumns(tables[i], staticColumns) //run it once on init: to create the array here. also diplays on console.
+    .then(res => {return res;})
+    .catch(err => {console.log(`vpVisit.service.pg.pgUtil.getColumns | table:${tables[i]} | error: `, err.message);});
+}
 
 function getColumns() {
-    console.log(`vpVisit.service.pg.getColumns | staticColumns:`, staticColumns);
     return new Promise((resolve, reject) => {
+      console.log(`vpVisit.service.pg.getColumns | staticColumns:`, staticColumns);
+      resolve(new Promise((resolve, reject) => {
       resolve(staticColumns);
+    }));
     });
 }
 
-async function getCount(body={}) {
-    const where = pgUtil.whereClause(body, staticColumns);
+async function getCount(params={}) {
+    const where = pgUtil.whereClause(params, staticColumns);
     const text = `select count(*) from vpvisit ${where.text};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
 
 /*
-NOTE: in vpvist, vpivisit lat/lon are canonical
+  New primary query for map/table list view - smaller dataset to improve speed.
 */
-async function getAll(params={}) {
+async function getOverview(params={}) {
     var orderClause = 'order by "visitId"';
     if (params.orderBy) {
         var col = params.orderBy.split("|")[0];
         var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';
         orderClause = `order by "${col}" ${dir}`;
     }
-    const where = pgUtil.whereClause(params, staticColumns);
+    const where = pgUtil.whereClause(params, staticColumns, 'AND');
+    if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
     const text = `
-        SELECT
-        (SELECT COUNT(*) FROM vpmapped INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
-        to_json(mappedtown) AS "mappedTown",
-        to_json(visittown) AS "visitTown",
-        vpmapped.*,
-        vpmapped."updatedAt" AS "mappedUpdatedAt",
-        vpmapped."createdAt" AS "mappedCreatedAt",
-        vpvisit.*,
-        vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt",
-        vpvisit."visitPoolId" AS "poolId",
-        vpvisit."visitLatitude" AS "latitude",
-        vpvisit."visitLongitude" AS "longitude"
-        from vpmapped
-        INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
-        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
-        ${where.text} ${orderClause};`;
+    SELECT
+    "townId",
+    "townName",
+    "countyName",
+    "mappedPoolId" AS "poolId",
+    "mappedPoolStatus" AS "poolStatus",
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+    "mappedByUser",
+    "mappedMethod",
+    "mappedConfidence",
+    "mappedObserverUserName",
+    "mappedLandownerPermission",
+    vpvisit."visitId",
+    vpvisit."visitUserName",
+    vpvisit."visitDate",
+    vpvisit."visitLatitude",
+    vpvisit."visitLongitude",
+    vpvisit."visitVernalPool",
+    vpvisit."visitLatitude",
+    vpvisit."visitLongitude",
+    vpvisit."updatedAt" AS "visitUpdatedAt"
+    FROM vpmapped
+    INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+    LEFT JOIN vptown ON "mappedTownId"="townId"
+    LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+    WHERE "visitId" > 0
+    ${where.text} ${orderClause};`;
+    console.log(text, where.values);
+    return await query(text, where.values);
+}
+
+async function getAll(params={}) {
+  var orderClause = 'order by "visitId"';
+  if (params.orderBy) {
+      var col = params.orderBy.split("|")[0];
+      var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';
+      orderClause = `order by "${col}" ${dir}`;
+  }
+  var where = pgUtil.whereClause(params, staticColumns);
+  if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
+  const text = `
+SELECT
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+vpmapped.*,
+vpmapped."updatedAt" AS "mappedUpdatedAt",
+vpmapped."createdAt" AS "mappedCreatedAt",
+vpvisit.*,
+vpvisit."updatedAt" AS "visitUpdatedAt",
+vpvisit."createdAt" AS "visitCreatedAt"
+from vpmapped
+INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+LEFT JOIN vptown ON "mappedTownId"="townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+${where.text} ${orderClause};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
@@ -85,54 +139,147 @@ async function getPage(page, params={}) {
         var dir = params.orderBy.split("|")[1]; dir = dir ? dir : '';
         orderClause = `order by "${col}" ${dir}`;
     }
-    var where = pgUtil.whereClause(params, staticColumns); //whereClause filters output against vpvisit.columns
+    var where = pgUtil.whereClause(params, staticColumns, 'AND'); //whereClause filters output against vpvisit.columns
+    if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
     const text = `
-        SELECT
-        (SELECT COUNT(*) FROM vpmapped INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
-        to_json(mappedtown) AS "mappedTown",
-        to_json(visittown) AS "visitTown",
-        vpmapped.*,
-        vpmapped."updatedAt" AS "mappedUpdatedAt",
-        vpmapped."createdAt" AS "mappedCreatedAt",
-        vpvisit.*,
-        vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt",
-        vpvisit."visitPoolId" AS "poolId",
-        vpvisit."visitLatitude" AS "latitude",
-        vpvisit."visitLongitude" AS "longitude"
-        from vpmapped
-        INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
-        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
-        ${where.text} ${orderClause} offset ${offset} limit ${pageSize};`;
+SELECT
+(SELECT COUNT(*) FROM vpmapped INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId" ${where.text}) AS count,
+"townId",
+"townName",
+"countyName",
+"mappedPoolId" AS "poolId",
+"mappedPoolStatus" AS "poolStatus",
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+vpmapped.*,
+vpmapped."updatedAt" AS "mappedUpdatedAt",
+vpmapped."createdAt" AS "mappedCreatedAt",
+vpvisit.*,
+vpvisit."updatedAt" AS "visitUpdatedAt",
+vpvisit."createdAt" AS "visitCreatedAt"
+from vpmapped
+INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+LEFT JOIN vptown ON "mappedTownId"="townId"
+LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+${where.text} ${orderClause}
+offset ${offset} limit ${pageSize};`;
     console.log(text, where.values);
     return await query(text, where.values);
 }
 
+/*
+  NOW get 2 points for each Visit, and return as a 2-element JSON object:
+
+  {both: {mapped:{}, visit:{}}}
+*/
 async function getById(id) {
-    const text = `
-        SELECT
-        to_json(mappedtown) AS "mappedTown",
-        to_json(visittown) AS "visitTown",
-        vpmapped.*,
-        vpmapped."updatedAt" AS "mappedUpdatedAt",
-        vpmapped."createdAt" AS "mappedCreatedAt",
-        vpvisit.*,
-        vpvisit."updatedAt" AS "visitUpdatedAt",
-        vpvisit."createdAt" AS "visitCreatedAt",
-        vpvisit."visitPoolId" AS "poolId",
-        vpvisit."visitLatitude" AS "latitude",
-        vpvisit."visitLongitude" AS "longitude"
-        from vpmapped
-        INNER JOIN vpvisit ON vpvisit."visitPoolId"=vpmapped."mappedPoolId"
-        LEFT JOIN vptown AS mappedtown ON vpmapped."mappedTownId"=mappedtown."townId"
-        LEFT JOIN vptown AS visittown ON vpvisit."visitTownId"=visittown."townId"
-        WHERE "visitId"=$1;`;
+    var text = `
+    SELECT
+    	json_build_object(
+    	'mapped', (SELECT row_to_json(mapped) FROM (
+    		SELECT
+    		"townId",
+    		"townName",
+    		"countyName",
+    		"mappedPoolId" AS "poolId",
+    		"mappedPoolStatus" AS "poolStatus",
+    		SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+    		SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+    		vpmapped.*
+    		) mapped),
+    	'visit', (SELECT row_to_json(visit) FROM (
+    		SELECT
+    		"townId",
+    		"townName",
+    		"countyName",
+    		"mappedPoolId" AS "poolId",
+    		"mappedPoolStatus" AS "poolStatus",
+    		"visitLatitude" AS latitude,
+    		"visitLongitude" AS longitude,
+    		vpmapped.*,
+    		vpmapped."updatedAt" AS "mappedUpdatedAt",
+    		vpmapped."createdAt" AS "mappedCreatedAt",
+    		vpvisit.*,
+    		vpvisit."updatedAt" AS "visitUpdatedAt",
+    		vpvisit."createdAt" AS "visitCreatedAt"
+    		) visit)
+    ) AS both,
+    "reviewId"
+    FROM vpmapped
+    INNER JOIN vpvisit ON "visitPoolId"="mappedPoolId"
+    LEFT JOIN vpreview ON "reviewPoolId"="mappedPoolId"
+    LEFT JOIN vptown ON "mappedTownId"="townId"
+    LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+    WHERE "visitId"=$1;`;
+
     return await query(text, [id])
 }
 
-async function getGeoJson(body={}) {
-    const where = pgUtil.whereClause(body, staticColumns);
+function getByPoolId(poolId) {
+  const text = `
+  SELECT
+  "townId",
+  "townName",
+  "countyName",
+  visituser.username AS "visitUserName",
+  visituser.id AS "visitUserId",
+  --visituser.email AS "visitUserEmail",
+  vpVisit.*,
+  vpVisit."updatedAt" AS "visitUpdatedAt",
+  vpVisit."createdAt" AS "visitCreatedAt",
+  vpmapped.*,
+  vpmapped."updatedAt" AS "mappedUpdatedAt",
+  vpmapped."createdAt" AS "mappedCreatedAt"
+  FROM vpvisit
+  INNER JOIN vpmapped ON "mappedPoolId"="visitPoolId"
+  LEFT JOIN vpuser AS visituser ON "visitUserId"="id"
+  LEFT JOIN vptown ON "mappedTownId"="townId"
+  LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+  WHERE "visitPoolId"=$1`
+
+  return query(text, [poolId]);
+}
+
+async function getCsv(params={}) {
+    const where = pgUtil.whereClause(params, staticColumns);
+    if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
+    const sql = `
+    SELECT
+    "mappedPoolId" AS "poolId",
+    "mappedPoolStatus" AS "poolStatus",
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 1) AS latitude,
+    SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
+    "townName",
+    "countyName",
+    vpvisit.*
+    FROM vpvisit
+    INNER JOIN vpmapped on "mappedPoolId"="visitPoolId"
+    LEFT JOIN vptown ON "mappedTownId"="townId"
+    LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
+    LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser.id
+    LEFT JOIN vpuser AS visituser ON "visitUserId"=visituser.id
+    ${where.text}`;
+
+    return await query(sql, where.values)
+}
+
+/*
+  NOTE: WE DO NOT NEED TO USE ST_AsGeoJSON("mappedPoolLocation")::json to convert geometry to geoJSON.
+
+  Simply use eg. this:
+
+  SELECT
+    to_json("mappedPoolLocation"), "mappedPoolLocation", "mappedPoolStatus"
+  FROM vpmapped
+  WHERE "mappedPoolId"='NEW400';
+
+  Input: params are passed as req.query
+*/
+async function getGeoJson(params={}) {
+    console.log('vpVisit.service | getGeoJson |', params);
+    var where = pgUtil.whereClause(params, staticColumns, 'WHERE');
+    if (params.visitHasIndicator) {if (where.text) {where.text += ' AND ';} else {where.text = ' WHERE '} where.text += common.visitHasIndicator();}
+    where.pretty = JSON.stringify(params).replace(/\"/g,'');
     const sql = `
     SELECT
         row_to_json(fc) as geojson
@@ -140,131 +287,57 @@ async function getGeoJson(body={}) {
         SELECT
     		'FeatureCollection' AS type,
     		'Vermont Vernal Pool Atlas - Pool Visits' as name,
-    		--"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
-            array_to_json(array_agg(f)) AS features
+        'WHERE ${where.pretty}' AS filter,
+        --The CRS type below causes importing this dataset into GIS software to fail.
+        --The default GeoJSON CRS is WGS84, which is what we have.
+    		--'{ "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } }'::json as crs,
+        array_to_json(array_agg(f)) AS features
         FROM (
             SELECT
                 'Feature' AS type,
-    			ST_AsGeoJSON(ST_GeomFromText('POINT(' || "visitLongitude" || ' ' || "visitLatitude" || ')'))::json as geometry,
-                (SELECT
-    			 	--note: comments fields can contain characters that are illegal for geoJSON
-    				row_to_json(p) FROM (SELECT
-    					vpvisit."visitId",
-    					--vpvisit."visitIdLegacy",
-    					vpvisit."visitUserName",
-    					vpvisit."visitPoolId",
-    					vpvisit."visitNavMethod",
-    					vpvisit."visitCertainty",
-    					vpvisit."visitLocatePool",
-    					vpvisit."visitDate",
-    					--vpvisit."visitTownName", --BAD values
-    					--vpvisit."visitLocationComments", --BAD values
-    					--vpvisit."visitDirections", --BAD values
-    					vpvisit."visitCoordSource",
-    					--vpvisit."visitLatitude",
-    					--vpvisit."visitLongitude",
-    					vpvisit."visitVernalPool",
-    					vpvisit."visitPoolType",
-    					vpvisit."visitInletType",
-    					vpvisit."visitOutletType",
-    					vpvisit."visitForestCondition",
-    					vpvisit."visitForestUpland",
-    					--vpvisit."visitHabitatComment", --BAD values
-    					vpvisit."visitHabitatAgriculture",
-    					vpvisit."visitHabitatLightDev",
-    					vpvisit."visitHabitatHeavyDev",
-    					vpvisit."visitHabitatPavedRd",
-    					vpvisit."visitHabitatDirtRd",
-    					vpvisit."visitHabitatPowerline",
-    					vpvisit."visitHabitatOther",
-    					vpvisit."visitMaxDepth",
-    					vpvisit."visitWaterLevelObs",
-    					vpvisit."visitHydroPeriod",
-    					vpvisit."visitMaxWidth",
-    					vpvisit."visitMaxLength",
-    					vpvisit."visitPoolTrees",
-    					vpvisit."visitPoolShrubs",
-    					vpvisit."visitPoolEmergents",
-    					vpvisit."visitPoolFloatingVeg",
-    					vpvisit."visitSubstrate",
-    					vpvisit."visitDisturbDumping",
-    					vpvisit."visitDisturbSiltation",
-    					vpvisit."visitDisturbVehicleRuts",
-    					vpvisit."visitDisturbRunoff",
-    					vpvisit."visitDisturbDitching",
-    					vpvisit."visitDisturbOther",
-    					vpvisit."visitWoodFrogAdults",
-    					vpvisit."visitWoodFrogLarvae",
-    					vpvisit."visitWoodFrogEgg",
-    					vpvisit."visitWoodFrogEggHow",
-    					vpvisit."visitSpsAdults",
-    					vpvisit."visitSpsLarvae",
-    					vpvisit."visitSpsEgg",
-    					vpvisit."visitSpsEggHow",
-    					vpvisit."visitJesaAdults",
-    					vpvisit."visitJesaLarvae",
-    					vpvisit."visitJesaEgg",
-    					vpvisit."visitJesaEggHow",
-    					vpvisit."visitBssaAdults",
-    					vpvisit."visitBssaLarvae",
-    					vpvisit."visitBssaEgg",
-    					vpvisit."visitBssaEggHow",
-    					vpvisit."visitFairyShrimp",
-    					vpvisit."visitFingerNailClams",
-    					--vpvisit."visitSpeciesOther1",
-    					--vpvisit."visitSpeciesOther2",
-    					--vpvisit."visitSpeciesComments",
-    					vpvisit."visitFish",
-    					vpvisit."visitFishCount",
-    					vpvisit."visitFishSizeSmall",
-    					vpvisit."visitFishSizeMedium",
-    					vpvisit."visitFishSizeLarge",
-    					vpvisit."visitPoolPhoto",
-    					vpvisit."visitUserId",
-    					vpvisit."createdAt",
-    					vpvisit."updatedAt",
-    					vpvisit."visitPoolMapped",
-    					vpvisit."visitUserIsLandowner",
-    					vpvisit."visitLandownerPermission",
-    					--vpvisit."visitLandowner",
-    					vpvisit."visitTownId",
-    					vpvisit."visitFishSize",
-    					vpvisit."visitWoodFrogPhoto",
-    					vpvisit."visitWoodFrogNotes",
-    					vpvisit."visitSpsPhoto",
-    					--vpvisit."visitSpsNotes",
-    					vpvisit."visitJesaPhoto",
-    					--vpvisit."visitJesaNotes",
-    					vpvisit."visitBssaPhoto",
-    					--vpvisit."visitBssaNotes",
-    					vpvisit."visitFairyShrimpPhoto",
-    					--vpvisit."visitFairyShrimpNotes",
-    					vpvisit."visitFingerNailClamsPhoto",
-    					--vpvisit."visitFingerNailClamsNotes",
-    					vpvisit."visitNavMethodOther",
-    					vpvisit."visitPoolTypeOther",
-    					vpvisit."visitSubstrateOther",
-    					vpvisit."visitSpeciesOtherName",
-    					vpvisit."visitSpeciesOtherCount",
-    					vpvisit."visitSpeciesOtherPhoto",
-    					--vpvisit."visitSpeciesOtherNotes",
-    					vpvisit."visitLocationUncertainty",
-    					vpvisit."visitObserverUserName",
-    					vpvisit."visitWoodFrogiNat",
-    					vpvisit."visitSpsiNat",
-    					vpvisit."visitJesaiNat",
-    					vpvisit."visitBssaiNat",
-    					vpvisit."visitFairyShrimpiNat",
-    					vpvisit."visitFingerNailClamsiNat",
-    					vpvisit."visitSpeciesOtheriNat"
-    				  ) AS p
-    			) AS properties
+                ST_AsGeoJSON("mappedPoolLocation")::json as geometry,
+                (SELECT row_to_json(p) FROM
+                  (SELECT
+                    "mappedPoolId" AS "poolId",
+                    "mappedPoolStatus" AS "poolStatus",
+                    CONCAT('https://vpatlas.org/pools/list?poolId=',"mappedPoolId",'&zoomFilter=false') AS vpatlas_pool_url,
+                    CONCAT('https://vpatlas.org/pools/visit/view/',"visitId") AS vpatlas_visit_url,
+                    vptown."townName",
+                    vpcounty."countyName",
+                    vpmapped.*,
+                    vpvisit.*
+                    ) AS p
+              ) AS properties
             FROM vpvisit
+            INNER JOIN vpmapped ON "visitPoolId"="mappedPoolId"
+            LEFT JOIN vptown ON "mappedTownId"="townId"
+            LEFT JOIN vpcounty ON "townCountyId"="govCountyId"
+            LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser."id"
+            LEFT JOIN vpuser AS visituser ON "visitUserId"=visituser."id"
             ${where.text}
         ) AS f
-    ) AS fc`;
+    ) AS fc;`
     console.log('vpVisit.service | getGeoJson |', where.text, where.values);
     return await query(sql, where.values);
+}
+
+async function getShapeFile(params={}, excludeHidden=1) {
+  var where = pgUtil.whereClause(params, staticColumns, 'AND');
+  where.pretty = JSON.stringify(params).replace(/\"/g,'');
+  where.combined = where.text;
+  where.values.map((val, idx) => {
+    console.log('vpVisit.service::getShapeFile | WHERE values', val, idx);
+    where.combined = where.combined.replace(`$${idx+1}`, `'${val}'`)
+  })
+  console.log('vpVisit.service::getShapeFile | WHERE', where);
+  //Important: notes and comments fields have characters that crash the shapefile dump. It must be handled.
+  let qry = `SELECT * 
+  FROM visit_shapefile
+  WHERE TRUE
+  ${where.combined}
+  `;
+  if (excludeHidden) {qry += `AND "mappedPoolStatus" NOT IN ('Duplicate', 'Eliminated')`}
+  return await shapeFile(qry, params.authUser, 'vpvisit')
 }
 
 async function create(body) {

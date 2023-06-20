@@ -1,9 +1,7 @@
 /*
-  Author: Jason Loomis
-
   Project: VPAtlas
 
-  File: vcgi_parcelmap_get.js
+  File: vcgi_parcelmap_load.js
 
   Notes:
     We can download the entire parcelmap from VCGI, but KML is 1.4G. Mapbox's tool
@@ -13,17 +11,31 @@
     the Angular 9x compiler.
 
   Specifics:
-  - GET geoJSON map data from VCGI API by town and store in postgres table by town
-  as jsonb.
-  - This is complicated because their API limits 'records' (more like features) to
-  about 1000 items. To get a complete geoJSON file for a town, we often have to append
-  features from multiple requests. getTownParcel uses recursion to do this, but it's
-  tricky to use recursion with asynchronous nodeJs. I didn't have time to work all that
-  out, so I left a harmless hack that uses async await.
+    - GET geoJSON map data from VCGI API by town and store in postgres table by town
+      as jsonb, or put in local filesystem with file names like 'Townname.geoJSON'.
 
-  To-Do:
-  - Add the ability to *Update* parcel maps as new data are available on vcgi.
+    - Example call to get geoJSON for a town and insert/update the database:
 
+      node vcgi_parcelmap_load town=strafford dest=db
+
+    - Example call to get geoJSON for a town and create local file:
+
+      node vcgi_parcelmap_load town=randolph dest=fs
+
+    - This is complicated because their API limits 'records' (more like features) to
+    about 1000 items. To get a complete geoJSON file for a town, we often have to append
+    features from multiple requests. getTownParcel uses recursion to do this, but it's
+    tricky to use recursion with asynchronous nodeJs. I didn't have time to work all that
+    out, so I left a harmless hack that uses async await.
+
+    - To *Update* parcel maps as new data are available on vcgi, simply re-run the load.
+    This service checks for SQL INSERT error type 23505, and switches to an SQL UPDATE.
+
+    - In the fall of 2022, the original VCGI endpoint was no longer valid:
+        'https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/OPENDATA_VCGI_CADASTRAL_SP_NOCACHE_v1/MapServer/17/query';
+      Switched to:
+        'https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_VTPARCELS_WM_NOCACHE_v2/FeatureServer/1/query'
+      which had a different location for endOfRecords indicator. It was moved from top-level to under 'properties'.
 */
 const db = require('../_helpers/db_postgres');
 const query = db.query;
@@ -64,18 +76,16 @@ console.log(`Program arguments | town:${town} | destination: ${dest}`);
 loadParcels(town);
 
 function loadParcels(townName=null) {
-  console.log('Loading parcels for ', townName?townName:'All Towns')
+  console.log('Loading parcels for', townName?townName:'All Towns')
   getTowns(townName)
     .then(async towns => {
       //console.dir(towns);
       for (var i=0; i<towns.rows.length; i++) {
-      //for (var i=0; i<1; i++) {
-        let pageSize = 500;
+        let limit = 500;
         let offset = 0;
-        let end = false;
         let parcel = {};
-        console.log(towns.rows[i].townName);
-        await getTownParcel(towns.rows[i], pageSize, offset, end, parcel);
+        console.log(i, towns.rows[i].townName);
+        await getTownParcel(towns.rows[i], limit, offset, parcel);
       }
     })
     .catch(err => {
@@ -91,17 +101,19 @@ function getTowns(townName=null) {
     return query(text, value);
 }
 
-async function getTownParcel(town, pageSize, offset, end, parcel) {
-  await httpsGetVcgiParcelPage(town.townName, pageSize, offset)
+async function getTownParcel(town, limit, offset, parcel) {
+  await httpsGetVcgiParcelPage(town.townName, limit, offset)
     .then(async data => {
-      console.log(town.townName, pageSize, offset, data.features.length);
+      console.log(town.townName, limit, offset, data.features.length);
       if (0 == offset) {parcel = data;}
       else {parcel.features = parcel.features.concat(data.features);}
-      end = !data.exceededTransferLimit;
-      offset += pageSize;
-      if (!end) {await getTownParcel(town, pageSize, offset, end, parcel);}
+      let more = data.properties && data.properties.exceededTransferLimit; //with new VCGI endpoint, endOfRecords moved from top-level to under 'properties'
+      if (more) { //more records to get. recurse.
+        offset += limit;
+        await getTownParcel(town, limit, offset, parcel);
+      }
       else {
-        console.log(`getTownParcel finished getting parcel for ${town.townName} destination ${dest}`);
+        console.log(`getTownParcel finished getting parcel for ${town.townName} | Destination: ${dest}`);
         if ('db' == dest) {
           await insertVcgiParcel(town, parcel)
             .then(res => {console.log('insertVcgiParcel SUCCESS |', res.rowCount, res.rows?res.rows[0]:null);})
@@ -122,34 +134,34 @@ async function getTownParcel(town, pageSize, offset, end, parcel) {
       }
     })
     .catch(err => {
-      end = true;
-      console.log('getTownParcel', err.message);
+      console.log('getTownParcel call to httpsGetVcgiParcelPage returned ERROR:', err.message);
       return(err);
     });
 }
 
-function httpsGetVcgiParcelPage(townName, pageSize, offset){
-  var apiUrl = 'https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/OPENDATA_VCGI_CADASTRAL_SP_NOCACHE_v1/MapServer/17/query';
+function httpsGetVcgiParcelPage(townName, limit, offset){
+  //var apiUrl = 'https://maps.vcgi.vermont.gov/arcgis/rest/services/EGC_services/OPENDATA_VCGI_CADASTRAL_SP_NOCACHE_v1/MapServer/17/query';
+  var apiUrl = 'https://services1.arcgis.com/BkFxaEFNwHqX3tAw/arcgis/rest/services/FS_VCGI_VTPARCELS_WM_NOCACHE_v2/FeatureServer/1/query'; //new 10/2022
   var query = `?where=TOWN='${townName}'`;
   var fields = `&outFields=*`;
-  var paging = `&resultOffset=${offset}&resultRecordCount=${pageSize}`;
+  var paging = `&resultOffset=${offset}&resultRecordCount=${limit}`;
   var types = `&outSR=4326&f=geojson`;
   var url = apiUrl+query+fields+paging+types;
 
-  console.log('httpsGetVcgiParcelPage', url);
+  console.log('httpsGetVcgiParcelPage URL:', url);
 
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
       const { statusCode } = res;
-      const contentType = res.headers['content-type'];
+      const contentType = res.headers['content-type']; //.split(';'); //new VCGI endpoint returns 'application/json; charset=utf-8'
 
       let error;
       if (statusCode !== 200) {
         error = new Error('Request Failed.\n' +
                           `Status Code: ${statusCode}`);
-      } else if (!/^application\/geo\+json/.test(contentType)) {
+      } else if (!(/^application\/json/.test(contentType))) {
         error = new Error('Invalid content-type.\n' +
-                          `Expected application/json but received ${contentType}`);
+                          `Expected content-type to be 'application/json' but received '${contentType}'`);
       }
       if (error) {
         console.error(error.message);
@@ -226,7 +238,7 @@ function updateVcgiParcel(town, data) {
   save geoJSON to local file
 */
 async function saveVcgiParcel(town, data) {
-  const fileDir = `town_geoJSON`;
+  const fileDir = `parcel_geoJSON`;
   const fileName = `${town.townName}.geoJSON`;
   const fileJson = JSON.stringify(data);
 

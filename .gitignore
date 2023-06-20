@@ -1,17 +1,32 @@
+# Secrets files
+config.json
+
 # IDE definition files
 vpatlas-node-api.komodoproject
-config.json
+.vscode/
+
+# npm config files
+package-lock.json
 
 package-lock.json
 
 #geoJSON downloads
-vcgiMapData/town_geoJSON
+vcgiMapData/parcel_geoJSON
+vcgiMapData/parcel_KML
+
+vpsurvey/uploads
+
+#database exports
+database/export
+
+shapefile/*
 
 # Logs
 logs
 *.log
 npm-debug.log*
 *.out
+*.txt
 
 # Runtime data
 pids

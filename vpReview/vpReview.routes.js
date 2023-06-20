@@ -1,11 +1,13 @@
 ﻿const express = require('express');
 const router = express.Router();
 const service = require('./vpReview.service');
+const routes = require('../_helpers/routes');
 
 // routes NOTE: routes with names for same method (ie. GET) must be above routes
 // for things like /:id, or they are missed/skipped.
 router.get('/geojson', getGeoJson);
 router.get('/columns', getColumns);
+router.get('/routes', getRoutes);
 router.get('/count', getCount);
 router.get('/', getAll);
 router.get('/:id', getById);
@@ -19,6 +21,10 @@ function getColumns(req, res, next) {
     service.getColumns()
         .then(columns => res.json(columns))
         .catch(err => next(err));
+}
+
+function getRoutes(req, res, next) {
+    res.json(routes(router));
 }
 
 function getCount(req, res, next) {

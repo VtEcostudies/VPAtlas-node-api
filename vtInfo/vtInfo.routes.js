@@ -1,14 +1,20 @@
 const express = require('express');
 const router = express.Router();
+const routes = require('../_helpers/routes');
 const vtInfoService = require('./vtInfo.service');
 
 // routes
+router.get('/routes', getRoutes);
 router.get('/counties', getCounties);
 router.get('/county/:id', getCounty);
 router.get('/towns', getTowns);
 router.get('/town/:id', getTown);
 
 module.exports = router;
+
+function getRoutes(req, res, next) {
+    res.json(routes(router));
+}
 
 function getCounties(req, res, next) {
     vtInfoService.getCounties()

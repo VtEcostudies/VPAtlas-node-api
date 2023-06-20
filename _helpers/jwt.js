@@ -13,12 +13,11 @@ How express-jwt parses the request is opaque here. However, via Postman include 
 Header Type: Authorization, Bearer Token
 
 Example: Key: Authorization, Value: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1YzhmZmM5YTBmYWViNjIyMWMwNmM5NzgiLCJpYXQiOjE1NTI5OTIwODV9.PRQffRTZZ4jLQ-7nkEtQQ0BFdLsnB5FBmgmLyFyqv90
- */
+*/
 function jwt() {
     const secret = config.secret;
-    const algorithms = ['HS256'];
+    const algorithms = ['HS256']; //NOTE: This has to match user.service jwt.sign algorithm.
     return expressJwt({ secret, algorithms, isRevoked }).unless({
-    //var ret = expressJwt({ secret, isRevoked }).unless({
         path: [
             /*
              public routes that don't require authentication
@@ -29,28 +28,44 @@ function jwt() {
             '/users/reset',
             '/users/verify',
             '/users/confirm',
+            '/users/routes',
 
-            '/vtinfo/towns',
-            '/parcel/townId/*',
-            '/parcel/townName',
-            { url: /^\/parcel\/townName\/.*/, methods: ['GET'] }, // /parcel/townName/:name
+            { url: /^\/utils\/where/, methods: ['GET'] },
 
-            '/pools/mapped', // /pools/mapped performs a getAll()
-            { url: /^\/pools\/mapped\/.*/, methods: ['GET'] }, // /pools/mapped/:id
-            { url: /^\/pools\/mapped\/page\/.*/, methods: ['GET'] }, // /pools/mapped/page/:page
+            { url: /^\/vtinfo\/towns/, methods: ['GET'] },
+            { url: /^\/vtinfo\/counties/, methods: ['GET'] },
+            { url: /^\/vtinfo\/routes/, methods: ['GET'] },
 
-            '/pools/visit', // /pools/visit performs a getAll()
+            { url: /^\/parcel\/townId\/.*/, methods: ['GET'] },
+            { url: /^\/parcel\/townName\/.*/, methods: ['GET'] },
+
+            { url: /^\/pools\/mapped\/.*/, methods: ['GET'] },
+            { url: /^\/pools\/mapped\/page\/.*/, methods: ['GET'] },
+            { url: /^\/mapped\/.*/, methods: ['GET'] },
+
             { url: /^\/pools\/visit\/.*/, methods: ['GET'] },
             { url: /^\/pools\/visit\/page\/.*/, methods: ['GET'] },
+            { url: /^\/visit\/.*/, methods: ['GET'] },
+            { url: /^\/visit\/pool\/.*/, methods: ['GET'] }, //visit/pool/:poolId
 
-            '/pools', // /pools performs a getAll()
+            { url: /^\/review\/.*/, methods: ['GET'] }, //add ability for public to view Reviews
+
+            { url: /^\/pools/, methods: ['GET'] },
             { url: /^\/pools\/.*/, methods: ['GET'] },
-            { url: /^\/pools\/page\/.*/, methods: ['GET'] }
+            { url: /^\/pools\/page\/.*/, methods: ['GET'] },
+
+            { url: /^\/survey\/columns/, methods: ['GET'] },
+            { url: /^\/survey/, methods: ['GET'] },
+            { url: /^\/survey\/.*/, methods: ['GET'] },
+            { url: /^\/survey\/page\/.*/, methods: ['GET'] },
+            { url: /^\/survey\/pool\/.*/, methods: ['GET'] }, //survey/pool/:poolId
+
+            //for testing. remove these in production.
+            //{ url: /^\/survey\/.*/, methods: ['POST'] },
+            //{ url: /^\/visit\/.*/, methods: ['POST'] }
+
         ]
     });
-
-    //console.log('jwt.js|jwt()|return: ', ret);
-    //return;
 }
 
 /*
@@ -68,13 +83,15 @@ function jwt() {
 */
 async function isRevoked(req, payload, done) {
 
-    console.log(`jwt.js::isRevoked()
+    console.log(`jwt::isRevoked()
                 req.body:[${Object.keys(req.body)}] [${Object.values(req.body)}]
                 payload:[${Object.keys(payload)}] [${Object.values(payload)}]`
                 );
 
-    if (payload.sub) {
+    if (payload.sub) { //on login we put userid into payload.sub
       req.user = await userService.getById(payload.sub);
+      //console.log('jwt::isRevoked | req.user |', req.user);
+      req.dbUser = req.user; //odd behavior - req.user is dbUser here, but elsewhere not. set separate value for downstream use.
     }
 
     // revoke token if user no longer exists or not found, or we need to disable logins

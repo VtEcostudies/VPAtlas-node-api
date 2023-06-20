@@ -22,21 +22,24 @@ module.exports = {
     (2) Use the object returned from here.
 
  */
-async function getColumns(tableName, columns=[]) {
+async function getColumns(tableName, columns=[], retcols=[]) {
 
     const text = `select * from ${tableName} limit 0;`;
 
-    await query(text)
+    return new Promise(async (resolve, reject) => {
+      await query(text)
         .then(res => {
             res.fields.forEach(fld => {
-                columns.push(String(fld.name));
+                columns.push(String(fld.name)); //cumulative list of all tables
+                retcols.push(String(fld.name)); //just the current table's columns for return
             });
             //console.log(`${tableName} columns:`, columns);
-            return {tableName: columns};
+            resolve({tableName:tableName, tableColumns:retcols}); //return just the current table's columns
         })
         .catch(err => {
-            throw err;
+            reject(err);
         });
+    });
 }
 
 /*
@@ -83,7 +86,9 @@ function whereClause(params={}, staticColumns=[], clause='WHERE') {
     var where = '';
     var values = [];
     var idx = 1;
+    //console.log('dg_pg_util::whereClause | params', params);
     if (Object.keys(params).length) {
+        prev_log_opr = false; //keep track of logical operator in the previous argument in a multi-arg list
         for (var key in params) {
             console.log('key', key, 'params[key]', params[key]);
             var col = key.split("|")[0];
@@ -93,11 +98,12 @@ function whereClause(params={}, staticColumns=[], clause='WHERE') {
             if (!Array.isArray(params[key]) && params[key].toLowerCase()=='null') { //null value requires special operators
               opr = opr==='!=' ? ' IS NOT NULL' : ' IS NULL';
             }
+            console.log('db_pg_util::whereClause | column:', col, '| operator:', opr);
             if (staticColumns.includes(col) || 'logical'===col.substring(0,7)) {
                 if (where == '') where = clause; //'WHERE', or 'AND' depending on caller
-                if ('logical'!=col.substring(0,7)) {
+                if ('logical' != col.substring(0,7)) {
                   if (Array.isArray(params[key])) { //search token has multiple values, passed as array
-                    //opr = 'IN'; //array of values for same column assumes 'IN' operator
+                    if ('=' == opr) {opr = 'IN'}; //an array of values must use 'IN' operator, unless API sent one, eg. 'NOT IN'
                     params[key].forEach((item, index) => {
                       if (item.toLowerCase()=='null') {}//values.push(null);}
                       else {values.push(item);}
@@ -107,11 +113,13 @@ function whereClause(params={}, staticColumns=[], clause='WHERE') {
                     else {values.push(params[key]);}
                   }
                 }
-                //if (idx > 1) where += ` AND `;
+                if (idx > 1 && 'logical' != col.substring(0,7) && !prev_log_opr) where += ` AND `; //if multiple args and no logical, must add AND, the default logical operator
+                prev_log_opr = false;
                 if (col.includes(`."`)) {
                   where += ` ${col} ${opr} $${idx++}`; //columns with table spec have double-quotes already
                 } else if ('logical'===col.substring(0,7)) {
-                  where += ` ${params[key]} `; //append logical operator
+                  where += ` ${params[key]} `; //append logical operator (AND, OR)
+                  prev_log_opr = params[key]; //flag a logical operator for the next loop-iteration
                 } else if (Array.isArray(params[key])) { //break array of values into list like '($2,$3,...)'
                     where += ` "${col}" ${opr} (`; //() around array of args
                     params[key].forEach((item, index) => {
