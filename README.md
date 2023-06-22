@@ -6,7 +6,7 @@ User Management
   - Registration
   - Authentication
   - Authorization (role-based user auth)
-  - Administrattion (add/remove/update/reset)
+  - Administration (add/remove/update/reset)
 
 Vernal Pool Web UX Data
   - Vernal Pool Mapping CRUD
