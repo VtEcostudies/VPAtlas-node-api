@@ -251,13 +251,15 @@ async function getCsv(params={}) {
     SPLIT_PART(ST_AsLatLonText("mappedPoolLocation", 'D.DDDDDD'), ' ', 2) AS longitude,
     "townName",
     "countyName",
-    vpvisit.*
+    vpvisit.*,
+    vpreview.*
     FROM vpvisit
     INNER JOIN vpmapped on "mappedPoolId"="visitPoolId"
     LEFT JOIN vptown ON "mappedTownId"="townId"
     LEFT JOIN vpcounty ON "govCountyId"="townCountyId"
-    LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser.id
-    LEFT JOIN vpuser AS visituser ON "visitUserId"=visituser.id
+    --LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser.id
+    --LEFT JOIN vpuser AS visituser ON "visitUserId"=visituser.id
+    LEFT JOIN vpreview ON "visitId" = "reviewVisitId"
     ${where.text}`;
 
     return await query(sql, where.values)
@@ -305,15 +307,17 @@ async function getGeoJson(params={}) {
                     vptown."townName",
                     vpcounty."countyName",
                     vpmapped.*,
-                    vpvisit.*
+                    vpvisit.*,
+                    vpreview.*
                     ) AS p
               ) AS properties
             FROM vpvisit
             INNER JOIN vpmapped ON "visitPoolId"="mappedPoolId"
             LEFT JOIN vptown ON "mappedTownId"="townId"
             LEFT JOIN vpcounty ON "townCountyId"="govCountyId"
-            LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser."id"
-            LEFT JOIN vpuser AS visituser ON "visitUserId"=visituser."id"
+            --LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser."id"
+            --LEFT JOIN vpuser AS visituser ON "visitUserId"=visituser."id"
+            LEFT JOIN vpreview ON "visitId" = "reviewVisitId"
             ${where.text}
         ) AS f
     ) AS fc;`
