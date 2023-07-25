@@ -17,6 +17,8 @@ const attachFeatureIds = {1:'WOFR',2:'SPSA',3:'JESA',4:'BSSA',5:'FASH',6:'FNC',7
 
 module.exports = {
     getData,
+    getServices,
+    getUploads,
     getUpsertData,
     getAttachments,
     getUpsertAttachments,
@@ -38,6 +40,33 @@ for (i=0; i<tables.length; i++) {
     .catch(err => {console.log(`vpVisit.service.pg.pgUtil.getColumns | table:${tables[i]} | error: `, err.message);});
 }
 
+/* Get a list of serviceIds with MAX objectId and updatedAt from vpvisit */
+function getServices(req) {
+  const where = pgUtil.whereClause(req.query, staticColumns, "AND");
+  let text = `SELECT MAX("visitObjectId") AS "visitObjectId", MAX("updatedAt") AS "visitUpdatedAt", "visitServiceId" 
+  FROM vpvisit 
+  WHERE "visitServiceId" IS NOT NULL
+  ${where.text} --AND "visitServiceId"='service_b9c42b1cd7994b3a80ff4a57806b96b9'
+  GROUP BY "visitServiceId"
+  ORDER BY MAX("updatedAt")`;
+  
+  return query(text, where.values);
+}
+
+/* Get a list of uploads for a serviceId(s) from vpvisit */
+function getUploads(req) {
+  const where = pgUtil.whereClause(req.query, staticColumns, "AND");
+  let text = `SELECT *,
+  (ARRAY(SELECT "visitPhotoUrl" FROM vpvisit_photos WHERE "visitPhotoVisitId"="visitId")) AS photos 
+  FROM vpvisit 
+  WHERE "visitServiceId" IS NOT NULL
+  ${where.text} --AND "visitServiceId"='service_b9c42b1cd7994b3a80ff4a57806b96b9'
+  ORDER BY "updatedAt" DESC
+  `;
+  
+  return query(text, where.values);
+}
+
 function getData(req) {
   return new Promise((resolve, reject) => {
     if (!req.query.serviceId) {req.query.serviceId = defaultServiceId;}
@@ -53,12 +82,14 @@ function getData(req) {
     });
 }
 
- //you MUST parseInt on string values used to contol for-loops!!!
+/*
+  You MUST parseInt on string values used to control for-loops!!!
+*/
 function getUpsertAll(req) {
   abort = 0; //always start this way
   return new Promise(async (resolve, reject) => {
-    var offset = req.query.offset?parseInt(req.query.offset):1; //you MUST parseInt on string values used to contol for-loops!!!
-    var limit = req.query.limit?parseInt(req.query.limit):1; //you MUST parseInt on string values used to contol for-loops!!!
+    var offset = req.query.offset?parseInt(req.query.offset):1; //you MUST parseInt on string values used to control for-loops!!!
+    var limit = req.query.limit?parseInt(req.query.limit):1; //you MUST parseInt on string values used to control for-loops!!!
     var stop = offset + limit;
     var sucs = [], errs = []; counts = {};
     for (z=offset; z<stop; z++) {
@@ -74,7 +105,7 @@ function getUpsertAll(req) {
           })
           .catch(err => {
             console.log('vpVisit.s123.service::getupsertAll | ERROR | err.message:', err.message, err);
-            errs.push(err)
+            errs.push(err);
           });
       }//end else
     }
@@ -115,6 +146,7 @@ function upsertVisit(req, jsonData) {
       var colum = null;
       var visitColumns = [];
       jsonData = fixJsonColumnsData(jsonData);
+      jsonData.visitServiceId = req.query.serviceId; //serviceId is passed with request from UI or set from default
       Object.keys(jsonData).forEach(colum => {
         if (tableColumns['vpvisit'].includes(colum)) visitColumns.push(colum);
       });
@@ -146,9 +178,9 @@ function upsertVisit(req, jsonData) {
         DO UPDATE SET ("${visitColumns.join('","')}")=(EXCLUDED."${visitColumns.join('",EXCLUDED."')}")`;
       }
       query += ' RETURNING "visitId","visitPoolId","visitGlobalId","visitObjectId","visitDataUrl","createdAt"!="updatedAt" AS updated ';
-      //console.log('vpVisit.s123.service::upsertVisit | query', query); //verbatim query with values for testing
-      //console.log('vpVisit.s123.service::upsertVisit | columns', columns);
-      //console.log('vpVisit.s123.service::upsertVisit | values', valArr);
+      console.log('vpVisit.s123.service::upsertVisit | query', query); //verbatim query with values for testing
+      console.log('vpVisit.s123.service::upsertVisit | columns', columns);
+      console.log('vpVisit.s123.service::upsertVisit | values', valArr);
     } catch (err) {
       err.globalId = jsonData.globalid;
       err.objectId = jsonData.objectid;
