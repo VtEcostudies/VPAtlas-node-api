@@ -18,6 +18,8 @@ var abort = 0; //flag to abort loading, sent via the API
 
 module.exports = {
     getData,
+    getServices,
+    getUploads,
     getUpsertData,
     getAttachments,
     getUpsertAttachments,
@@ -60,12 +62,38 @@ function getData(req) {
     });
 }
 
+/* Get a list of serviceIds with MAX objectId and updatedAt from vpsurvey */
+function getServices(req) {
+  const where = pgUtil.whereClause(req.query, staticColumns, "AND");
+  let text = `SELECT MAX("surveyObjectId") AS "surveyObjectId", MAX("updatedAt") AS "surveyUpdatedAt", "surveyServiceId" 
+  FROM vpsurvey 
+  WHERE "surveyServiceId" IS NOT NULL
+  ${where.text} --AND "surveyServiceId"='service_e4f2a9746905471a9bb0d7a2d3d2c2a1'
+  GROUP BY "surveyServiceId"
+  ORDER BY MAX("updatedAt")`;
+  
+  return query(text, where.values);
+}
+
+/* Get a list of uploads for serviceId(s) from vpsurvey */
+function getUploads(req) {
+  const where = pgUtil.whereClause(req.query, staticColumns);
+  let text = `SELECT *,
+  (ARRAY(SELECT "surveyPhotoUrl" FROM vpsurvey_photos WHERE "surveyPhotoSurveyId"="surveyId")) AS photos 
+  FROM vpsurvey 
+  ${where.text} --AND "surveyServiceId"='service_e4f2a9746905471a9bb0d7a2d3d2c2a1'
+  ORDER BY "updatedAt" DESC
+  `;
+  
+  return query(text, where.values);
+}
+
 function abortAll(req) {
   abort = 1;
   return Promise.resolve({message:'Abort requested!'})
 }
 
- //you MUST parseInt on string values used to contol for-loops!!!
+ //you MUST parseInt on string values used to control for-loops!!!
 function getUpsertAll(req) {
   abort = 0; //always start this way
   return new Promise(async (resolve, reject) => {
@@ -128,6 +156,7 @@ function upsertSurvey(req, jsonData) {
         split = colum.split(obsDelim); colum = split[split.length-1]; obsId=(2==split.length?split[0]:0);
         if (tableColumns['vpsurvey'].includes(colum)) surveyColumns.push(colum);
       });
+      surveyColumns.push('surveyServiceId'); //optional. passed in req.query
       surveyColumns.push('surveyGlobalId'); //optional. sent as 'globalid'
       surveyColumns.push('surveyObjectId'); //required. sent as 'objectid'
       surveyColumns.push('surveyDataUrl'); //required. sent as 'dataUrl'
@@ -146,11 +175,13 @@ function upsertSurvey(req, jsonData) {
       var split = [];
       var obsId = 1; //obsId is 1-based for actual observers
       var value = null; //temporary local var to hold values for scrubbing
+      jsonData.surveyServiceId = req.query.serviceId; //serviceId is passed with request from UI or set from default
       jsonData['surveyGlobalId'] = jsonData.globalid; //this is required
       jsonData['surveyObjectId'] = jsonData.objectid; //this is required
       jsonData['surveyDataUrl'] = jsonData.dataUrl; //this is required
       Object.keys(jsonData).forEach(colum => { //iterate over keys in jsonData object (column names)
         value = jsonData[colum]; //this MUST be done FIRST, before stripping the leading 'obsN_'
+        value = typeof value === 'string' ? value.trim() : value; //values with leading/trailing spaces can muck db triggers
         split = colum.split(obsDelim); colum = split[split.length-1]; //observer column_name is the last piece
         obsId = (2==split.length?split[0]:0); //did we get two array-elements split by '_'? If yes, flag it.
         obsId = (obsId?obsId.slice(-1):0); //if flagged above, obsId is the trailing number of 'obs2...'
@@ -189,7 +220,7 @@ function upsertSurvey(req, jsonData) {
         ON CONFLICT ON CONSTRAINT "unique_surveyGlobalId"
         DO UPDATE SET ("${surveyColumns.join('","')}")=(EXCLUDED."${surveyColumns.join('",EXCLUDED."')}")`;
         }
-      query += ' RETURNING "surveyId","surveyPoolId","surveyGlobalId","surveyObjectId","surveyDataUrl","createdAt"!="updatedAt" AS updated ';
+      query += ' RETURNING "surveyId","surveyPoolId","surveyGlobalId","surveyObjectId","surveyDataUrl","surveyUserEmail","surveyUserId","createdAt"!="updatedAt" AS updated ';
       //console.log('vpsurvey.upload | query', query); //verbatim query with values for testing
       //console.log('vpsurvey.s123.service::upsertSurvey | columns', columns);
       //console.log('vpsurvey.s123.service::upsertSurvey | values', valArr);
@@ -263,6 +294,7 @@ function fixJsonColumnData(colum, value, jsonData) {
     case 'surveyMacroTotalCDFY': fixed=value+0; break;
     default: fixed=value;
   }
+  fixed = typeof fixed === 'string' ? fixed.trim() : fixed; //values with leading/trailing spaces can muck db triggers
   console.log('vpSurvey.s123.service::fixJsonColumnData |', colum, value, fixed)
   return fixed;
 }

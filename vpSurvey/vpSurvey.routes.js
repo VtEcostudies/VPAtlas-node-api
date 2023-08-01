@@ -23,6 +23,8 @@ router.get('/years', getYears); //get pool-survey years
 router.get('/', getAll);
 router.get('/s123', getS123);
 router.get('/s123/attachments', getS123attachments);
+router.get('/s123/services', getS123Services);
+router.get('/s123/uploads', getS123Uploads);
 router.get('/:id', getById);
 router.get('/pool/:poolId', getByPoolId);
 //router.get('/upload/history', getUploadHistory);
@@ -49,6 +51,18 @@ function getRoutes(req, res, next) {
 
 function getS123(req, res, next) {
     s123svc.getData(req)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getS123Services(req, res, next) {
+    s123svc.getServices(req)
+        .then(items => res.json(items))
+        .catch(err => next(err));
+}
+
+function getS123Uploads(req, res, next) {
+    s123svc.getUploads(req)
         .then(items => res.json(items))
         .catch(err => next(err));
 }

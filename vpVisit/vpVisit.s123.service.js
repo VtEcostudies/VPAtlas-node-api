@@ -158,7 +158,8 @@ function upsertVisit(req, jsonData) {
       Object.keys(jsonData).forEach(colum => { //iterate over keys in jsonData object (column names)
         value = jsonData[colum];
         if ('' === value) {value = null;} //convert empty strings to null
-        if (`${Number(value)}` === value) {value = Number(value);} //convert string number to numbers (MUST USE '===' or it converts bool to int!!!)
+        if (typeof value === 'string') {value = value.trim();}
+        if (`${Number(value)}` === value) {value = Number(value);} //convert string number to numbers (MUST USE '===' or it converts bool to int!!!
         if ('visitLandowner' == colum) {
           if (typeof value != 'object') {
             value = {'name': value};

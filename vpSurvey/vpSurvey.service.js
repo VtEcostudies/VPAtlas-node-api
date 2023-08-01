@@ -217,6 +217,9 @@ function getById(surveyId) {
   WHERE "surveyAmphibSurveyId"="surveyId"
   AND LOWER(email)=LOWER("surveyAmphibJson"->'2'->>'surveyAmphibObsEmail')),
 
+  "surveyAmphibJson"->'1'->>'surveyAmphibObsEmail' AS "surveyAmphibObs1Email",
+  "surveyAmphibJson"->'2'->>'surveyAmphibObsEmail' AS "surveyAmphibObs2Email",
+  
 --  (SELECT json_agg(so) AS "surveyAmphibObs" FROM (
 --    SELECT username, email, id
 --    FROM vpsurvey_amphib
@@ -250,7 +253,7 @@ function getById(surveyId) {
   FROM vpSurvey
   INNER JOIN vpmapped ON "mappedPoolId"="surveyPoolId"
   INNER JOIN def_survey_type ON vpsurvey."surveyTypeId"=def_survey_type."surveyTypeId"
-  --LEFT JOIN VPsurvey_photos ON "surveyPhotoSurveyId"="surveyId"
+  --LEFT JOIN vpsurvey_photos ON "surveyPhotoSurveyId"="surveyId"
   LEFT JOIN vpuser AS surveyuser ON "surveyUserId"=surveyuser."id"
   LEFT JOIN vpuser AS mappeduser ON "mappedUserId"=mappeduser."id"
   LEFT JOIN vptown ON "mappedTownId"="townId"
