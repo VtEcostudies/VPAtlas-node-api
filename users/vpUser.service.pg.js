@@ -18,6 +18,7 @@ module.exports = {
     register,
     check,
     update,
+    test,
     reset,
     verify,
     confirm,
@@ -289,6 +290,17 @@ async function update(id, body, user) {
     const text = `update vpuser set (${queryColumns.named}) = (${queryColumns.numbered}) where "id"=$1;`;
     console.log(text, queryColumns.values);
     return await query(text, queryColumns.values);
+}
+
+/*
+  Test sendmail. This is used to keep the Google 'less secure apps' setting open by using it.
+*/
+function test(email) {
+  return new Promise((resolve, reject) => {
+    sendmail.test(email, 'TestTokenIsInvalid')
+      .then(ret => {resolve(ret);})
+      .catch(err => {reject(err)});
+  })
 }
 
 /*

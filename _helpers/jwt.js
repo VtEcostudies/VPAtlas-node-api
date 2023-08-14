@@ -29,6 +29,10 @@ function jwt() {
             '/users/verify',
             '/users/confirm',
             '/users/routes',
+            '/users/test',
+
+            //'/utils/timer',
+            { url: /utils\/timer/, methods: ['GET'] },
 
             { url: /^\/utils\/where/, methods: ['GET'] },
 

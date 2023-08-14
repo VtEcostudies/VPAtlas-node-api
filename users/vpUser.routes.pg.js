@@ -10,6 +10,8 @@ router.post('/authenticate', authenticate);
 router.post('/register', register);
 router.post('/check', check);
 router.post('/reset', reset);
+router.get('/test', test); //send a test email to req.query.email
+//router.post('/test', test); //send a test email to req.query.email
 router.post('/verify', verify); //verify a valid reset token
 router.post('/confirm', confirm);
 router.post('/new_email/:id', new_email);
@@ -115,7 +117,16 @@ function reset(req, res, next) {
         .catch(err => next(err));
 }
 
-//reachable by GET, so easy to test token/email in browser
+//reachable by GET, so easy to test email in browser
+function test(req, res, next) {
+    console.log(`vpUser.routes.pg.js::test() | req.body:`, req.body);
+    console.log(`vpUser.routes.pg.js::test() | req.query:`, req.query);
+    userService.test(req.query.email)
+        .then(ret => res.json(ret))
+        .catch(err => next(err));
+}
+
+//to make this easy to test, make reachable by GET
 function verify(req, res, next) {
     console.log(`vpUser.routes.pg.js::verify() | req.body:`, req.body);
     userService.verify(req.body.token)

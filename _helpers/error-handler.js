@@ -17,25 +17,18 @@ try {
 
     if (typeof (err) === 'string') {
         // custom application console.error();
-        console.log('errorHandler | string error | error:', err);
+        console.log('errorHandler | typeof===string | error:', err);
         ret = { message: err };
         next(res.status(400).json(ret));
-    }
-
-    else if (err.name === 'UnauthorizedError') {
-        // jwt authentication error
-        console.log('errorHandler | Unauthorized Error | error:', err);
-        err.message = 'Invalid Token';
+    } else if (typeof (err) === 'object') {
+      console.log('errorHandler | typeof===object | error.message:', err.message);
+      if (err.name === 'UnauthorizedError') { //jwt authentication error
         next(res.status(401).json(err));
-    }
-
-    else if (typeof (err) === 'object') {
-      console.log('errorHandler | Object error | error Object:', err);
-      ret = { message: err.message };
-      next(res.status(400).json(ret));
-    }
-
-    else {
+      } else {
+        //ret = { message: err.message }; //hmm. not sure why I did this. UX display issues?
+        next(res.status(400).json(err));
+      }
+    } else {
       console.log('errorHandler | Other Error | error:', err)
       ret = {
         name: err.name,
@@ -62,5 +55,6 @@ try {
     }
   } catch(tcErr) {
     console.log('errorHandler try-catch error:', tcErr);
+    next(res.status(500).json(tcErr));
   }
 }

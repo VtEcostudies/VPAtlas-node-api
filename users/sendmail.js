@@ -5,6 +5,7 @@ const host = os.hostname();
 const env = os.hostname()=='vpatlas.org'?'prod':('dev.vpatlas.org'?'dev-remote':'dev-local');
 
 module.exports = {
+    test: (userMail) => reset(userMail, '', 'test'),
     register: (userMail, token) => reset(userMail, token, 'registration'),
     reset: (userMail, token) => reset(userMail, token, 'reset'),
     new_email: (userMail, token) => reset(userMail, token, 'email')
@@ -24,22 +25,26 @@ function reset(userMail, token, type='registration') {
     from: config.vceEmail
   });
 
-  var url = `<a href=${config.server[env]}/confirm/registration?token=${token}>Confirm VPAtlas Registration</a>`;
+  var htm = `<a href=${config.server[env]}/confirm/registration?token=${token}>Confirm VPAtlas Registration</a>`;
   var sub = 'VPAtlas Registration';
   if (type == 'reset') {
-    url = `<a href=${config.server[env]}/confirm/reset?token=${token}>Confirm VPAtlas Password Change</a>`;
+    htm = `<a href=${config.server[env]}/confirm/reset?token=${token}>Confirm VPAtlas Password Change</a>`;
     sub = 'VPAtlas Password Reset';
   }
   if (type == 'email') {
-    url = `<a href=${config.server[env]}/confirm/email?token=${token}>Confirm VPAtlas Email Change</a>`;
+    htm = `<a href=${config.server[env]}/confirm/email?token=${token}>Confirm VPAtlas Email Change</a>`;
     sub = 'VPAtlas Email Change';
+  }
+  if (type == 'test') {
+    htm = `This is a test email sent from VPAtlas to verify it's able to send mail.`;
+    sub = 'VPAtlas Email Test';
   }
 
   var mailOptions = {
     from: config.vceEmail,
     to: userMail,
     subject: sub,
-    html: url
+    html: htm
   };
 
   /*
