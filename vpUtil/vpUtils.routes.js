@@ -32,12 +32,14 @@ minute: 60
 hour: 3,600
 day: 86,400
 week: 604,800
-month: 18,144,000
+max timer milliseconds: 2,147,483,647 (about 25 days)
 */
 function setEmailTimer(req, res, next) {
     let intEmail = req.query.email;
     let interval = req.query.interval;
     interval = parseInt(interval);
+
+    console.log('setEmailTimer', intEmail, interval);
 
     if (intEmail) {
         if (emailTimer[intEmail]) {clearInterval(emailTimer[intEmail].handle);}
@@ -59,15 +61,17 @@ function setEmailTimer(req, res, next) {
 
 function getEmailTimer(req, res, next) {
     console.log('getEmailTimer | emailTimer:', emailTimer);
-    let emailTimerList = {}
+    let emailTimerList = [];
     for (const email in emailTimer) {
-        emailTimerList[email] = {
+        //emailTimerList[email] = {
+        emailTimerList.push({
+            email: email,
             interval: emailTimer[email].interval, 
             idleTimeout: emailTimer[email].handle._idleTimeout,
             idleStart: emailTimer[email].handle._idleStart,
             repeat: emailTimer[email].handle._repeat,
             destroyed: emailTimer[email].handle._destroyed
-        }
+        });
     }
     res.json(emailTimerList);
 }
@@ -92,6 +96,7 @@ function deleteEmailTimer(req, res, next) {
 
 function cbEmailTimer(intEmail) {
     console.log(`Email timer callback function called for ${intEmail}`);
+
     sendmail.test(intEmail)
       .then(ret => {console.log(ret);})
       .catch(err => {console.log(err);});
