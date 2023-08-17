@@ -5,7 +5,7 @@ const host = os.hostname();
 const env = os.hostname()=='vpatlas.org'?'prod':('dev.vpatlas.org'?'dev-remote':'dev-local');
 
 module.exports = {
-    test: (userMail) => reset(userMail, '', 'test'),
+    test: (userMail, interval) => reset(userMail, interval, 'test'), //use 'token' to pass 'interval'
     register: (userMail, token) => reset(userMail, token, 'registration'),
     reset: (userMail, token) => reset(userMail, token, 'reset'),
     new_email: (userMail, token) => reset(userMail, token, 'email')
@@ -35,8 +35,10 @@ function reset(userMail, token, type='registration') {
     htm = `<a href=${config.server[env]}/confirm/email?token=${token}>Confirm VPAtlas Email Change</a>`;
     sub = 'VPAtlas Email Change';
   }
-  if (type == 'test') {
-    htm = `This is a test email sent from VPAtlas to verify it's able to send mail.`;
+  if (type == 'test') { //use 'token' to pass 'interval'
+    htm = `This is a test email sent from VPAtlas at ${os.hostname()} to verify it's able to send mail. 
+    If you don't get the next email in ${token} seconds, you'll need to re-enable less secure apps
+    in Google Workspace for the user vpatlas@vtecostudies.org.`;
     sub = 'VPAtlas Email Test';
   }
 

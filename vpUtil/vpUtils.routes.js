@@ -46,10 +46,10 @@ function setEmailTimer(req, res, next) {
         delete emailTimer[intEmail]; //always delete and reset
         if (interval > 0) {
             emailTimer[intEmail] = {
-                handle: (setInterval(cbEmailTimer, interval*1000, intEmail)), 
+                handle: (setInterval(cbEmailTimer, interval*1000, intEmail, interval)), 
                 interval: interval
             };
-            cbEmailTimer(intEmail); //call it at time=0 to get immediate feedback
+            cbEmailTimer(intEmail, interval); //call it at time=0 to get immediate feedback
             res.json({message:`Set email timer for ${intEmail} at ${interval} seconds.`});
         } else {
             res.json({message:`Removed email timer for ${intEmail}.`});
@@ -94,10 +94,10 @@ function deleteEmailTimer(req, res, next) {
     res.json({message: msg, before: before, after: Object.keys(emailTimer).length});
 }
 
-function cbEmailTimer(intEmail) {
+function cbEmailTimer(intEmail, interval) {
     console.log(`Email timer callback function called for ${intEmail}`);
 
-    sendmail.test(intEmail)
+    sendmail.test(intEmail, interval)
       .then(ret => {console.log(ret);})
       .catch(err => {console.log(err);});
 }
