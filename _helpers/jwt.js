@@ -31,9 +31,9 @@ function jwt() {
             '/users/routes',
             '/users/test',
 
-            //'/utils/timer',
-            { url: /utils\/timer/, methods: ['GET'] },
-
+            //{ url: /^\/utils\/untar/, methods: ['GET'] },
+            { url: '/utils/untar', methods: ['GET'] },
+            { url: /^\/utils\/timer/, methods: ['GET'] },
             { url: /^\/utils\/where/, methods: ['GET'] },
 
             { url: /^\/vtinfo\/towns/, methods: ['GET'] },

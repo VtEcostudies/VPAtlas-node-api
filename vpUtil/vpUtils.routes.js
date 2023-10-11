@@ -8,6 +8,7 @@ var emailTimer = {}; //a list of send-to emails timed to be sent from the VPAtla
 // routes
 router.get('/where', testWhereClause);
 router.get('/routes', getRoutes);
+router.get('/untar', getUntar);
 router.post('/timer', setEmailTimer);
 router.put('/timer', setEmailTimer);
 router.get('/timer', getEmailTimer);
@@ -24,6 +25,14 @@ function testWhereClause(req, res, next) {
 
 function getRoutes(req, res, next) {
     res.json(routes(router));
+}
+
+function getUntar(req, res, next) {
+    let filename = 'untar_win.bat';
+    let fileSpec = './' + filename;
+    res.setHeader('Content-disposition', `attachment; filename=${fileSpec}`);
+    res.setHeader('Content-type', 'application/x-bat');
+    res.download(fileSpec);
 }
 
 /*
@@ -61,7 +70,7 @@ function setEmailTimer(req, res, next) {
 
 function getEmailTimer(req, res, next) {
     console.log('getEmailTimer | emailTimer:', emailTimer);
-    let emailTimerList = [];
+    let emailTimerList = [emailTimer];
     for (const email in emailTimer) {
         //emailTimerList[email] = {
         emailTimerList.push({
