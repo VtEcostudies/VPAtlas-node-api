@@ -144,8 +144,47 @@ async function getAll(params={}) {
     "townName",
     "countyName",
     surveyuser.username AS "surveyUserName",
-    surveyuser.id AS "surveyUserId",
-    vpSurvey.*,
+    surveyuser.id AS "surveyUserId"
+    --list all vpSurvey columns except email
+    ,"surveyId"
+    ,"surveyGlobalId"
+    ,"surveyPoolId"
+    ,"surveyTypeId"
+    ,"surveyUserId"
+    ,"surveyDate"
+    ,"surveyTime"
+    ,"surveyPoolLatitude"
+    ,"surveyPoolLongitude"
+    ,"surveyPoolBorderJson"
+    ,"surveyAcousticMonitor"
+    ,"surveyHoboLogger"
+    ,"surveyHoboData"
+    ,"surveyCustomLogger"
+    ,"surveyIceCover"
+    ,"surveyWaterLevel"
+    ,"surveySubmergedVeg"
+    ,"surveyFloatingVeg"
+    ,"surveyEmergentVeg"
+    ,"surveyShrubs"
+    ,"surveyTrees"
+    ,"surveyPhysicalParametersNotes"
+    ,"surveyAirTempF"
+    ,"surveyHumidity"
+    ,"surveyWindBeaufort"
+    ,"surveyWeatherConditions"
+    ,"surveyWeatherNotes"
+    ,"surveySpermatophores"
+    ,"surveyAmphibMacroNotes"
+    ,"surveyEdgeVisualImpairment"
+    ,"surveyInteriorVisualImpairment"
+    ,"surveyAmphibJson"
+    ,"surveyMacroJson"
+    ,"surveyYearJson"
+    ,"surveyPhotoJson"
+    ,"surveyObjectId"
+    ,"surveyDataUrl"
+    ,"surveyServiceId",
+
     vpSurvey."updatedAt" AS "surveyUpdatedAt",
     vpSurvey."createdAt" AS "surveyCreatedAt",
     (SELECT array_agg(

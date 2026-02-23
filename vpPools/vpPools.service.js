@@ -258,8 +258,46 @@ vpvisit."updatedAt" AS "visitUpdatedAt",
 vpvisit_photos.*,
 vpreview.*,
 vpreview."createdAt" AS "reviewCreatedAt",
-vpreview."updatedAt" AS "reviewUpdatedAt",
-vpsurvey.*,
+vpreview."updatedAt" AS "reviewUpdatedAt"
+--list all vpSurvey columns except email
+,"surveyId"
+,"surveyGlobalId"
+,"surveyPoolId"
+,"surveyTypeId"
+,"surveyUserId"
+,"surveyDate"
+,"surveyTime"
+,"surveyPoolLatitude"
+,"surveyPoolLongitude"
+,"surveyPoolBorderJson"
+,"surveyAcousticMonitor"
+,"surveyHoboLogger"
+,"surveyHoboData"
+,"surveyCustomLogger"
+,"surveyIceCover"
+,"surveyWaterLevel"
+,"surveySubmergedVeg"
+,"surveyFloatingVeg"
+,"surveyEmergentVeg"
+,"surveyShrubs"
+,"surveyTrees"
+,"surveyPhysicalParametersNotes"
+,"surveyAirTempF"
+,"surveyHumidity"
+,"surveyWindBeaufort"
+,"surveyWeatherConditions"
+,"surveyWeatherNotes"
+,"surveySpermatophores"
+,"surveyAmphibMacroNotes"
+,"surveyEdgeVisualImpairment"
+,"surveyInteriorVisualImpairment"
+,"surveyAmphibJson"
+,"surveyMacroJson"
+,"surveyYearJson"
+,"surveyPhotoJson"
+,"surveyObjectId"
+,"surveyDataUrl"
+,"surveyServiceId",
 vpsurvey."createdAt" AS "surveyCreatedAt",
 vpsurvey."updatedAt" AS "surveyUpdatedAt",
 vpsurvey_photos.*
