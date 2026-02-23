@@ -284,13 +284,17 @@ function fixJsonColumnsData(jsonData) {
     jsonData["visitFingerNailClams"]=jsonData["visitFingernailClam"]+0;
     jsonData["visitSpeciesOtherName"]=jsonData["visitOther"];
     jsonData["visitSpeciesComments"]=jsonData["visitMiscNotes"];
-    jsonData["visitFish"]=!!jsonData["visitFish"]; //convert integers to boolean
+    jsonData["visitFish"] = toBool(jsonData["visitFish"]);
     jsonData["visitFishCount"]=jsonData["visitFishCount"];
     jsonData["visitFishSize"]=jsonData["FishSize"];
     jsonData["visitFishSizeSmall"]=jsonData["visitFishSizeSmall"];
     jsonData["visitFishSizeMedium"]=jsonData["visitFishSizeMedium"];
     jsonData["visitFishSizeLarge"]=jsonData["visitFishSizeLarge"];
     return jsonData;
+}
+
+function toBool(val) {
+  return val === true || val === 'true' || val === 1 || val === '1';
 }
 
 /*
